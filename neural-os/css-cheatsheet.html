@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSS Cheat Sheet</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    padding: 2rem;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1 { text-align: center; font-size: 2rem; color: #f8fafc; margin-bottom: 0.25rem; }
+  .subtitle { text-align: center; color: #64748b; margin-bottom: 2rem; font-size: 0.9rem; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 1.25rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .wide { grid-column: span 2; }
+  @media (max-width: 700px) { .wide { grid-column: span 1; } }
+
+  .card { background: #1e2130; border-radius: 10px; overflow: hidden; border: 1px solid #2d3148; }
+  .card-header { padding: 0.6rem 1rem; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .card-body { padding: 0.75rem 1rem 1rem; }
+
+  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 0.35rem 0; border-bottom: 1px solid #2a2f47; gap: 1rem; }
+  .row:last-child { border-bottom: none; }
+  .label { color: #94a3b8; font-size: 0.82rem; flex-shrink: 0; max-width: 48%; }
+
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem; padding: 0.15rem 0.45rem;
+    border-radius: 4px; background: #111827; white-space: nowrap;
+  }
+
+  .block-code {
+    background: #111827; border-radius: 6px; padding: 0.8rem; margin-top: 0.5rem;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem; line-height: 1.85; color: #e2e8f0; overflow-x: auto; white-space: pre;
+  }
+
+  .note { border-left: 3px solid #475569; padding: 0.45rem 0.75rem; margin-top: 0.6rem; color: #94a3b8; font-size: 0.8rem; border-radius: 0 4px 4px 0; background: #161b2e; }
+  .tip  { border-left: 3px solid #10b981; padding: 0.45rem 0.75rem; margin-top: 0.6rem; color: #6ee7b7; font-size: 0.8rem; border-radius: 0 4px 4px 0; background: #051a10; }
+
+  /* card colors */
+  .blue   .card-header { background: #1e3a5f; color: #60a5fa; }
+  .green  .card-header { background: #14402a; color: #4ade80; }
+  .purple .card-header { background: #2d1f4e; color: #c084fc; }
+  .orange .card-header { background: #3d2200; color: #fb923c; }
+  .red    .card-header { background: #3b1010; color: #f87171; }
+  .teal   .card-header { background: #0f3033; color: #2dd4bf; }
+  .yellow .card-header { background: #3d2e00; color: #fbbf24; }
+  .pink   .card-header { background: #3b1a2e; color: #f472b6; }
+  .slate  .card-header { background: #1e2535; color: #94a3b8; }
+  .cyan   .card-header { background: #082f3a; color: #67e8f9; }
+  .lime   .card-header { background: #1a2e05; color: #a3e635; }
+  .rose   .card-header { background: #3b0a1a; color: #fb7185; }
+  .indigo .card-header { background: #1e1b4b; color: #a5b4fc; }
+  .amber  .card-header { background: #2d1a00; color: #fcd34d; }
+
+  .blue   code { color: #93c5fd; }
+  .green  code { color: #86efac; }
+  .purple code { color: #d8b4fe; }
+  .orange code { color: #fdba74; }
+  .red    code { color: #fca5a5; }
+  .teal   code { color: #5eead4; }
+  .yellow code { color: #fcd34d; }
+  .pink   code { color: #f9a8d4; }
+  .slate  code { color: #cbd5e1; }
+  .cyan   code { color: #a5f3fc; }
+  .lime   code { color: #bef264; }
+  .rose   code { color: #fda4af; }
+  .indigo code { color: #c7d2fe; }
+  .amber  code { color: #fde68a; }
+
+  /* syntax highlight in block-code */
+  .prop { color: #93c5fd; }
+  .val  { color: #86efac; }
+  .sel  { color: #f472b6; }
+  .at   { color: #fbbf24; }
+  .num  { color: #c084fc; }
+  .fn   { color: #2dd4bf; }
+  .cmt  { color: #4b5563; font-style: italic; }
+  .var  { color: #fda4af; }
+
+  /* live demo boxes */
+  .demo-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; align-items: center; }
+  .swatch { width: 28px; height: 28px; border-radius: 4px; display: inline-block; border: 1px solid #2d3148; }
+  .flex-demo { display: flex; gap: 4px; background: #111827; padding: 6px; border-radius: 6px; margin-top: 6px; }
+  .flex-demo span { background: #1e3a5f; color: #60a5fa; font-size: 0.7rem; padding: 4px 8px; border-radius: 3px; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<h1>CSS Cheat Sheet</h1>
+<p class="subtitle">Complete Quick Reference — CSS3</p>
+
+<div class="grid">
+
+  <!-- SELECTORS -->
+  <div class="card pink">
+    <div class="card-header">🎯 Selectors</div>
+    <div class="card-body">
+      <div class="row"><span class="label">element</span><code>div</code></div>
+      <div class="row"><span class="label">class</span><code>.classname</code></div>
+      <div class="row"><span class="label">id</span><code>#idname</code></div>
+      <div class="row"><span class="label">all</span><code>*</code></div>
+      <div class="row"><span class="label">group</span><code>h1, h2, p</code></div>
+      <div class="row"><span class="label">descendant</span><code>div p</code></div>
+      <div class="row"><span class="label">direct child</span><code>div > p</code></div>
+      <div class="row"><span class="label">adjacent sibling</span><code>h1 + p</code></div>
+      <div class="row"><span class="label">general sibling</span><code>h1 ~ p</code></div>
+      <div class="row"><span class="label">attribute exists</span><code>[href]</code></div>
+      <div class="row"><span class="label">attribute equals</span><code>[type="text"]</code></div>
+      <div class="row"><span class="label">attribute contains</span><code>[class*="btn"]</code></div>
+      <div class="row"><span class="label">attribute starts with</span><code>[href^="https"]</code></div>
+      <div class="row"><span class="label">attribute ends with</span><code>[src$=".png"]</code></div>
+      <div class="row"><span class="label">specificity order</span><code>inline > #id > .class > tag</code></div>
+      <div class="note">Specificity score: inline=1000, #id=100, .class=10, tag=1</div>
+    </div>
+  </div>
+
+  <!-- PSEUDO-CLASSES -->
+  <div class="card rose">
+    <div class="card-header">🔮 Pseudo-classes</div>
+    <div class="card-body">
+      <div class="row"><span class="label">hover</span><code>:hover</code></div>
+      <div class="row"><span class="label">focus</span><code>:focus</code></div>
+      <div class="row"><span class="label">active (clicked)</span><code>:active</code></div>
+      <div class="row"><span class="label">visited link</span><code>:visited</code></div>
+      <div class="row"><span class="label">first child</span><code>:first-child</code></div>
+      <div class="row"><span class="label">last child</span><code>:last-child</code></div>
+      <div class="row"><span class="label">nth child</span><code>:nth-child(2n+1)</code></div>
+      <div class="row"><span class="label">nth of type</span><code>:nth-of-type(3)</code></div>
+      <div class="row"><span class="label">only child</span><code>:only-child</code></div>
+      <div class="row"><span class="label">not</span><code>:not(.active)</code></div>
+      <div class="row"><span class="label">checked</span><code>:checked</code></div>
+      <div class="row"><span class="label">disabled</span><code>:disabled</code></div>
+      <div class="row"><span class="label">placeholder</span><code>::placeholder</code></div>
+      <div class="row"><span class="label">empty element</span><code>:empty</code></div>
+      <div class="row"><span class="label">focus visible</span><code>:focus-visible</code></div>
+      <div class="row"><span class="label">has child</span><code>:has(img)</code></div>
+    </div>
+  </div>
+
+  <!-- PSEUDO-ELEMENTS -->
+  <div class="card indigo">
+    <div class="card-header">✨ Pseudo-elements</div>
+    <div class="card-body">
+      <div class="row"><span class="label">before element</span><code>::before</code></div>
+      <div class="row"><span class="label">after element</span><code>::after</code></div>
+      <div class="row"><span class="label">first line</span><code>::first-line</code></div>
+      <div class="row"><span class="label">first letter</span><code>::first-letter</code></div>
+      <div class="row"><span class="label">selected text</span><code>::selection</code></div>
+      <div class="row"><span class="label">placeholder</span><code>::placeholder</code></div>
+      <div class="row"><span class="label">marker (list)</span><code>::marker</code></div>
+      <div class="block-code"><span class="sel">.btn::before</span> {
+  <span class="prop">content</span>: <span class="val">""</span>;          <span class="cmt">/* required */</span>
+  <span class="prop">display</span>: <span class="val">block</span>;
+  <span class="prop">width</span>: <span class="num">10px</span>;
+  <span class="prop">height</span>: <span class="num">10px</span>;
+  <span class="prop">background</span>: <span class="val">red</span>;
+}</div>
+    </div>
+  </div>
+
+  <!-- BOX MODEL -->
+  <div class="card orange">
+    <div class="card-header">📦 Box Model</div>
+    <div class="card-body">
+      <div class="row"><span class="label">width / height</span><code>width: 200px; height: 100px</code></div>
+      <div class="row"><span class="label">min / max width</span><code>min-width: 100px; max-width: 800px</code></div>
+      <div class="row"><span class="label">padding (all)</span><code>padding: 16px</code></div>
+      <div class="row"><span class="label">padding (T R B L)</span><code>padding: 10px 20px 10px 20px</code></div>
+      <div class="row"><span class="label">padding (T/B  L/R)</span><code>padding: 10px 20px</code></div>
+      <div class="row"><span class="label">margin (all)</span><code>margin: 16px</code></div>
+      <div class="row"><span class="label">margin auto (center)</span><code>margin: 0 auto</code></div>
+      <div class="row"><span class="label">border</span><code>border: 1px solid #ccc</code></div>
+      <div class="row"><span class="label">border radius</span><code>border-radius: 8px</code></div>
+      <div class="row"><span class="label">circle</span><code>border-radius: 50%</code></div>
+      <div class="row"><span class="label">outline</span><code>outline: 2px solid blue</code></div>
+      <div class="row"><span class="label">box sizing</span><code>box-sizing: border-box</code></div>
+      <div class="row"><span class="label">overflow</span><code>overflow: hidden / scroll / auto</code></div>
+      <div class="row"><span class="label">overflow x/y</span><code>overflow-x: hidden</code></div>
+      <div class="tip">Always set <code>box-sizing: border-box</code> globally — padding and border are included in width.</div>
+    </div>
+  </div>
+
+  <!-- DISPLAY & POSITION -->
+  <div class="card blue">
+    <div class="card-header">📐 Display &amp; Position</div>
+    <div class="card-body">
+      <div class="row"><span class="label">block</span><code>display: block</code></div>
+      <div class="row"><span class="label">inline</span><code>display: inline</code></div>
+      <div class="row"><span class="label">inline-block</span><code>display: inline-block</code></div>
+      <div class="row"><span class="label">none (hidden)</span><code>display: none</code></div>
+      <div class="row"><span class="label">invisible (keeps space)</span><code>visibility: hidden</code></div>
+      <div class="row"><span class="label">static (default)</span><code>position: static</code></div>
+      <div class="row"><span class="label">relative</span><code>position: relative</code></div>
+      <div class="row"><span class="label">absolute</span><code>position: absolute</code></div>
+      <div class="row"><span class="label">fixed (viewport)</span><code>position: fixed</code></div>
+      <div class="row"><span class="label">sticky</span><code>position: sticky; top: 0</code></div>
+      <div class="row"><span class="label">stack order</span><code>z-index: 10</code></div>
+      <div class="row"><span class="label">offset</span><code>top / right / bottom / left</code></div>
+      <div class="note">absolute is relative to nearest positioned ancestor (non-static).</div>
+    </div>
+  </div>
+
+  <!-- FLEXBOX -->
+  <div class="card green wide">
+    <div class="card-header">🟩 Flexbox</div>
+    <div class="card-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 2rem;">
+        <div>
+          <div style="color:#4ade80; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.4rem;">Container</div>
+          <div class="row"><span class="label">enable</span><code>display: flex</code></div>
+          <div class="row"><span class="label">direction</span><code>flex-direction: row / column</code></div>
+          <div class="row"><span class="label">reverse</span><code>flex-direction: row-reverse</code></div>
+          <div class="row"><span class="label">wrap</span><code>flex-wrap: wrap / nowrap</code></div>
+          <div class="row"><span class="label">main axis align</span><code>justify-content: …</code></div>
+          <div class="row"><span class="label">cross axis align</span><code>align-items: …</code></div>
+          <div class="row"><span class="label">multi-line align</span><code>align-content: …</code></div>
+          <div class="row"><span class="label">gap</span><code>gap: 16px</code></div>
+          <div class="row"><span class="label">gap row/col</span><code>row-gap: 8px; column-gap: 16px</code></div>
+          <div style="margin-top:0.75rem">
+            <div style="color:#4ade80; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">justify-content values</div>
+            <div class="row"><span class="label">pack to start</span><code>flex-start</code></div>
+            <div class="row"><span class="label">pack to end</span><code>flex-end</code></div>
+            <div class="row"><span class="label">center</span><code>center</code></div>
+            <div class="row"><span class="label">space between</span><code>space-between</code></div>
+            <div class="row"><span class="label">space around</span><code>space-around</code></div>
+            <div class="row"><span class="label">space evenly</span><code>space-evenly</code></div>
+          </div>
+        </div>
+        <div>
+          <div style="color:#4ade80; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.4rem;">Items</div>
+          <div class="row"><span class="label">grow (fill space)</span><code>flex-grow: 1</code></div>
+          <div class="row"><span class="label">shrink</span><code>flex-shrink: 0</code></div>
+          <div class="row"><span class="label">base size</span><code>flex-basis: 200px</code></div>
+          <div class="row"><span class="label">shorthand</span><code>flex: 1 1 auto</code></div>
+          <div class="row"><span class="label">fill all space</span><code>flex: 1</code></div>
+          <div class="row"><span class="label">no grow/shrink</span><code>flex: none</code></div>
+          <div class="row"><span class="label">self align</span><code>align-self: center</code></div>
+          <div class="row"><span class="label">order</span><code>order: 2</code></div>
+          <div style="margin-top:0.75rem">
+            <div style="color:#4ade80; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">align-items values</div>
+            <div class="row"><span class="label">stretch (default)</span><code>stretch</code></div>
+            <div class="row"><span class="label">start</span><code>flex-start</code></div>
+            <div class="row"><span class="label">end</span><code>flex-end</code></div>
+            <div class="row"><span class="label">center</span><code>center</code></div>
+            <div class="row"><span class="label">text baseline</span><code>baseline</code></div>
+          </div>
+          <div class="tip" style="margin-top:0.75rem">Perfect center: <code>display:flex; justify-content:center; align-items:center</code></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="card purple wide">
+    <div class="card-header">🟪 CSS Grid</div>
+    <div class="card-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 2rem;">
+        <div>
+          <div style="color:#c084fc; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.4rem;">Container</div>
+          <div class="row"><span class="label">enable</span><code>display: grid</code></div>
+          <div class="row"><span class="label">columns</span><code>grid-template-columns: 1fr 2fr 1fr</code></div>
+          <div class="row"><span class="label">rows</span><code>grid-template-rows: 100px auto</code></div>
+          <div class="row"><span class="label">repeat</span><code>repeat(3, 1fr)</code></div>
+          <div class="row"><span class="label">auto-fill</span><code>repeat(auto-fill, minmax(200px,1fr))</code></div>
+          <div class="row"><span class="label">auto-fit</span><code>repeat(auto-fit, minmax(200px,1fr))</code></div>
+          <div class="row"><span class="label">gap</span><code>gap: 16px</code></div>
+          <div class="row"><span class="label">col / row gap</span><code>column-gap: 16px; row-gap: 8px</code></div>
+          <div class="row"><span class="label">named areas</span><code>grid-template-areas: "h h" "s m" "f f"</code></div>
+          <div class="row"><span class="label">align all items</span><code>justify-items / align-items</code></div>
+          <div class="row"><span class="label">align grid</span><code>justify-content / align-content</code></div>
+        </div>
+        <div>
+          <div style="color:#c084fc; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.4rem;">Items</div>
+          <div class="row"><span class="label">col span</span><code>grid-column: 1 / 3</code></div>
+          <div class="row"><span class="label">col span (short)</span><code>grid-column: span 2</code></div>
+          <div class="row"><span class="label">row span</span><code>grid-row: 1 / 3</code></div>
+          <div class="row"><span class="label">named area</span><code>grid-area: header</code></div>
+          <div class="row"><span class="label">self align</span><code>justify-self / align-self</code></div>
+          <div class="block-code"><span class="cmt">/* named areas layout */</span>
+<span class="sel">.layout</span> {
+  <span class="prop">display</span>: <span class="val">grid</span>;
+  <span class="prop">grid-template-areas</span>:
+    <span class="val">"header header"</span>
+    <span class="val">"sidebar main"</span>
+    <span class="val">"footer footer"</span>;
+}
+<span class="sel">.header</span>  { <span class="prop">grid-area</span>: <span class="val">header</span>; }
+<span class="sel">.sidebar</span> { <span class="prop">grid-area</span>: <span class="val">sidebar</span>; }
+<span class="sel">.main</span>    { <span class="prop">grid-area</span>: <span class="val">main</span>; }
+<span class="sel">.footer</span>  { <span class="prop">grid-area</span>: <span class="val">footer</span>; }</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPOGRAPHY -->
+  <div class="card teal">
+    <div class="card-header">🔤 Typography</div>
+    <div class="card-body">
+      <div class="row"><span class="label">font family</span><code>font-family: 'Inter', sans-serif</code></div>
+      <div class="row"><span class="label">size</span><code>font-size: 1rem</code></div>
+      <div class="row"><span class="label">weight</span><code>font-weight: 400 / 700 / bold</code></div>
+      <div class="row"><span class="label">style</span><code>font-style: italic / normal</code></div>
+      <div class="row"><span class="label">line height</span><code>line-height: 1.6</code></div>
+      <div class="row"><span class="label">letter spacing</span><code>letter-spacing: 0.05em</code></div>
+      <div class="row"><span class="label">word spacing</span><code>word-spacing: 4px</code></div>
+      <div class="row"><span class="label">transform</span><code>text-transform: uppercase / capitalize</code></div>
+      <div class="row"><span class="label">align</span><code>text-align: left / center / right / justify</code></div>
+      <div class="row"><span class="label">decoration</span><code>text-decoration: underline / none</code></div>
+      <div class="row"><span class="label">indent</span><code>text-indent: 2rem</code></div>
+      <div class="row"><span class="label">overflow ellipsis</span><code>text-overflow: ellipsis</code></div>
+      <div class="row"><span class="label">no wrap</span><code>white-space: nowrap</code></div>
+      <div class="row"><span class="label">word break</span><code>word-break: break-word</code></div>
+      <div class="row"><span class="label">Google Font</span><code>@import url('https://fonts.googleapis.com/…')</code></div>
+      <div class="block-code"><span class="cmt">/* single-line truncate */</span>
+<span class="sel">.truncate</span> {
+  <span class="prop">overflow</span>: <span class="val">hidden</span>;
+  <span class="prop">white-space</span>: <span class="val">nowrap</span>;
+  <span class="prop">text-overflow</span>: <span class="val">ellipsis</span>;
+}</div>
+    </div>
+  </div>
+
+  <!-- COLORS & BACKGROUNDS -->
+  <div class="card yellow">
+    <div class="card-header">🎨 Colors &amp; Backgrounds</div>
+    <div class="card-body">
+      <div class="row"><span class="label">named color</span><code>color: red</code></div>
+      <div class="row"><span class="label">hex</span><code>color: #ff5733</code></div>
+      <div class="row"><span class="label">hex + alpha</span><code>color: #ff573380</code></div>
+      <div class="row"><span class="label">rgb</span><code>color: rgb(255, 87, 51)</code></div>
+      <div class="row"><span class="label">rgba</span><code>color: rgba(255, 87, 51, 0.5)</code></div>
+      <div class="row"><span class="label">hsl</span><code>color: hsl(11, 100%, 60%)</code></div>
+      <div class="row"><span class="label">background color</span><code>background-color: #1e2130</code></div>
+      <div class="row"><span class="label">background image</span><code>background-image: url('img.jpg')</code></div>
+      <div class="row"><span class="label">size</span><code>background-size: cover / contain / 50%</code></div>
+      <div class="row"><span class="label">position</span><code>background-position: center</code></div>
+      <div class="row"><span class="label">repeat</span><code>background-repeat: no-repeat</code></div>
+      <div class="row"><span class="label">attachment</span><code>background-attachment: fixed</code></div>
+      <div class="row"><span class="label">opacity</span><code>opacity: 0.5</code></div>
+      <div class="block-code"><span class="cmt">/* linear gradient */</span>
+<span class="prop">background</span>: <span class="fn">linear-gradient</span>(<span class="num">135deg</span>, <span class="val">#667eea</span>, <span class="val">#764ba2</span>);
+
+<span class="cmt">/* radial gradient */</span>
+<span class="prop">background</span>: <span class="fn">radial-gradient</span>(<span class="val">circle</span>, <span class="val">#667eea</span>, <span class="val">#764ba2</span>);
+
+<span class="cmt">/* multiple backgrounds */</span>
+<span class="prop">background</span>: <span class="fn">url</span>(<span class="val">overlay.png</span>) <span class="val">top/cover</span>,
+             <span class="fn">linear-gradient</span>(<span class="val">#000</span>, <span class="val">#333</span>);</div>
+    </div>
+  </div>
+
+  <!-- SHADOWS -->
+  <div class="card cyan">
+    <div class="card-header">🌑 Shadows &amp; Borders</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt">/* box-shadow: x y blur spread color */</span>
+<span class="prop">box-shadow</span>: <span class="num">0 4px 6px</span> <span class="fn">rgba</span>(<span class="num">0,0,0,0.1</span>);
+
+<span class="cmt">/* inset shadow */</span>
+<span class="prop">box-shadow</span>: <span class="val">inset</span> <span class="num">0 2px 4px</span> <span class="fn">rgba</span>(<span class="num">0,0,0,0.2</span>);
+
+<span class="cmt">/* multiple shadows */</span>
+<span class="prop">box-shadow</span>: <span class="num">0 1px 3px</span> <span class="val">#0003</span>,
+             <span class="num">0 4px 12px</span> <span class="val">#0002</span>;
+
+<span class="cmt">/* text-shadow: x y blur color */</span>
+<span class="prop">text-shadow</span>: <span class="num">2px 2px 4px</span> <span class="fn">rgba</span>(<span class="num">0,0,0,0.5</span>);
+
+<span class="cmt">/* border shorthand */</span>
+<span class="prop">border</span>: <span class="num">2px</span> <span class="val">solid</span> <span class="val">#60a5fa</span>;
+<span class="prop">border-radius</span>: <span class="num">8px</span>;
+
+<span class="cmt">/* individual sides */</span>
+<span class="prop">border-top</span>: <span class="num">4px</span> <span class="val">solid</span> <span class="val">#f87171</span>;
+<span class="prop">border-bottom</span>: <span class="val">none</span>;
+
+<span class="cmt">/* outline (doesn't affect layout) */</span>
+<span class="prop">outline</span>: <span class="num">2px</span> <span class="val">solid</span> <span class="val">#60a5fa</span>;
+<span class="prop">outline-offset</span>: <span class="num">4px</span>;</div>
+    </div>
+  </div>
+
+  <!-- TRANSITIONS -->
+  <div class="card lime">
+    <div class="card-header">⚡ Transitions</div>
+    <div class="card-body">
+      <div class="row"><span class="label">shorthand</span><code>transition: all 0.3s ease</code></div>
+      <div class="row"><span class="label">property</span><code>transition-property: color, background</code></div>
+      <div class="row"><span class="label">duration</span><code>transition-duration: 0.3s</code></div>
+      <div class="row"><span class="label">timing</span><code>transition-timing-function: ease-in-out</code></div>
+      <div class="row"><span class="label">delay</span><code>transition-delay: 0.1s</code></div>
+      <div style="color:#a3e635; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin: 0.6rem 0 0.3rem;">Timing Functions</div>
+      <div class="row"><span class="label">ease (default)</span><code>slow → fast → slow</code></div>
+      <div class="row"><span class="label">linear</span><code>constant speed</code></div>
+      <div class="row"><span class="label">ease-in</span><code>slow start</code></div>
+      <div class="row"><span class="label">ease-out</span><code>slow end</code></div>
+      <div class="row"><span class="label">ease-in-out</span><code>slow start and end</code></div>
+      <div class="row"><span class="label">cubic-bezier</span><code>cubic-bezier(0.4, 0, 0.2, 1)</code></div>
+      <div class="row"><span class="label">steps</span><code>steps(4, end)</code></div>
+      <div class="block-code"><span class="sel">.btn</span> {
+  <span class="prop">background</span>: <span class="val">#3b82f6</span>;
+  <span class="prop">transition</span>: <span class="val">background</span> <span class="num">0.2s</span> <span class="val">ease</span>, <span class="prop">transform</span> <span class="num">0.1s</span>;
+}
+<span class="sel">.btn:hover</span> {
+  <span class="prop">background</span>: <span class="val">#2563eb</span>;
+  <span class="prop">transform</span>: <span class="fn">translateY</span>(<span class="num">-2px</span>);
+}</div>
+    </div>
+  </div>
+
+  <!-- ANIMATIONS -->
+  <div class="card red">
+    <div class="card-header">🎬 Animations</div>
+    <div class="card-body">
+      <div class="row"><span class="label">name</span><code>animation-name: slide-in</code></div>
+      <div class="row"><span class="label">duration</span><code>animation-duration: 1s</code></div>
+      <div class="row"><span class="label">timing</span><code>animation-timing-function: ease</code></div>
+      <div class="row"><span class="label">delay</span><code>animation-delay: 0.5s</code></div>
+      <div class="row"><span class="label">iteration</span><code>animation-iteration-count: infinite</code></div>
+      <div class="row"><span class="label">direction</span><code>animation-direction: alternate</code></div>
+      <div class="row"><span class="label">fill mode</span><code>animation-fill-mode: forwards</code></div>
+      <div class="row"><span class="label">play state</span><code>animation-play-state: paused</code></div>
+      <div class="block-code"><span class="at">@keyframes</span> <span class="val">slide-in</span> {
+  <span class="num">from</span> { <span class="prop">transform</span>: <span class="fn">translateX</span>(<span class="num">-100%</span>); <span class="prop">opacity</span>: <span class="num">0</span>; }
+  <span class="num">to</span>   { <span class="prop">transform</span>: <span class="fn">translateX</span>(<span class="num">0</span>); <span class="prop">opacity</span>: <span class="num">1</span>; }
+}
+
+<span class="at">@keyframes</span> <span class="val">pulse</span> {
+  <span class="num">0%, 100%</span> { <span class="prop">transform</span>: <span class="fn">scale</span>(<span class="num">1</span>); }
+  <span class="num">50%</span>      { <span class="prop">transform</span>: <span class="fn">scale</span>(<span class="num">1.05</span>); }
+}
+
+<span class="sel">.card</span> {
+  <span class="prop">animation</span>: <span class="val">slide-in</span> <span class="num">0.4s</span> <span class="val">ease forwards</span>;
+}</div>
+    </div>
+  </div>
+
+  <!-- TRANSFORMS -->
+  <div class="card amber">
+    <div class="card-header">🔄 Transforms</div>
+    <div class="card-body">
+      <div class="row"><span class="label">translate X/Y</span><code>transform: translateX(50px)</code></div>
+      <div class="row"><span class="label">translate both</span><code>transform: translate(50px, 20px)</code></div>
+      <div class="row"><span class="label">scale</span><code>transform: scale(1.5)</code></div>
+      <div class="row"><span class="label">scale X/Y</span><code>transform: scaleX(2) scaleY(0.5)</code></div>
+      <div class="row"><span class="label">rotate</span><code>transform: rotate(45deg)</code></div>
+      <div class="row"><span class="label">skew</span><code>transform: skewX(20deg)</code></div>
+      <div class="row"><span class="label">multiple</span><code>transform: rotate(45deg) scale(1.2)</code></div>
+      <div class="row"><span class="label">3D rotate</span><code>transform: rotateY(180deg)</code></div>
+      <div class="row"><span class="label">3D perspective</span><code>perspective: 800px</code></div>
+      <div class="row"><span class="label">origin</span><code>transform-origin: top left</code></div>
+      <div class="row"><span class="label">3D preserve</span><code>transform-style: preserve-3d</code></div>
+    </div>
+  </div>
+
+  <!-- CSS VARIABLES -->
+  <div class="card slate">
+    <div class="card-header">📌 CSS Variables</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt">/* define on :root (global) */</span>
+<span class="sel">:root</span> {
+  <span class="var">--color-primary</span>:   <span class="val">#3b82f6</span>;
+  <span class="var">--color-bg</span>:       <span class="val">#0f1117</span>;
+  <span class="var">--spacing-sm</span>:     <span class="num">8px</span>;
+  <span class="var">--spacing-md</span>:     <span class="num">16px</span>;
+  <span class="var">--radius</span>:         <span class="num">8px</span>;
+  <span class="var">--font-body</span>:      <span class="val">'Inter', sans-serif</span>;
+}
+
+<span class="cmt">/* use */</span>
+<span class="sel">.card</span> {
+  <span class="prop">background</span>: <span class="fn">var</span>(<span class="var">--color-bg</span>);
+  <span class="prop">padding</span>: <span class="fn">var</span>(<span class="var">--spacing-md</span>);
+  <span class="prop">border-radius</span>: <span class="fn">var</span>(<span class="var">--radius</span>);
+}
+
+<span class="cmt">/* fallback value */</span>
+<span class="prop">color</span>: <span class="fn">var</span>(<span class="var">--color-text</span>, <span class="val">#e2e8f0</span>);
+
+<span class="cmt">/* override locally */</span>
+<span class="sel">.dark-card</span> {
+  <span class="var">--color-bg</span>: <span class="val">#1e2130</span>;
+}
+
+<span class="cmt">/* update via JS */</span>
+document.documentElement.style
+  .setProperty(<span class="val">'--color-primary'</span>, <span class="val">'#f87171'</span>);</div>
+    </div>
+  </div>
+
+  <!-- UNITS -->
+  <div class="card blue">
+    <div class="card-header">📏 Units</div>
+    <div class="card-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 1.5rem;">
+        <div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">Absolute</div>
+          <div class="row"><span class="label">pixels</span><code>px</code></div>
+          <div class="row"><span class="label">points</span><code>pt</code></div>
+          <div class="row"><span class="label">centimeters</span><code>cm / mm</code></div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin:0.6rem 0 0.3rem;">Relative</div>
+          <div class="row"><span class="label">parent font size</span><code>em</code></div>
+          <div class="row"><span class="label">root font size</span><code>rem</code></div>
+          <div class="row"><span class="label">parent width %</span><code>%</code></div>
+          <div class="row"><span class="label">viewport width</span><code>vw</code></div>
+          <div class="row"><span class="label">viewport height</span><code>vh</code></div>
+          <div class="row"><span class="label">min of vw/vh</span><code>vmin</code></div>
+          <div class="row"><span class="label">max of vw/vh</span><code>vmax</code></div>
+          <div class="row"><span class="label">grid fraction</span><code>fr</code></div>
+          <div class="row"><span class="label">char width</span><code>ch</code></div>
+        </div>
+        <div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">Functions</div>
+          <div class="row"><span class="label">clamp</span><code>clamp(1rem, 2vw, 2rem)</code></div>
+          <div class="row"><span class="label">min</span><code>min(50%, 400px)</code></div>
+          <div class="row"><span class="label">max</span><code>max(200px, 50%)</code></div>
+          <div class="row"><span class="label">calc</span><code>calc(100% - 2rem)</code></div>
+          <div class="note" style="margin-top:0.5rem">
+            <b>rem</b> for font sizes — immune to nesting.<br>
+            <b>em</b> for padding/margin relative to component.<br>
+            <b>%</b> for fluid layouts.<br>
+            <b>clamp()</b> for fluid typography.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEDIA QUERIES -->
+  <div class="card pink">
+    <div class="card-header">📱 Media Queries</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt">/* mobile first (min-width) */</span>
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">640px</span>)  { <span class="cmt">/* sm  */</span> }
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">768px</span>)  { <span class="cmt">/* md  */</span> }
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">1024px</span>) { <span class="cmt">/* lg  */</span> }
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">1280px</span>) { <span class="cmt">/* xl  */</span> }
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">1536px</span>) { <span class="cmt">/* 2xl */</span> }
+
+<span class="cmt">/* desktop first (max-width) */</span>
+<span class="at">@media</span> (<span class="prop">max-width</span>: <span class="num">767px</span>) { <span class="cmt">/* mobile */</span> }
+
+<span class="cmt">/* range */</span>
+<span class="at">@media</span> (<span class="num">640px</span> &lt;= <span class="prop">width</span> &lt; <span class="num">1024px</span>) { }
+
+<span class="cmt">/* dark mode */</span>
+<span class="at">@media</span> (<span class="prop">prefers-color-scheme</span>: <span class="val">dark</span>) { }
+
+<span class="cmt">/* reduced motion */</span>
+<span class="at">@media</span> (<span class="prop">prefers-reduced-motion</span>: <span class="val">reduce</span>) {
+  * { <span class="prop">animation-duration</span>: <span class="num">0.01ms</span> <span class="val">!important</span>; }
+}
+
+<span class="cmt">/* print */</span>
+<span class="at">@media</span> <span class="val">print</span> { <span class="sel">.sidebar</span> { <span class="prop">display</span>: <span class="val">none</span>; } }
+
+<span class="cmt">/* orientation */</span>
+<span class="at">@media</span> (<span class="prop">orientation</span>: <span class="val">landscape</span>) { }</div>
+    </div>
+  </div>
+
+  <!-- USEFUL PATTERNS -->
+  <div class="card teal wide">
+    <div class="card-header">🛠️ Useful Patterns</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt">/* ── Global reset ───────────────────────────────────── */</span>
+<span class="sel">*, *::before, *::after</span> {
+  <span class="prop">box-sizing</span>: <span class="val">border-box</span>;
+  <span class="prop">margin</span>: <span class="num">0</span>; <span class="prop">padding</span>: <span class="num">0</span>;
+}
+
+<span class="cmt">/* ── Absolute center (flex) ─────────────────────────── */</span>
+<span class="sel">.center</span> { <span class="prop">display</span>: <span class="val">flex</span>; <span class="prop">justify-content</span>: <span class="val">center</span>; <span class="prop">align-items</span>: <span class="val">center</span>; }
+
+<span class="cmt">/* ── Absolute center (position) ─────────────────────── */</span>
+<span class="sel">.center-pos</span> {
+  <span class="prop">position</span>: <span class="val">absolute</span>;
+  <span class="prop">top</span>: <span class="num">50%</span>; <span class="prop">left</span>: <span class="num">50%</span>;
+  <span class="prop">transform</span>: <span class="fn">translate</span>(<span class="num">-50%, -50%</span>);
+}
+
+<span class="cmt">/* ── Responsive image ───────────────────────────────── */</span>
+<span class="sel">img</span> { <span class="prop">max-width</span>: <span class="num">100%</span>; <span class="prop">height</span>: <span class="val">auto</span>; <span class="prop">display</span>: <span class="val">block</span>; }
+
+<span class="cmt">/* ── Aspect ratio box ───────────────────────────────── */</span>
+<span class="sel">.video-wrap</span> { <span class="prop">aspect-ratio</span>: <span class="num">16 / 9</span>; <span class="prop">width</span>: <span class="num">100%</span>; }
+
+<span class="cmt">/* ── Smooth scroll ──────────────────────────────────── */</span>
+<span class="sel">html</span> { <span class="prop">scroll-behavior</span>: <span class="val">smooth</span>; }
+
+<span class="cmt">/* ── Custom scrollbar ───────────────────────────────── */</span>
+<span class="sel">::-webkit-scrollbar</span>       { <span class="prop">width</span>: <span class="num">6px</span>; }
+<span class="sel">::-webkit-scrollbar-track</span> { <span class="prop">background</span>: <span class="val">#1e2130</span>; }
+<span class="sel">::-webkit-scrollbar-thumb</span> { <span class="prop">background</span>: <span class="val">#475569</span>; <span class="prop">border-radius</span>: <span class="num">3px</span>; }
+
+<span class="cmt">/* ── Fluid typography ───────────────────────────────── */</span>
+<span class="sel">h1</span> { <span class="prop">font-size</span>: <span class="fn">clamp</span>(<span class="num">1.5rem, 5vw, 3rem</span>); }
+
+<span class="cmt">/* ── Visually hidden (accessible) ──────────────────── */</span>
+<span class="sel">.sr-only</span> {
+  <span class="prop">position</span>: <span class="val">absolute</span>; <span class="prop">width</span>: <span class="num">1px</span>; <span class="prop">height</span>: <span class="num">1px</span>;
+  <span class="prop">padding</span>: <span class="num">0</span>; <span class="prop">margin</span>: <span class="num">-1px</span>; <span class="prop">overflow</span>: <span class="val">hidden</span>;
+  <span class="prop">clip</span>: <span class="fn">rect</span>(<span class="num">0,0,0,0</span>); <span class="prop">white-space</span>: <span class="val">nowrap</span>; <span class="prop">border</span>: <span class="num">0</span>;
+}
+
+<span class="cmt">/* ── Glass morphism ─────────────────────────────────── */</span>
+<span class="sel">.glass</span> {
+  <span class="prop">background</span>: <span class="fn">rgba</span>(<span class="num">255,255,255,0.1</span>);
+  <span class="prop">backdrop-filter</span>: <span class="fn">blur</span>(<span class="num">10px</span>);
+  <span class="prop">border</span>: <span class="num">1px</span> <span class="val">solid</span> <span class="fn">rgba</span>(<span class="num">255,255,255,0.2</span>);
+}
+
+<span class="cmt">/* ── Sticky footer layout ───────────────────────────── */</span>
+<span class="sel">body</span> { <span class="prop">display</span>: <span class="val">flex</span>; <span class="prop">flex-direction</span>: <span class="val">column</span>; <span class="prop">min-height</span>: <span class="num">100vh</span>; }
+<span class="sel">main</span> { <span class="prop">flex</span>: <span class="num">1</span>; }</div>
+    </div>
+  </div>
+
+  <!-- FUNCTIONS -->
+  <div class="card indigo">
+    <div class="card-header">⚙️ CSS Functions</div>
+    <div class="card-body">
+      <div class="row"><span class="label">variable</span><code>var(--name, fallback)</code></div>
+      <div class="row"><span class="label">calculate</span><code>calc(100% - 2rem)</code></div>
+      <div class="row"><span class="label">clamp</span><code>clamp(min, ideal, max)</code></div>
+      <div class="row"><span class="label">min</span><code>min(50%, 400px)</code></div>
+      <div class="row"><span class="label">max</span><code>max(200px, 50%)</code></div>
+      <div class="row"><span class="label">rgb / rgba</span><code>rgb(255 87 51 / 50%)</code></div>
+      <div class="row"><span class="label">hsl / hsla</span><code>hsl(220 90% 56% / 0.8)</code></div>
+      <div class="row"><span class="label">url</span><code>url('image.jpg')</code></div>
+      <div class="row"><span class="label">linear-gradient</span><code>linear-gradient(to right, #f00, #00f)</code></div>
+      <div class="row"><span class="label">radial-gradient</span><code>radial-gradient(circle, …)</code></div>
+      <div class="row"><span class="label">conic-gradient</span><code>conic-gradient(red, yellow, green)</code></div>
+      <div class="row"><span class="label">counter</span><code>counter(section)</code></div>
+      <div class="row"><span class="label">attr</span><code>attr(data-label)</code></div>
+      <div class="row"><span class="label">env</span><code>env(safe-area-inset-top)</code></div>
+    </div>
+  </div>
+
+  <!-- MISC / FILTERS -->
+  <div class="card orange">
+    <div class="card-header">🔧 Filters, Cursor, Misc</div>
+    <div class="card-body">
+      <div class="row"><span class="label">blur</span><code>filter: blur(4px)</code></div>
+      <div class="row"><span class="label">brightness</span><code>filter: brightness(0.8)</code></div>
+      <div class="row"><span class="label">contrast</span><code>filter: contrast(1.2)</code></div>
+      <div class="row"><span class="label">grayscale</span><code>filter: grayscale(100%)</code></div>
+      <div class="row"><span class="label">invert</span><code>filter: invert(1)</code></div>
+      <div class="row"><span class="label">saturate</span><code>filter: saturate(2)</code></div>
+      <div class="row"><span class="label">drop shadow</span><code>filter: drop-shadow(0 4px 6px #0003)</code></div>
+      <div class="row"><span class="label">cursor pointer</span><code>cursor: pointer</code></div>
+      <div class="row"><span class="label">cursor types</span><code>default / crosshair / not-allowed / grab</code></div>
+      <div class="row"><span class="label">pointer events</span><code>pointer-events: none</code></div>
+      <div class="row"><span class="label">user select</span><code>user-select: none</code></div>
+      <div class="row"><span class="label">resize</span><code>resize: vertical</code></div>
+      <div class="row"><span class="label">will change</span><code>will-change: transform</code></div>
+      <div class="row"><span class="label">mix blend mode</span><code>mix-blend-mode: multiply</code></div>
+      <div class="row"><span class="label">appearance</span><code>appearance: none</code></div>
+    </div>
+  </div>
+
+</div>
+
+<p style="text-align:center; margin-top:2rem; color:#4b5563; font-size:0.75rem;">
+  CSS3 · Quick Reference · Neural OS
+</p>
+
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

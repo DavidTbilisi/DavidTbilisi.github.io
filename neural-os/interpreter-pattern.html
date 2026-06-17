@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Interpreter Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --num: #7ee787; --op: #f78166; --var: #d2a8ff; --rule: #ffa657;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .node { transition: opacity .35s, filter .35s; }
+  .node.dim { opacity: 0.25; }
+  .node.evaluating { filter: drop-shadow(0 0 12px var(--pick)); }
+  .node.done circle, .node.done rect { fill: var(--num); }
+  .node-label { font: 700 14px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .result-pill { fill: var(--num); font: 700 13px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .result-pill.on { opacity: 1; }
+  .edge { stroke: var(--muted); stroke-width: 1.5; fill: none; opacity: 0.55; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .grammar { fill: var(--muted); font: 600 11px ui-monospace, monospace; text-anchor: start; }
+  .ctx-box { fill: var(--panel); stroke: var(--var); stroke-width: 1.5; opacity: 0; transition: opacity .35s; }
+  .ctx-label { fill: var(--text); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .ctx-box.on, .ctx-label.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Interpreter Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <text class="grammar" x="20" y="40">expr   →  number | (expr OP expr)</text>
+        <text class="grammar" x="20" y="56">OP     →  + | * | -</text>
+
+        <line class="edge" x1="260" y1="118" x2="160" y2="180"/>
+        <line class="edge" x1="260" y1="118" x2="360" y2="180"/>
+        <line class="edge" x1="360" y1="208" x2="290" y2="260"/>
+        <line class="edge" x1="360" y1="208" x2="430" y2="260"/>
+
+        <g id="n-root" class="node" style="color: var(--op)">
+          <rect x="230" y="80" width="60" height="40" rx="6" fill="var(--op)" opacity="0.9"/>
+          <text class="node-label" x="260" y="106">+</text>
+          <text class="result-pill" id="r-root" x="310" y="106">= 16</text>
+        </g>
+
+        <g id="n-l" class="node" style="color: var(--num)">
+          <circle cx="160" cy="200" r="22" fill="var(--num)" opacity="0.9"/>
+          <text class="node-label" x="160" y="206">2</text>
+          <text class="result-pill" id="r-l" x="200" y="206">= 2</text>
+        </g>
+
+        <g id="n-r" class="node" style="color: var(--op)">
+          <rect x="330" y="180" width="60" height="40" rx="6" fill="var(--op)" opacity="0.9"/>
+          <text class="node-label" x="360" y="206">*</text>
+          <text class="result-pill" id="r-r" x="410" y="200">= 14</text>
+        </g>
+
+        <g id="n-rl" class="node" style="color: var(--num)">
+          <circle cx="290" cy="280" r="22" fill="var(--num)" opacity="0.9"/>
+          <text class="node-label" x="290" y="286">7</text>
+          <text class="result-pill" id="r-rl" x="290" y="320">= 7</text>
+        </g>
+
+        <g id="n-rr" class="node" style="color: var(--var)">
+          <circle cx="430" cy="280" r="22" fill="var(--var)" opacity="0.9"/>
+          <text class="node-label" x="430" y="286">x</text>
+          <text class="result-pill" id="r-rr" x="430" y="320">= 2</text>
+        </g>
+
+        <rect id="ctx" class="ctx-box" x="20" y="270" width="160" height="60" rx="6"/>
+        <text id="ctx-l1" class="ctx-label" x="100" y="292">Context</text>
+        <text id="ctx-l2" class="ctx-label" x="100" y="312">{ x: 2 }</text>
+
+        <text id="caption" class="caption" x="260" y="350"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL = ['n-root','n-l','n-r','n-rl','n-rr'];
+const ALL_R = ['r-root','r-l','r-r','r-rl','r-rr'];
+const steps = [
+  {
+    title: "the same little language, again",
+    narration: `You keep writing parsers for the same shape: <span class="pill">2 + 7 * x</span>, <span class="pill">price &gt; 100 AND tag == "sale"</span>, a tiny query DSL. Each time you write a one-off parser and one-off evaluator. The grammar lives in everyone's head, nowhere in code.`,
+    code: [
+      '<span class="k">function</span> evaluate(expr: <span class="t">string</span>): <span class="t">number</span> {',
+      '  <span class="c">// hand-written: tokenize, match, branch by char</span>',
+      '  <span class="c">// 60 lines of one-off parsing, every time.</span>',
+      '  <span class="c">// adds a rule → patch tokenizer + parser + evaluator.</span>',
+      '}',
+    ],
+    state: { dim: ALL, glow: [], evaluating: null, done: [], results: [], ctx: false, caption: "a DSL with no grammar in code" }
+  },
+  {
+    title: "each grammar rule is a class",
+    narration: `Turn the grammar inside out. Every production becomes a class implementing one method: <span class="pill">interpret(ctx)</span>. <b>Number</b>, <b>Var</b>, <b>Add</b>, <b>Mul</b> — each knows how to interpret <i>itself</i>.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">Expr</span> {',
+      '  interpret(ctx: <span class="t">Context</span>): <span class="t">number</span>',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">Num</span>  <span class="k">implements</span> <span class="t">Expr</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> v: <span class="t">number</span>) {}',
+      '  interpret() { <span class="k">return</span> <span class="k">this</span>.v }',
+      '}',
+      '<span class="k">class</span> <span class="t">Var</span>  <span class="k">implements</span> <span class="t">Expr</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> name: <span class="t">string</span>) {}',
+      '  interpret(ctx) { <span class="k">return</span> ctx[<span class="k">this</span>.name] }',
+      '}',
+      '<span class="k">class</span> <span class="t">Add</span>  <span class="k">implements</span> <span class="t">Expr</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> l: <span class="t">Expr</span>, <span class="k">private</span> r: <span class="t">Expr</span>) {}',
+      '  interpret(ctx) { <span class="k">return</span> <span class="k">this</span>.l.interpret(ctx) + <span class="k">this</span>.r.interpret(ctx) }',
+      '}',
+    ],
+    state: { dim: [], glow: ALL, evaluating: null, done: [], results: [], ctx: false, caption: "grammar lifted into a class hierarchy" }
+  },
+  {
+    title: "build the AST",
+    narration: `Compose the classes to form a tree mirroring the expression: <span class="pill">2 + 7 * x</span> becomes <span class="pill">Add(Num(2), Mul(Num(7), Var("x")))</span>. The tree <i>is</i> the parsed form.`,
+    code: [
+      '<span class="k">const</span> ast: <span class="t">Expr</span> =',
+      '  <span class="k">new</span> Add(',
+      '    <span class="k">new</span> Num(<span class="n">2</span>),',
+      '    <span class="k">new</span> Mul(',
+      '      <span class="k">new</span> Num(<span class="n">7</span>),',
+      '      <span class="k">new</span> Var(<span class="s">"x"</span>)',
+      '    )',
+      '  )',
+      '',
+      '<span class="c">// shape: every internal node is an operator, every leaf is a literal or var.</span>',
+    ],
+    state: { dim: [], glow: ALL, evaluating: null, done: [], results: [], ctx: false, caption: "expression = tree of small objects" }
+  },
+  {
+    title: "interpret recurses",
+    narration: `<span class="pill">root.interpret(ctx)</span> calls its children, which call theirs. Leaves return values; internal nodes combine them. The recursion <i>is</i> the evaluation.`,
+    code: [
+      '<span class="k">const</span> ctx = { x: <span class="n">2</span> }',
+      'ast.interpret(ctx)',
+      '<span class="c">// = Add.interpret(ctx)</span>',
+      '<span class="c">//   = Num(2).interpret() + Mul(...).interpret(ctx)</span>',
+      '<span class="c">//   = 2 + (Num(7).interpret() * Var("x").interpret(ctx))</span>',
+      '<span class="c">//   = 2 + (7 * 2)</span>',
+      '<span class="c">//   = 16</span>',
+    ],
+    state: { dim: [], glow: ['n-root'], evaluating: 'n-root', done: ['n-l','n-rl','n-rr','n-r'], results: ['r-l','r-rl','r-rr','r-r','r-root'], ctx: true, caption: "leaves resolve first; the root assembles 16" }
+  },
+  {
+    title: "context for variables (and scope)",
+    narration: `The <b>Context</b> object is passed down the recursion. It's how variables resolve — and how scopes nest. Push a new context for a let-binding, pop it on the way out. The same tree, evaluated under different contexts, gives different results.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Let</span> <span class="k">implements</span> <span class="t">Expr</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> name: <span class="t">string</span>, <span class="k">private</span> value: <span class="t">Expr</span>, <span class="k">private</span> body: <span class="t">Expr</span>) {}',
+      '  interpret(ctx) {',
+      '    <span class="k">const</span> v = <span class="k">this</span>.value.interpret(ctx)',
+      '    <span class="k">return</span> <span class="k">this</span>.body.interpret({ ...ctx, [<span class="k">this</span>.name]: v })',
+      '  }',
+      '}',
+      '',
+      'ast.interpret({ x: <span class="n">10</span> })  <span class="c">// → 72</span>',
+      'ast.interpret({ x: <span class="n">-1</span> })  <span class="c">// → -5</span>',
+    ],
+    state: { dim: [], glow: ['n-rr'], evaluating: 'n-rr', done: [], results: ['r-rr'], ctx: true, caption: "context holds bindings; scope = new context pushed and popped" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Interpreter makes the grammar reify as code — every rule is a class, the AST is the parsed program, and the recursion is the evaluator. Pays off for <i>tiny</i> DSLs: query filters, rule engines, math expressions, configuration languages. Costs: scales badly past ~10 rules — every operator is a class, the class explosion stops paying. At that point you want a parser generator (ANTLR, tree-sitter) or a real bytecode/JIT interpreter. Close cousin of <b>[[composite-pattern]]</b> (the AST <i>is</i> a composite tree) and <b>[[visitor-pattern]]</b> (an alternative: keep the tree but move <span class="pill">interpret</span> out into a visitor — useful when you have multiple operations like eval + typecheck + pretty-print on the same tree).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - small DSL (math expressions, filter syntax, ~10 rules)</span>',
+      '<span class="c">//   - rule engines, search-query parsers, feature-flag expressions</span>',
+      '<span class="c">//   - regex / glob matching</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - grammar with &gt;20 rules → use parser generators or fold in Visitor</span>',
+      '<span class="c">//   - performance-critical evaluation → compile, don\'t interpret</span>',
+      '<span class="c">//   - one-off "two operators" → just write the if/else</span>',
+    ],
+    state: { dim: [], glow: ALL, evaluating: null, done: [], results: [], ctx: false, caption: "use it when a tiny grammar needs to live as objects" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL.forEach(id => {
+    const el = $(id);
+    el.classList.toggle('dim', s.state.dim.includes(id));
+    el.classList.toggle('glow', s.state.glow.includes(id));
+    el.classList.toggle('evaluating', s.state.evaluating === id);
+    el.classList.toggle('done', s.state.done.includes(id));
+  });
+  ALL_R.forEach(id => $(id).classList.toggle('on', s.state.results.includes(id)));
+  $('ctx').classList.toggle('on', s.state.ctx);
+  $('ctx-l1').classList.toggle('on', s.state.ctx);
+  $('ctx-l2').classList.toggle('on', s.state.ctx);
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

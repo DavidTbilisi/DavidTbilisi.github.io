@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-10">
+<head>
+<meta charset="utf-8">
+<title>Proof Theory — Cut Simulator</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  /* ═══ Typeset Proof — blueprint canvas. Confined to this file. ═══
+     macOS-native font stacks, no external CDN (offline-safe). */
+  :root {
+    --font-display: "Hoefler Text", "Iowan Old Style", Palatino, Georgia, serif;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "SF Mono", "Berkeley Mono", ui-monospace, Menlo, Consolas, monospace;
+    --hair: rgba(230,237,243,0.09);
+  }
+
+  body { background:
+      radial-gradient(1000px 520px at 82% -12%, rgba(247,129,102,0.06), transparent 60%),
+      radial-gradient(820px 520px at -12% 112%, rgba(210,168,255,0.05), transparent 55%),
+      var(--bg); }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(var(--hair) 1px, transparent 1px),
+      linear-gradient(90deg, var(--hair) 1px, transparent 1px);
+    background-size: 30px 30px; opacity:.45;
+    -webkit-mask-image: radial-gradient(circle at 50% 25%, #000 28%, transparent 80%);
+            mask-image: radial-gradient(circle at 50% 25%, #000 28%, transparent 80%); }
+
+  .sim { max-width: 1100px; margin: 0 auto; padding: 40px 24px 36px; position: relative; z-index: 1; }
+
+  /* ── header ── */
+  .sim > header { display:block; margin-bottom: 14px; animation: rise .55s cubic-bezier(.2,.7,.2,1) both; }
+  .backlink { display:inline-block; margin-bottom:14px; color: var(--accent); text-decoration:none;
+    font:12px var(--font-mono); letter-spacing:.04em; opacity:.85; }
+  .backlink:hover { text-decoration:underline; opacity:1; }
+  .kicker { display:flex; align-items:center; gap:11px; margin-bottom:11px;
+    font:600 11px/1 var(--font-mono); letter-spacing:.3em; text-transform:uppercase; color: var(--pick); opacity:.85; }
+  .kicker::before { content:""; width:28px; height:1px; background: var(--pick); opacity:.55; }
+  .sim h1 { margin:0; font:400 38px/1.04 var(--font-display); letter-spacing:-.018em; color: var(--text); }
+  .sim h1 small { display:block; margin-top:6px; font:italic 400 17px/1.3 var(--font-display); color: var(--muted); }
+
+  /* ── model pull-quote ── */
+  .model { position:relative; margin:18px 0 20px; padding:20px 24px 20px 56px;
+    background: linear-gradient(180deg, var(--panel), #12161d); border:1px solid var(--line);
+    border-radius:14px; font:400 16.5px/1.6 var(--font-display); color: var(--text);
+    box-shadow:0 16px 44px -28px rgba(0,0,0,.85); animation: rise .55s .06s cubic-bezier(.2,.7,.2,1) both; }
+  .model::before { content:"\201C"; position:absolute; left:16px; top:6px;
+    font:700 52px/1 var(--font-display); color: var(--l3); opacity:.45; }
+  .model b { color: var(--accent); font-weight:600; }
+
+  /* ── controls ── */
+  .controls { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin:8px 0 18px;
+    animation: rise .55s .12s cubic-bezier(.2,.7,.2,1) both; }
+  #reduce { background: linear-gradient(180deg, rgba(247,129,102,.20), rgba(247,129,102,.06));
+    border:1px solid var(--pick); color: var(--pick); font-weight:600; letter-spacing:.02em;
+    transition: color .16s, box-shadow .16s, transform .12s, background .16s; }
+  #reduce:hover:not(:disabled) { color:#ffd7ca; box-shadow:0 0 22px -6px var(--pick); transform:translateY(-1px); }
+  #reduce:disabled { background: var(--panel); border-color: var(--line); color: var(--muted); }
+  #reset { font:13px var(--font-ui); }
+  .readout { font:600 13px var(--font-mono); color: var(--muted); letter-spacing:.04em; }
+  .readout b { color: var(--pick); font-size:18px; font-family: var(--font-mono);
+    display:inline-block; min-width:1.2ch; text-align:center; }
+  .status { flex:1; min-width:240px; font:13.5px/1.45 var(--font-display); color: var(--muted); }
+  .status.done { color: var(--ok); }
+
+  /* ── blueprint stage ── */
+  .stage { position:relative; min-height:280px; margin-top:2px; padding:34px 24px;
+    display:flex; align-items:flex-end; justify-content:center; overflow-x:auto;
+    border:1px solid var(--line); border-radius:14px;
+    background:
+      radial-gradient(circle, rgba(230,237,243,0.05) 1px, transparent 1px) 0 0 / 22px 22px,
+      linear-gradient(180deg, #12161d, var(--panel));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03), inset 0 0 60px rgba(0,0,0,.4);
+    animation: rise .55s .18s cubic-bezier(.2,.7,.2,1) both; }
+  .stage.flash { animation: flash .55s ease; }
+  @keyframes flash {
+    0%   { box-shadow: inset 0 0 0 2px rgba(247,129,102,0),   inset 0 0 60px rgba(0,0,0,.4); }
+    30%  { box-shadow: inset 0 0 0 2px rgba(247,129,102,.5),  inset 0 0 80px rgba(247,129,102,.10); }
+    100% { box-shadow: inset 0 0 0 2px rgba(247,129,102,0),   inset 0 0 60px rgba(0,0,0,.4); }
+  }
+
+  /* ── proof tree ── */
+  .ptree { display:inline-flex; flex-direction:column; align-items:center; margin:0 8px; vertical-align:bottom; }
+  .prem-row { display:flex; align-items:flex-end; gap:16px; justify-content:center; }
+  .barrow { display:flex; align-items:center; align-self:stretch; gap:7px; margin:6px 0 4px; }
+  .bar { flex:1; height:2px; background: var(--text); min-width:54px; opacity:.85; }
+  .rule { color: var(--muted); font:10px var(--font-mono); white-space:nowrap; letter-spacing:.03em; }
+  .concl { font:13.5px var(--font-mono); white-space:nowrap; color: var(--text); padding:1px 5px; }
+  .leaf .concl { color: var(--ok); }
+  .leaf .concl.assume { color: var(--accent); }
+  .leaf .concl.given  { color: var(--muted); }
+
+  /* the redex — what the next Reduce will eat */
+  .ptree.redex { position:relative; border-radius:10px; animation: redexpulse 1.7s ease-in-out infinite; }
+  @keyframes redexpulse {
+    0%,100% { box-shadow: 0 0 0 1.5px rgba(247,129,102,.55), 0 0 0 7px rgba(247,129,102,0); }
+    50%     { box-shadow: 0 0 0 1.5px rgba(247,129,102,.85), 0 0 22px 5px rgba(247,129,102,.16); }
+  }
+  .ptree.redex > .redex-chip { position:absolute; top:-30px; left:50%; transform:translateX(-50%);
+    background: var(--pick); color:#0d1117; font:600 10px var(--font-mono); padding:2px 9px;
+    border-radius:11px; white-space:nowrap; box-shadow:0 4px 12px -2px rgba(247,129,102,.5); }
+
+  /* ── payoff ── */
+  .payoff { display:none; margin-top:20px; padding:18px 22px 18px 52px; position:relative;
+    background: linear-gradient(180deg, var(--panel), #12161d); border:1px solid var(--line);
+    border-left:3px solid var(--l5); border-radius:12px; font:15px/1.62 var(--font-display); }
+  .payoff.on { display:block; animation: panelin .5s ease both; }
+  .payoff::before { content:"\220E"; position:absolute; left:18px; top:18px;
+    font:18px var(--font-mono); color: var(--l5); }
+  .payoff b { color: var(--accent); }
+  .payoff code { font:12.5px var(--font-mono); background: rgba(0,0,0,.3); padding:1px 6px; border-radius:5px; color: var(--ok); }
+  .payoff .wikilink { color: var(--l5); text-decoration:underline; cursor:pointer; }
+  .payoff .wikilink::after { content:" ↗"; font-size:.85em; opacity:.6; }
+
+  /* ── todo notice ── */
+  .todo-note { display:none; margin-top:16px; padding:13px 16px; font:13.5px/1.5 var(--font-ui);
+    background: rgba(248,81,73,0.08); border:1px solid rgba(248,81,73,0.3); border-radius:10px; color: var(--warn); }
+  .todo-note.on { display:block; }
+  .todo-note code { font:12.5px var(--font-mono); background: rgba(0,0,0,.3); padding:1px 6px; border-radius:5px; }
+
+  @keyframes rise { from { opacity:0; transform: translateY(11px); } to { opacity:1; transform:none; } }
+  @keyframes panelin { from { opacity:0; transform: translateY(7px); } to { opacity:1; transform:none; } }
+  @media (max-width:680px) { .sim h1 { font-size:29px; } }
+</style>
+</head>
+<body>
+<div class="sim">
+  <header>
+    <a class="backlink" href="proof-theory.html">‹ all representations</a>
+    <div class="kicker">Interactive · Cut-Elimination</div>
+    <h1>Cut Simulator <small>run cut-elimination yourself</small></h1>
+  </header>
+
+  <div class="model">
+    A <b>detour</b> is a sub-proof that <b>builds</b> an implication (→I) and then <b>immediately uses</b> it (→E).
+    Each <b>Reduce</b> removes one detour by slotting the minor premise into the discharged assumptions —
+    until no detours remain (<b>normal form</b>).
+  </div>
+
+  <div class="controls">
+    <button id="reduce">Reduce ▸</button>
+    <button id="reset">Reset</button>
+    <span class="readout">detours left: <b id="count">–</b></span>
+    <span class="status" id="status">The orange-dashed box is the next detour to fall.</span>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="payoff" id="payoff">
+    <b>Normal form reached.</b> Every line is now a sub-formula of the goal — the
+    <span class="wikilink" data-wiki="sub-formula-property">[[sub-formula-property]]</span>. Notice the cost:
+    the inner detour <b>duplicated</b> its minor premise, because a cut is shared work and removing it copies that
+    work to every use site. That tidying-by-running is exactly
+    <span class="wikilink" data-wiki="cut-elimination-hauptsatz">[[cut-elimination-hauptsatz]]</span>, and seen as
+    evaluating <code>(λx.M)(a) → M[a/x]</code> it is
+    <span class="wikilink" data-wiki="curry-howard-correspondence">[[curry-howard-correspondence]]</span>.
+  </div>
+
+  <div class="todo-note" id="todo-note">
+    Reduction is disabled until <code>substitute()</code> is implemented — see the marked spot
+    in this file's source. The proof above renders fine; pressing <b>Reduce</b> just can't fire yet.
+  </div>
+</div>
+
+<script>
+// ── superscript helper for discharged-assumption labels ─────────
+const SUP = { 1: '¹', 2: '²', 3: '³', 4: '⁴' };
+
+// ── the starting proof — two stacked → detours ──────────────────
+//   outer: an identity detour (build (A∧A)→(A∧A), use it once)
+//   inner: a duplicating detour (its body uses [A]¹ TWICE)
+// Reducing the outer peels the ceremony; reducing the inner copies π.
+function startProof() {
+  // π — a small proof of A (so its duplication is visible): A from A∧B
+  const pi = () => ({ rule: '∧E₁', concl: 'A',
+    premises: [ { rule: 'ax', concl: 'A ∧ B', given: true } ] });
+
+  const innerBody = { rule: '∧I', concl: 'A ∧ A',
+    premises: [ { rule: 'assume', concl: 'A', n: 1 }, { rule: 'assume', concl: 'A', n: 1 } ] };
+  const innerIntro = { rule: '→I', discharge: 1, concl: 'A → (A∧A)', premises: [ innerBody ] };
+  const innerDetour = { rule: '→E', concl: 'A ∧ A', premises: [ innerIntro, pi() ] };
+
+  const outerBody = { rule: 'assume', concl: 'A ∧ A', n: 2 };
+  const outerIntro = { rule: '→I', discharge: 2, concl: '(A∧A) → (A∧A)', premises: [ outerBody ] };
+  return { rule: '→E', concl: 'A ∧ A', premises: [ outerIntro, innerDetour ] };
+}
+
+// ── redex machinery (provided) ──────────────────────────────────
+// A redex is an →E whose MAJOR premise (premises[0]) is an →I.
+const isRedex = (n) => n.rule === '→E' && n.premises && n.premises[0] && n.premises[0].rule === '→I';
+function countRedexes(n) {
+  if (!n) return 0;
+  return (isRedex(n) ? 1 : 0) + (n.premises || []).reduce((s, p) => s + countRedexes(p), 0);
+}
+function containsRedex(n) { return countRedexes(n) > 0; }
+
+// reduceRedex: peel one detour by substituting the minor premise (proof of A)
+// into the discharged assumptions inside the →I body. Leans on substitute().
+function reduceRedex(redex) {
+  const intro = redex.premises[0];      // →I, discharges `intro.discharge`
+  const minor = redex.premises[1];      // the proof of A
+  const body  = intro.premises[0];      // derivation of B from [A]ⁿ
+  return substitute(body, intro.discharge, minor);
+}
+
+// reduceOnce: rewrite the first (outermost-leftmost) redex in the whole tree
+function reduceOnce(node) {
+  if (isRedex(node)) return reduceRedex(node);
+  if (!node.premises) return node;
+  let patched = false;
+  const premises = node.premises.map((p) => {
+    if (!patched && containsRedex(p)) { patched = true; return reduceOnce(p); }
+    return p;
+  });
+  return { ...node, premises };
+}
+
+// ───────────────────────────────────────────────────────────────
+//  substitute() — the heart of cut-elimination (implemented below).
+//
+//  Cut-elimination removes a detour by dropping the minor premise's
+//  proof into every assumption it discharged. That drop-in IS this
+//  function — it is also exactly β-reduction's M[a/x].
+//
+//  Return a COPY of `node` in which every discharged-assumption leaf
+//    { rule: 'assume', n: label }
+//  has been replaced by `replacement` (the whole sub-proof).
+//
+//  • Base case: an assume-leaf whose `n === label`  →  return `replacement`.
+//  • Recursive case: rebuild the node with each premise substituted
+//    (use {...node, premises: node.premises.map(...)} so the original
+//    tree is never mutated — reduceOnce relies on immutability).
+//  • A leaf with no `premises` and a different/absent `n` is returned unchanged.
+// ───────────────────────────────────────────────────────────────
+function substitute(node, label, replacement) {
+  if (node.rule === 'assume' && node.n === label) return replacement;                                // base: the discharged assumption
+  return { ...node, premises: (node.premises || []).map((p) => substitute(p, label, replacement)) }; // recurse, rebuilt immutably
+}
+
+// ── renderer (provided) ─────────────────────────────────────────
+function render(node, markRedex) {
+  const leaf = !node.premises || node.premises.length === 0;
+  if (leaf) {
+    const cls = node.rule === 'assume' ? 'assume' : (node.given ? 'given' : '');
+    const txt = node.rule === 'assume'
+      ? `[${node.concl}]${SUP[node.n] || ''}`
+      : (node.given ? `${node.concl} (given)` : node.concl);
+    return `<div class="ptree leaf"><div class="concl ${cls}">${txt}</div></div>`;
+  }
+  const here = markRedex && isRedex(node);
+  const ruleLabel = node.rule + (node.discharge ? ',' + (SUP[node.discharge] || node.discharge) : '');
+  const prem = node.premises.map((p) => render(p, markRedex)).join('');
+  return `<div class="ptree ${here ? 'redex' : ''}">
+            ${here ? '<span class="redex-chip">↯ detour — Reduce removes this</span>' : ''}
+            <div class="prem-row">${prem}</div>
+            <div class="barrow"><div class="bar"></div><span class="rule">${ruleLabel}</span></div>
+            <div class="concl">${node.concl}</div>
+          </div>`;
+}
+
+// ── driver (provided) ───────────────────────────────────────────
+const state = { tree: startProof() };
+const $ = (id) => document.getElementById(id);
+
+function substituteReady() {
+  try {
+    const r = substitute({ rule: 'assume', concl: 'A', n: 1 }, 1, { rule: 'ax', concl: 'X' });
+    return !!(r && r.rule === 'ax');
+  } catch (e) { return false; }
+}
+
+function paint() {
+  const k = countRedexes(state.tree);
+  $('stage').innerHTML = render(state.tree, true);
+  $('count').textContent = k;
+  const done = k === 0;
+  $('payoff').classList.toggle('on', done);
+  $('reduce').disabled = done;
+  const st = $('status');
+  st.classList.toggle('done', done);
+  st.textContent = done
+    ? '✓ Normal form — no detours left. Read off the payoff below.'
+    : `${k} detour${k === 1 ? '' : 's'} left. The orange-dashed box is the next to fall.`;
+  $('payoff').querySelectorAll('.wikilink').forEach((a) => {
+    a.onclick = () => { window.location.href =
+      `obsidian://open?vault=Neural-OS-Research&file=` + encodeURIComponent('wiki/logic/' + a.dataset.wiki); };
+  });
+}
+
+$('reduce').addEventListener('click', () => {
+  if (!substituteReady()) { $('todo-note').classList.add('on'); return; }
+  $('todo-note').classList.remove('on');
+  const next = reduceOnce(state.tree);
+  if (!next) { $('todo-note').classList.add('on'); return; }
+  state.tree = next;
+  const stage = $('stage');
+  stage.classList.remove('flash'); void stage.offsetWidth; stage.classList.add('flash');
+  paint();
+});
+
+$('reset').addEventListener('click', () => {
+  state.tree = startProof();
+  $('todo-note').classList.remove('on');
+  paint();
+});
+
+paint();
+if (!substituteReady()) $('todo-note').classList.add('on');
+</script>
+</body>
+</html>

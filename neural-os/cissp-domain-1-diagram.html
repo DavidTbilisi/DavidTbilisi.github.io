@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-05">
+<head>
+<meta charset="utf-8">
+<title>CISSP Domain 1 — Diagram (spine matrix)</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  :root {
+    --d1-c: #f78166;     /* D1 spine — pick color */
+    --domain-c: #79c0ff; /* other domains */
+    --rule-c: #d2a8ff;   /* mindset rules */
+    --unlock-c: #7ee787; /* unlocks */
+    --legacy-c: #ffa657; /* legacy walkthrough links */
+  }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+  const svg = `
+    <svg viewBox="0 0 760 360">
+      ${Explain.svgDefs()}
+
+      <!-- 8-domain ring around D1 spine -->
+      ${Explain.glyph('node', { x: 380, y: 180, r: 50, label: 'D1', sub: 'spine', id: 'd1',  color: 'var(--d1-c)' })}
+
+      ${Explain.glyph('node', { x: 380, y:  60, r: 22, label: 'D1', id: 'r-d1', color: 'var(--domain-c)' })}
+      ${Explain.glyph('node', { x: 525, y:  95, r: 22, label: 'D2', id: 'r-d2', color: 'var(--domain-c)' })}
+      ${Explain.glyph('node', { x: 595, y: 180, r: 22, label: 'D3', id: 'r-d3', color: 'var(--domain-c)' })}
+      ${Explain.glyph('node', { x: 525, y: 265, r: 22, label: 'D4', id: 'r-d4', color: 'var(--domain-c)' })}
+      ${Explain.glyph('node', { x: 380, y: 300, r: 22, label: 'D5', id: 'r-d5', color: 'var(--domain-c)' })}
+      ${Explain.glyph('node', { x: 235, y: 265, r: 22, label: 'D6', id: 'r-d6', color: 'var(--domain-c)' })}
+      ${Explain.glyph('node', { x: 165, y: 180, r: 22, label: 'D7', id: 'r-d7', color: 'var(--domain-c)' })}
+      ${Explain.glyph('node', { x: 235, y:  95, r: 22, label: 'D8', id: 'r-d8', color: 'var(--domain-c)' })}
+
+      <!-- 4 anchor concept boxes around D1 -->
+      ${Explain.glyph('box',  { x: 660, y:  20, w: 90, h: 38, label: 'Risk Treat', id: 'a-rt', color: 'var(--legacy-c)' })}
+      ${Explain.glyph('box',  { x: 660, y:  70, w: 90, h: 38, label: 'Quant Risk', id: 'a-qr', color: 'var(--legacy-c)' })}
+      ${Explain.glyph('box',  { x: 660, y: 120, w: 90, h: 38, label: 'Controls',   id: 'a-ct', color: 'var(--legacy-c)' })}
+      ${Explain.glyph('box',  { x: 660, y: 170, w: 90, h: 38, label: 'BCP/DRP',    id: 'a-bd', color: 'var(--legacy-c)' })}
+
+      <!-- 2 unlock pins -->
+      ${Explain.glyph('node', { x:  60, y:  60, r: 18, label: 'U1', id: 'u-1', color: 'var(--unlock-c)' })}
+      ${Explain.glyph('node', { x:  60, y: 120, r: 18, label: 'U2', id: 'u-2', color: 'var(--unlock-c)' })}
+
+      <!-- Mindset rules cluster (bottom) -->
+      ${Explain.glyph('box',  { x:  20, y: 280, w: 140, h: 60, label: '8 mindset rules', id: 'rules', color: 'var(--rule-c)' })}
+
+      <!-- spokes ring → spine -->
+      ${Explain.glyph('arrow', { from: [380, 82],  to: [380, 130], id: 'sp-1' })}
+      ${Explain.glyph('arrow', { from: [505, 110], to: [415, 155], id: 'sp-2' })}
+      ${Explain.glyph('arrow', { from: [573, 180], to: [430, 180], id: 'sp-3' })}
+      ${Explain.glyph('arrow', { from: [505, 250], to: [415, 205], id: 'sp-4' })}
+      ${Explain.glyph('arrow', { from: [380, 278], to: [380, 230], id: 'sp-5' })}
+      ${Explain.glyph('arrow', { from: [255, 250], to: [345, 205], id: 'sp-6' })}
+      ${Explain.glyph('arrow', { from: [187, 180], to: [330, 180], id: 'sp-7' })}
+      ${Explain.glyph('arrow', { from: [255, 110], to: [345, 155], id: 'sp-8' })}
+
+      <!-- anchors → spine -->
+      ${Explain.glyph('arrow', { from: [660, 39],  to: [430, 165], id: 'a-rt-arr' })}
+      ${Explain.glyph('arrow', { from: [660, 89],  to: [430, 178], id: 'a-qr-arr' })}
+      ${Explain.glyph('arrow', { from: [660, 139], to: [430, 192], id: 'a-ct-arr' })}
+      ${Explain.glyph('arrow', { from: [660, 189], to: [430, 205], id: 'a-bd-arr' })}
+
+      <!-- unlocks → spine -->
+      ${Explain.glyph('arrow', { from: [78, 60],  to: [330, 170], id: 'u-1-arr' })}
+      ${Explain.glyph('arrow', { from: [78, 120], to: [330, 185], id: 'u-2-arr' })}
+    </svg>`;
+
+  const code = `<pre>
+<span class="ln"><span class="c">// CISSP D1 — Security and Risk Management</span></span>
+<span class="ln"><span class="c">// the spine (process-led, governance + risk)</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="k">domain</span> D1 {</span>
+<span class="ln">  mindset:   8 rules (substrate of every decision)</span>
+<span class="ln">  pillars:   CIA + Authenticity + Non-repudiation</span>
+<span class="ln">  risk:      identify → assess → treat → monitor</span>
+<span class="ln">  controls:  3 types × 7 functions = 21 cells</span>
+<span class="ln">  continuity:BIA → RTO/RPO → site choice → SLA</span>
+<span class="ln">  legal:     Due Care (act) + Due Diligence (prove)</span>
+<span class="ln">  IP:        Copyright · Patent · Trademark · Trade Secret</span>
+<span class="ln">  privacy:   GDPR — 72h + €20M + 4% revenue</span>
+<span class="ln">}</span>
+<span class="ln"></span>
+<span class="ln"><span class="c">// unlocks registered in [[composability-index]]</span></span>
+<span class="ln"><span class="t">U1</span>: Risk-treatment × Cynefin   (ATMA chaotic→clear)</span>
+<span class="ln"><span class="t">U2</span>: Act-vs-prove meta-pattern (Due Care + Due Diligence)</span>
+</pre>`;
+
+  // ============================================================
+  // U — See (CAST): visual taxonomy of the D1 spine
+  // ============================================================
+  const uSee = [
+    {
+      layer: 'recognize',
+      title: 'D1 sits at the center',
+      narration:
+        'CISSP has <b>8 domains</b> in a ring. <b>D1 — Security and Risk Management</b> sits at the center because <i>every other domain inherits its governance, risk vocabulary, and legal framing</i>. The mnemonic for the ring: <span class="pill">Real Astronauts Always Communicate In Awesome Operational Systems</span> (R-A-A-C-I-A-O-S → 8 first letters → 8 domains).',
+      codeLines: [0, 1],
+      onEnter: (e) => { e.glow('d1'); ['r-d1','r-d2','r-d3','r-d4','r-d5','r-d6','r-d7','r-d8'].forEach(id => e.glow(id)); },
+    },
+    {
+      layer: 'understand',
+      title: '4 anchor concepts',
+      narration:
+        'D1 routes through <b>4 anchor concepts</b>, each with its own walkthrough: <b>Risk Treatment × Cynefin</b> (ATMA quadrant), <b>Quantitative Risk</b> (AV·EF·SLE·ARO·ALE chain), <b>Controls</b> (3×7 grid), and <b>BCP/DRP</b> (RPO ↔ RTO timeline). The orange boxes on the right are the four legacy walkthroughs — every D1 question routes to at least one.',
+      codeLines: [3, 4, 5, 6, 7, 8],
+      onEnter: (e) => { e.glow('a-rt'); e.glow('a-qr'); e.glow('a-ct'); e.glow('a-bd'); e.glow('d1'); },
+    },
+    {
+      layer: 'understand',
+      title: 'The 2 registered unlocks',
+      narration:
+        '<b>Two unlocks</b> are confirmed in <span class="pill">composability-index</span> and surface across D1: <b>U1: Risk-treatment × Cynefin</b> — the ATMA quadrant aligns 1-to-1 with Cynefin\'s sense-making domains. <b>U2: Act-vs-prove meta-pattern</b> — Due Care is the act side, Due Diligence the prove side; this pattern appears in every D1 control, risk, and continuity decision.',
+      codeLines: [13, 14, 15],
+      onEnter: (e) => { e.glow('u-1'); e.glow('u-2'); e.glow('d1'); e.activate('u-1-arr'); e.activate('u-2-arr'); },
+    },
+    {
+      layer: 'understand',
+      title: '8 mindset rules underneath',
+      narration:
+        'Beneath all of this sit the <b>8 D0 mindset rules</b> — substrate principles every decision inherits: <i>defense in depth · least privilege · separation of duties · need to know · fail securely · keep it simple · economy of mechanism · psychological acceptability</i>. They\'re not on the exam directly, but every right answer presupposes them.',
+      codeLines: [4],
+      onEnter: (e) => { e.glow('rules'); e.glow('d1'); },
+    },
+    {
+      layer: 'apply',
+      title: 'Risk register walkthrough',
+      narration:
+        'A risk arrives: <i>"Third-party cloud vendor we use for analytics had a data breach 3 months ago; our customer PII may have been exposed but we have no proof."</i> Walk the spine. First branch — what does D1 say to do <span class="pill">before</span> picking a treatment?',
+      codeLines: [6, 7],
+      choices: [
+        { label: 'Treat it as Mitigate — buy more controls immediately',         correct: false,
+          reason: 'You can\'t pick a treatment without ALE and Cynefin classification. Premature Mitigate is the most common D1 error per the Risk Treatment walkthrough.' },
+        { label: 'Treat it as Accept — no proof of exposure means no exposure',   correct: false,
+          reason: 'Accept requires the risk be quantified AND within appetite. "No proof" is not "quantified" — it\'s "unmeasured." Premature Accept hides exposure.' },
+        { label: 'Document + compute ALE + classify Cynefin domain first',         correct: true,
+          reason: 'Right. D1 demands the chain: Document (Due Diligence) → Compute ALE (AV × EF × ARO) → Classify Cynefin (Complex here — emergent, third-party-driven) → only then choose treatment (likely Transfer to specialist DFIR + cyber-insurance). The walkthrough mirrors all 4 anchor concepts in sequence.' },
+        { label: 'Escalate to the board — too big for risk register',             correct: false,
+          reason: 'Board escalation happens AFTER residual risk exceeds appetite. Skipping the register is governance-bypass, which D1 explicitly prohibits.' },
+      ],
+      onEnter: (e) => { e.glow('a-rt'); e.glow('a-qr'); e.glow('a-bd'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Where D1 reasoning fails',
+      narration:
+        '<span class="pill">analyze</span> — Across the 4 anchors, D1 has one classic failure mode that beats all others. Pick it.',
+      codeLines: [],
+      choices: [
+        { label: 'Misclassifying Cynefin → wrong treatment family',          correct: false,
+          reason: 'Real and load-bearing for Risk Treatment specifically (per its walkthrough). But it\'s domain-internal — not the D1-wide error.' },
+        { label: 'Acting without documenting (act without prove)',            correct: true,
+          reason: 'Right. The act-vs-prove meta-pattern is D1-wide because EVERY decision (treatment, control deployment, BCP test, vendor selection) requires both Due Care (act) and Due Diligence (documentation that the act was deliberate). "We just decided" without the trail is the classic D1 failure across all 4 anchors.' },
+        { label: 'Over-engineering ALE precision',                            correct: false,
+          reason: 'ARO error bars are real (per Quant Risk walkthrough), but precision-theatre is a sub-failure of the bigger act-vs-prove pattern.' },
+        { label: 'Skipping BIA in continuity planning',                       correct: false,
+          reason: 'Real per BCP/DRP walkthrough, but again domain-internal. Not D1-wide.' },
+      ],
+      onEnter: (e) => { e.glow('u-2'); e.glow('d1'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'D1 spine = 4 walkthroughs + 2 unlocks',
+      narration:
+        'The D1 spine compresses into <b>4 anchor concepts</b> (Risk Treatment · Quant Risk · Controls · BCP/DRP — each with its own walkthrough) glued by <b>2 registered unlocks</b> (Risk × Cynefin · Act-vs-prove). Every D1 exam stem touches at least one anchor. Read this spine, then drill the anchors. D2 ingest unlocks when D1 stabilization passes ≥90% retrieval. See <span class="wikilink" data-link="cissp-oscp-exam-automaticity-roadmap">cissp-oscp-exam-automaticity-roadmap</span> for the full sequencing.',
+      codeLines: [3, 13, 14],
+      onEnter: (e) => {
+        e.glow('d1'); e.glow('a-rt'); e.glow('a-qr'); e.glow('a-ct'); e.glow('a-bd');
+        e.glow('u-1'); e.glow('u-2');
+      },
+    },
+  ];
+
+  // ============================================================
+  // D — Name (NEDF): identifier card
+  // ============================================================
+  const dName = [
+    {
+      layer: 'understand',
+      title: 'D1 is the governance / risk / legal layer',
+      narration:
+        '<b>D1\'s identifier</b>: process-led, not technology-led. Distinguishes from <b>D3 (Architecture)</b> by being about <i>how decisions get made and documented</i>, not <i>what gets built</i>. Distinguishes from <b>D5 (IAM)</b> by being about <i>policy-level authority</i>, not <i>system-level identity</i>. The bullseye: every D1 question has a <b>process</b> or <b>legal</b> verb at its core.',
+      codeLines: [1],
+      onEnter: (e) => { e.glow('d1'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'What D1 is NOT',
+      narration:
+        '<span class="pill">analyze</span> — A question stem mentions "classifying customer data as Confidential per the data classification policy." Is this primarily D1 or D2 (Asset Security)?',
+      codeLines: [],
+      choices: [
+        { label: 'D1 — because the policy is governance',           correct: false,
+          reason: 'The POLICY exists in D1 governance, but APPLYING classifications to specific data assets is D2 (Asset Security) — that\'s where data classification proper lives.' },
+        { label: 'D2 — Asset Security owns classification execution', correct: true,
+          reason: 'Right. D2 owns the data-classification execution layer. D1 sets the framework (must-have-a-classification-policy) but D2 is where data is actually labeled, handled, retained, destroyed.' },
+        { label: 'D5 — it\'s about access',                          correct: false,
+          reason: 'D5 (IAM) is about subjects accessing objects. Classification labels assets independent of access decisions.' },
+        { label: 'D8 — it\'s about secure development',             correct: false,
+          reason: 'D8 (Software Development Security) is about the SDLC pipeline. Not classification.' },
+      ],
+      onEnter: (e) => { e.glow('r-d2'); e.glow('d1'); },
+    },
+  ];
+
+  // ============================================================
+  // F — Do (SPEAR): action playbook
+  // ============================================================
+  const fDo = [
+    {
+      layer: 'apply',
+      title: 'D1 SPEAR loop: 1 risk → 1 register entry',
+      narration:
+        '<b>The D1 playbook</b> for any new risk: <span class="pill">(1) Identify → (2) Compute ALE → (3) Classify Cynefin → (4) Choose treatment → (5) Document Due Diligence trail</span>. Every step uses the substrate of one of the 4 anchor walkthroughs. Step 5 is the one teams forget — the act without prove failure.',
+      codeLines: [6, 7, 8, 9],
+      onEnter: (e) => { e.glow('a-rt'); e.glow('a-qr'); },
+    },
+    {
+      layer: 'apply',
+      title: 'The cost-benefit decision',
+      narration:
+        '<span class="pill">apply</span> — A control proposal: $4,000/yr ongoing cost; the risk\'s ALE_before is $20,000/yr; deploying the control reduces ALE to $3,000/yr. Is the control justified?',
+      codeLines: [6],
+      choices: [
+        { label: 'Yes — $4k < ($20k − $3k) = $17k reduction',  correct: true,
+          reason: 'Right. The only D1 rule: annual_cost < ΔALE. $4k < $17k → justified. Per the Quant Risk walkthrough.' },
+        { label: 'No — ALE_after is still nonzero',             correct: false,
+          reason: 'Residual risk after Mitigate is normal. The question is whether the reduction beats the cost.' },
+        { label: 'Yes — but only after board approval',          correct: false,
+          reason: 'Board approval applies when residual exceeds risk appetite. The math justifies the control independent of board approval workflow.' },
+        { label: 'Insufficient data — need ARO',                  correct: false,
+          reason: 'ARO is baked into the ALE figures already given ($20k = SLE × ARO). The inequality has everything it needs.' },
+      ],
+      onEnter: (e) => { e.glow('a-qr'); },
+    },
+  ];
+
+  // ============================================================
+  // B — Watch (HEART): failure-mode monitor
+  // ============================================================
+  const bWatch = [
+    {
+      layer: 'understand',
+      title: 'Top D1 failure modes',
+      narration:
+        'Watch for these in any D1 scenario: <b>(1) Act without prove</b> — decisions without documented Due Diligence. <b>(2) Premature Accept</b> — formalizing acceptance before ALE is computed. <b>(3) Detective without Corrective</b> — alerting without remediation pipeline. <b>(4) Compensating as permanent</b> — substitute controls outliving the original gap. <b>(5) Untested DR/BCP plan</b> — paper recovery that never proved itself under load.',
+      codeLines: [],
+      onEnter: (e) => { e.glow('u-2'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Which signal flags the deepest failure?',
+      narration:
+        '<span class="pill">analyze</span> — In a D1 audit, you see: (a) DR plan exists; (b) controls are mapped to risks; (c) ALE figures are documented; (d) the last DR exercise was 4 years ago. Which signal carries the most risk?',
+      codeLines: [],
+      choices: [
+        { label: '(a) — having a DR plan at all is suspicious',           correct: false,
+          reason: 'DR plan existence is a positive signal, not a failure flag.' },
+        { label: '(b) — control mapping might be incomplete',              correct: false,
+          reason: 'Incompleteness is a separate issue; the signal given says they ARE mapped.' },
+        { label: '(c) — ALE figures are usually wrong',                    correct: false,
+          reason: 'ARO uncertainty is real (per Quant Risk), but documented figures with sensitivity analysis are defensible. The DR-test gap is bigger.' },
+        { label: '(d) — 4 years is long enough that the plan is fiction', correct: true,
+          reason: 'Right. Per failure mode #5 — an untested DR plan is aspiration, not control. 4 years across infrastructure changes means the plan likely no longer matches reality. Recovery as a control function (per Controls walkthrough) requires testing to count.' },
+      ],
+      onEnter: (e) => { e.glow('a-bd'); },
+    },
+  ];
+
+  // ============================================================
+  // L — Predict (ORACLE): predict-from-input
+  // ============================================================
+  const lPredict = [
+    {
+      layer: 'apply',
+      title: 'Predict the treatment',
+      narration:
+        '<span class="pill">apply</span> — Risk: a state-actor APT targeting your sector for the first time, no defensive playbook exists, threat-intel firms have just started tracking it. Predict the treatment.',
+      codeLines: [],
+      choices: [
+        { label: 'Avoid — close the operation',     correct: false,
+          reason: 'Activity is essential — closing operations is a Chaotic-domain response. APT presence ≠ Chaotic.' },
+        { label: 'Mitigate — deploy controls',       correct: false,
+          reason: 'This is the classic Complex-misread-as-Complicated error. Per Risk Treatment walkthrough, the highest-yield failure mode.' },
+        { label: 'Transfer — specialist DFIR + insurance', correct: true,
+          reason: 'Right. Novel + emergent + specialist pattern-library beats internal = Complex domain = Transfer. ATMA chaotic→clear: position 2.' },
+        { label: 'Accept — too rare to budget for',    correct: false,
+          reason: 'Premature Accept on unquantified emerging threat. Accept requires quantification first.' },
+      ],
+      onEnter: (e) => { e.glow('a-rt'); e.glow('u-1'); },
+    },
+    {
+      layer: 'apply',
+      title: 'Predict the control function',
+      narration:
+        '<span class="pill">apply</span> — An hourly SIEM digest is automatically reviewed by an analyst on rotation. The control type and function?',
+      codeLines: [],
+      choices: [
+        { label: 'Technical × Preventive',  correct: false,
+          reason: 'Preventive blocks attacks BEFORE they land. SIEM digest is DURING/AFTER — it identifies, not blocks.' },
+        { label: 'Technical × Detective',   correct: true,
+          reason: 'Right. SIEM is Technical (system-implemented). Hourly digest with rotation = Detective (identifies in progress or after). Per Controls walkthrough cell T-4.' },
+        { label: 'Managerial × Corrective', correct: false,
+          reason: 'The reviewer is a person but the SIEM control is Technical. And Corrective fixes damage; Detective identifies it.' },
+        { label: 'Physical × Detective',    correct: false,
+          reason: 'Physical means the world itself (CCTV, walkthroughs). SIEM is software.' },
+      ],
+      onEnter: (e) => { e.glow('a-ct'); },
+    },
+  ];
+
+  // ============================================================
+  // R — Act (GRACE): in-the-moment protocol
+  // ============================================================
+  const rAct = [
+    {
+      layer: 'apply',
+      title: 'D1 reflex: when a new risk arrives',
+      narration:
+        '<span class="pill">apply</span> — A colleague says <i>"we should worry about X."</i> What\'s your D1 reflex (in &lt;30 seconds)?',
+      codeLines: [],
+      choices: [
+        { label: 'Suggest a control',                                        correct: false,
+          reason: 'Premature mitigation. You don\'t know which treatment family applies until you classify and quantify.' },
+        { label: 'Document the named risk + start ALE estimate + classify Cynefin', correct: true,
+          reason: 'Right. The D1 reflex is the start of the SPEAR loop: write it down (Due Diligence trail begins), gather inputs for ALE (or note "ARO unknown — escalate"), classify Cynefin to pick treatment family. 30 seconds, three actions.' },
+        { label: 'Ask "is it on the risk register?"',                         correct: false,
+          reason: 'Good follow-on, but the FIRST move is to document the new mention so the register can absorb it.' },
+        { label: 'Defer to next risk-committee meeting',                       correct: false,
+          reason: 'Defer-without-documenting is the act-without-prove failure. Document first, then defer if appropriate.' },
+      ],
+      onEnter: (e) => { e.glow('d1'); e.glow('u-2'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Post-incident D1 protocol',
+      narration:
+        '<b>After</b> any incident, D1 demands a three-line entry: <span class="pill">(1) what happened</span> · <span class="pill">(2) which controls were in place (and which failed)</span> · <span class="pill">(3) what changes in the register</span>. The third line is where Due Care (we acted) meets Due Diligence (we learned and documented). Skipping line 3 is the deepest D1 failure across the 4 anchors and the 2 unlocks.',
+      codeLines: [13, 14],
+      onEnter: (e) => { e.glow('u-2'); e.glow('a-bd'); },
+    },
+  ];
+
+  // ============================================================
+  // BRIDGE: cross-domain analogies
+  // ============================================================
+  const bridge = [
+    {
+      layer: 'synthesize',
+      title: 'D1 ≈ project management risk register',
+      narration:
+        '<b>CISSP D1</b> and <b>PMI project-risk management</b> share one mechanism: <i>identify risks, score them, choose a treatment per cell, document the rationale.</i> Term-by-term: <span class="pill">ATMA</span> ≈ PMI\'s Avoid/Mitigate/Transfer/Accept; <span class="pill">ALE</span> ≈ PMI\'s Expected Monetary Value; <span class="pill">Due Diligence trail</span> ≈ PMI\'s risk register history column. The PMI register stops at "monitor"; CISSP D1 adds the legal Due-Care/Due-Diligence framing that escalates failures to liability. <span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [6, 7],
+      onEnter: (e) => { e.glow('a-rt'); e.glow('a-qr'); e.glow('u-2'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'D1 ≈ medical triage (act + document)',
+      narration:
+        '<b>CISSP D1</b> and <b>hospital triage</b> share: <i>classify the case under uncertainty, choose the treatment family that matches the classification, document the decision rationale before acting</i>. Term-by-term: <span class="pill">Cynefin classification</span> ≈ ESI triage levels (1-5); <span class="pill">Risk treatment</span> ≈ care pathway selection; <span class="pill">Due Diligence documentation</span> ≈ medical chart entry. The legal exposure is identical — "we treated the patient" without "we documented why we chose this treatment" is malpractice in both fields. <span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [9],
+      onEnter: (e) => { e.glow('u-1'); e.glow('u-2'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'D1 ≈ financial controls (segregation + audit trail)',
+      narration:
+        '<b>CISSP D1</b> and <b>SOX / financial controls</b> share: <i>preventive segregation of duties + detective audit-trail + corrective remediation cycle</i>. Term-by-term: <span class="pill">D1 control types (M/T/P)</span> ≈ SOX control types (entity / process / IT general); <span class="pill">D1 control functions</span> ≈ COSO control activities; <span class="pill">act-vs-prove pattern</span> ≈ SOX 404\'s "design vs operating effectiveness" — the controls must exist AND be tested. Both frameworks fail the same way: documented controls that nobody verifies still running. <span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [13, 14],
+      onEnter: (e) => { e.glow('a-ct'); e.glow('u-2'); },
+    },
+  ];
+
+  Explain.init({
+    title:    'CISSP Domain 1 — Security and Risk Management',
+    subtitle: 'mechanism view · CAST matrix — one of several representations',
+    created:  '2026-06-05',
+    svg, code,
+    matrix: {
+      'u-see':     { name: 'U — See',     framework: 'CAST',   steps: uSee },
+      'd-name':    { name: 'D — Name',    framework: 'NEDF',   steps: dName },
+      'f-do':      { name: 'F — Do',      framework: 'SPEAR',  steps: fDo },
+      'b-watch':   { name: 'B — Watch',   framework: 'HEART',  steps: bWatch },
+      'l-predict': { name: 'L — Predict', framework: 'ORACLE', steps: lPredict },
+      'r-act':     { name: 'R — Act',     framework: 'GRACE',  steps: rAct },
+      'bridge':    { name: 'BRIDGE',      framework: 'cross-domain', steps: bridge },
+    },
+  });
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

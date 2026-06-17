@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EC2 vs Lambda — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --ec2: #ffa657; --lambda: #d2a8ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .card { transition: opacity .35s, filter .35s, transform .4s ease; transform-origin: center; transform-box: fill-box; }
+  .card.dim { opacity: 0.28; }
+  .card.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .card-label { font: 700 14px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .card-sub { font: 500 10.5px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.75; }
+  .layer-row rect { transition: opacity .35s, fill .35s; }
+  .layer-row text { font: 500 10.5px ui-monospace, monospace; fill: var(--text); }
+  .layer-row .who { font: 600 9.5px ui-monospace, monospace; fill: var(--muted); text-anchor: end; }
+  .you-own  { fill: var(--ec2); opacity: 0.85; }
+  .aws-owns { fill: var(--lambda); opacity: 0.85; }
+  .layer-off { opacity: 0.15; }
+  .workload { transition: transform .55s cubic-bezier(.5,.05,.2,1), opacity .35s; }
+  .spectrum { stroke: var(--line); stroke-width: 1; }
+  .spectrum-tick { fill: var(--muted); font: 600 9.5px ui-monospace, monospace; text-anchor: middle; }
+  .spectrum-marker { fill: var(--pick); stroke: var(--bg); stroke-width: 2; transition: cx .55s cubic-bezier(.5,.05,.2,1); }
+  .caption { fill: var(--muted); font: 600 10.5px ui-monospace, monospace; text-anchor: middle; }
+  .warn-text { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .warn-text.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>EC2 vs Lambda <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 540 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <!-- EC2 card (left) — a stack of layers you own -->
+        <g id="card-ec2" class="card" style="color: var(--ec2)">
+          <rect x="40" y="30" width="180" height="38" rx="8" fill="var(--ec2)"/>
+          <text class="card-label" x="130" y="49">EC2</text>
+          <text class="card-sub" x="130" y="63">virtual machine</text>
+
+          <!-- layer rows (top = app, bottom = hardware) -->
+          <g class="layer-row" data-svc="ec2">
+            <rect class="you-own"  x="40" y="78"  width="180" height="22" rx="3"/>
+            <text x="48" y="93">your code</text>
+            <text class="who" x="212" y="93">you</text>
+
+            <rect class="you-own"  x="40" y="102" width="180" height="22" rx="3"/>
+            <text x="48" y="117">runtime / libs</text>
+            <text class="who" x="212" y="117">you</text>
+
+            <rect class="you-own"  x="40" y="126" width="180" height="22" rx="3"/>
+            <text x="48" y="141">OS + patches</text>
+            <text class="who" x="212" y="141">you</text>
+
+            <rect class="aws-owns" x="40" y="150" width="180" height="22" rx="3"/>
+            <text x="48" y="165">hypervisor</text>
+            <text class="who" x="212" y="165">aws</text>
+
+            <rect class="aws-owns" x="40" y="174" width="180" height="22" rx="3"/>
+            <text x="48" y="189">hardware</text>
+            <text class="who" x="212" y="189">aws</text>
+          </g>
+        </g>
+
+        <!-- Lambda card (right) — only your code is yours -->
+        <g id="card-lambda" class="card" style="color: var(--lambda)">
+          <rect x="320" y="30" width="180" height="38" rx="8" fill="var(--lambda)"/>
+          <text class="card-label" x="410" y="49">Lambda</text>
+          <text class="card-sub" x="410" y="63">function</text>
+
+          <g class="layer-row" data-svc="lambda">
+            <rect class="you-own"  x="320" y="78"  width="180" height="22" rx="3"/>
+            <text x="328" y="93">your code</text>
+            <text class="who" x="492" y="93">you</text>
+
+            <rect class="aws-owns" x="320" y="102" width="180" height="22" rx="3"/>
+            <text x="328" y="117">runtime / libs</text>
+            <text class="who" x="492" y="117">aws</text>
+
+            <rect class="aws-owns" x="320" y="126" width="180" height="22" rx="3"/>
+            <text x="328" y="141">OS + patches</text>
+            <text class="who" x="492" y="141">aws</text>
+
+            <rect class="aws-owns" x="320" y="150" width="180" height="22" rx="3"/>
+            <text x="328" y="165">hypervisor</text>
+            <text class="who" x="492" y="165">aws</text>
+
+            <rect class="aws-owns" x="320" y="174" width="180" height="22" rx="3"/>
+            <text x="328" y="189">hardware</text>
+            <text class="who" x="492" y="189">aws</text>
+          </g>
+        </g>
+
+        <!-- Workload (a small pill that lands on one side) -->
+        <g id="workload" class="workload" style="transform: translate(0px, 0px); opacity: 0">
+          <rect x="225" y="6" width="90" height="20" rx="10" fill="var(--pick)"/>
+          <text x="270" y="20" text-anchor="middle" font="600 11px ui-monospace" fill="#0d1117" id="workload-label">workload</text>
+        </g>
+
+        <!-- Cold-start warning (step 5) -->
+        <text id="cold-warn" class="warn-text" x="410" y="218">▲ cold start: ~100ms–2s</text>
+
+        <!-- Spectrum bar (bottom) -->
+        <g id="spectrum-g">
+          <line class="spectrum" x1="60" y1="280" x2="480" y2="280"/>
+          <circle class="spectrum" cx="60"  cy="280" r="3" fill="var(--muted)"/>
+          <circle class="spectrum" cx="480" cy="280" r="3" fill="var(--muted)"/>
+          <text class="spectrum-tick" x="60"  y="300">EC2 side</text>
+          <text class="spectrum-tick" x="480" y="300">Lambda side</text>
+          <text class="spectrum-tick" x="60"  y="316" fill="var(--ec2)">more control</text>
+          <text class="spectrum-tick" x="480" y="316" fill="var(--lambda)">less ops</text>
+          <circle id="marker" class="spectrum-marker" cx="270" cy="280" r="7"/>
+        </g>
+
+        <text id="caption" class="caption" x="270" y="346"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Detail</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+// Workload lands at one of these x-offsets from its starting position (centered at x=270)
+const WORKLOAD_POS = {
+  none:   { dx: 0,    opacity: 0 },
+  middle: { dx: 0,    opacity: 1 },
+  ec2:    { dx: -140, opacity: 1 },
+  lambda: { dx: 140,  opacity: 1 },
+};
+
+// Spectrum marker position (60 = full EC2, 480 = full Lambda, 270 = middle)
+const MARKER_POS = { ec2: 80, mid: 270, lambda: 460 };
+
+const steps = [
+  {
+    title: "the question",
+    narration: `You have code to run on AWS. The real question isn't <i>where</i> — it's <b>how much of the machine do you want to own?</b> Every layer you keep, you patch, scale, and pay for when idle.`,
+    code: [
+      '<span class="c">// Two ways to run the same function on AWS:</span>',
+      '',
+      '<span class="c">// 1. EC2 — rent a server. You boot it, patch it, scale it.</span>',
+      '<span class="k">const</span> server = launchEC2(<span class="s">"t3.medium"</span>)',
+      'server.install(<span class="s">"node 20"</span>)',
+      'server.run(<span class="s">"app.js"</span>)   <span class="c">// runs 24/7, you pay 24/7</span>',
+      '',
+      '<span class="c">// 2. Lambda — hand AWS a function. They do everything else.</span>',
+      'deployLambda({ handler: myFunction })',
+      '<span class="c">// runs only when invoked, you pay per ms of execution</span>',
+    ],
+    state: { dimEC2: false, dimLambda: false, workload: 'none', marker: 'mid', caption: "the spectrum: control ⇄ ops burden", cold: false }
+  },
+  {
+    title: "EC2 — you own the stack",
+    narration: `<b>EC2</b> gives you a virtual machine. Your code, your runtime, your OS — all yours to choose, install, and <i>maintain</i>. AWS only owns the hypervisor and hardware below.`,
+    code: [
+      '<span class="c">// EC2: a Linux box you ssh into.</span>',
+      '$ ssh ec2-user@<span class="n">54.210.18.4</span>',
+      '$ sudo yum update -y         <span class="c"># you patch the OS</span>',
+      '$ sudo systemctl restart app <span class="c"># you manage the process</span>',
+      '',
+      '<span class="c">// pricing: per second the instance is running,</span>',
+      '<span class="c">// whether it serves 0 requests or 10,000.</span>',
+      '',
+      '<span class="c">// scaling: you (or an ASG) launch more instances.</span>',
+    ],
+    state: { dimEC2: false, dimLambda: true, workload: 'ec2', marker: 'ec2', caption: "you own everything above the hypervisor", cold: false }
+  },
+  {
+    title: "Lambda — you own one function",
+    narration: `<b>Lambda</b> inverts it. You hand AWS a function; they own <i>everything</i> else — the runtime, the OS, the scaling, the idle time. You pay per invocation, billed in milliseconds.`,
+    code: [
+      '<span class="c">// Lambda: just the function.</span>',
+      '<span class="k">export const</span> handler = <span class="k">async</span> (event) =&gt; {',
+      '  <span class="k">const</span> user = <span class="k">await</span> getUser(event.id)',
+      '  <span class="k">return</span> { statusCode: <span class="n">200</span>, body: JSON.stringify(user) }',
+      '}',
+      '',
+      '<span class="c">// no OS, no server, no idle cost.</span>',
+      '<span class="c">// AWS spawns containers as load arrives, freezes them when it leaves.</span>',
+      '<span class="c">// scaling is automatic — concurrency, not instances.</span>',
+    ],
+    state: { dimEC2: true, dimLambda: false, workload: 'lambda', marker: 'lambda', caption: "you own the function — AWS owns the rest", cold: false }
+  },
+  {
+    title: "the spectrum",
+    narration: `Same axis, different points. EC2 lives at <b>max control / max ops</b>. Lambda lives at <b>min control / min ops</b>. Between them sit Fargate, ECS, Beanstalk — but the trade-off is always the same one.`,
+    code: [
+      '<span class="c">// the AWS compute spectrum (rough):</span>',
+      '',
+      '  EC2          → bare VM, you own OS+up',
+      '  ECS on EC2   → containers on your VMs',
+      '  Fargate      → containers, no VMs',
+      '  App Runner   → containers, no infra at all',
+      '  Lambda       → function, no container shape',
+      '',
+      '<span class="c">// each step right: less control, less ops, more AWS lock-in,</span>',
+      '<span class="c">// more "magic" billing model.</span>',
+    ],
+    state: { dimEC2: false, dimLambda: false, workload: 'middle', marker: 'mid', caption: "every AWS compute service lives on this axis", cold: false }
+  },
+  {
+    title: "Lambda's hidden teeth",
+    narration: `Lambda's <i>simplicity</i> hides three constraints: <b>cold starts</b> (first invocation after idle is slow), a <b>15-minute</b> execution cap, and <b>stateless containers</b> (no in-memory cache survives across invocations). For long jobs or hot loops, EC2 wins.`,
+    code: [
+      '<span class="c">// Lambda limits you can\'t escape:</span>',
+      '',
+      '  max duration:    <span class="n">15 minutes</span>',
+      '  max memory:      <span class="n">10 GB</span>',
+      '  cold start:      <span class="n">~100ms–2s</span> (worse for big runtimes)',
+      '  /tmp scratch:    <span class="n">512 MB</span> (ephemeral)',
+      '  no persistent FS, no listening ports, no background threads',
+      '',
+      '<span class="c">// for: long jobs, GPU work, websockets, in-memory caches</span>',
+      '<span class="c">// → EC2 (or Fargate, ECS) is the right tool.</span>',
+    ],
+    state: { dimEC2: true, dimLambda: false, workload: 'lambda', marker: 'lambda', caption: "Lambda is brilliant — within its limits", cold: true }
+  },
+  {
+    title: "pay for <i>what</i> vs pay for <i>when</i>",
+    narration: `EC2 bills <b>time the box is on</b>, regardless of work done. Lambda bills <b>work done</b>, regardless of time. The crossover is traffic shape: <i>steady</i> workloads favor EC2, <i>spiky</i> or <i>idle-most-of-the-time</i> workloads favor Lambda.`,
+    code: [
+      '<span class="c">// rough mental model (numbers shift, the shape doesn\'t):</span>',
+      '',
+      '  EC2 t3.medium, 24/7  ≈ <span class="n">$30</span> / month  <span class="c">// flat</span>',
+      '',
+      '  Lambda 100ms × <span class="n">1M</span>     ≈ <span class="n">$0.20</span> / month <span class="c">// near-zero</span>',
+      '  Lambda 100ms × <span class="n">1B</span>     ≈ <span class="n">$200</span>  / month <span class="c">// linear</span>',
+      '',
+      '<span class="c">// crossover: ~50–500 req/sec sustained, Lambda starts to lose.</span>',
+      '<span class="c">// below that, Lambda is almost free. Above, EC2 amortizes better.</span>',
+    ],
+    state: { dimEC2: false, dimLambda: false, workload: 'none', marker: 'mid', caption: "traffic shape decides the winner", cold: false }
+  },
+  {
+    title: "the decision",
+    narration: `Don't reach for Lambda because it's modern, or EC2 because it's familiar. Pick by <b>workload shape</b>, <b>execution time</b>, and how much <b>OS/runtime control</b> you actually need. Most real systems use <i>both</i>.`,
+    code: [
+      '<span class="c">// reach for EC2 when:</span>',
+      '<span class="c">//   - steady load (web servers, databases, ML training)</span>',
+      '<span class="c">//   - long jobs (&gt;15 min)</span>',
+      '<span class="c">//   - you need specific OS, kernel modules, GPUs</span>',
+      '<span class="c">//   - in-memory state matters (caches, sessions)</span>',
+      '',
+      '<span class="c">// reach for Lambda when:</span>',
+      '<span class="c">//   - event-driven (S3 uploads, SQS, API Gateway, cron)</span>',
+      '<span class="c">//   - spiky or unpredictable traffic</span>',
+      '<span class="c">//   - glue code between services</span>',
+      '<span class="c">//   - you don\'t want to think about scaling</span>',
+    ],
+    state: { dimEC2: false, dimLambda: false, workload: 'none', marker: 'mid', caption: "match the shape of the work, not the trend", cold: false }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  $('card-ec2').classList.toggle('dim', s.state.dimEC2);
+  $('card-lambda').classList.toggle('dim', s.state.dimLambda);
+  $('card-ec2').classList.toggle('glow', !s.state.dimEC2 && s.state.workload === 'ec2');
+  $('card-lambda').classList.toggle('glow', !s.state.dimLambda && s.state.workload === 'lambda');
+
+  // Workload pill: position + visibility
+  const pos = WORKLOAD_POS[s.state.workload] || WORKLOAD_POS.none;
+  const wl = $('workload');
+  wl.style.transform = `translate(${pos.dx}px, 0px)`;
+  wl.style.opacity = pos.opacity;
+  $('workload-label').textContent =
+    s.state.workload === 'ec2'    ? 'workload' :
+    s.state.workload === 'lambda' ? 'function' :
+    s.state.workload === 'middle' ? 'your code' : '';
+
+  // Spectrum marker
+  $('marker').setAttribute('cx', MARKER_POS[s.state.marker]);
+
+  // Cold-start warning
+  $('cold-warn').classList.toggle('on', !!s.state.cold);
+
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

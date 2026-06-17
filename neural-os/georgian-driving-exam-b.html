@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-11">
+<head>
+<meta charset="utf-8">
+<title>Georgian Driving Exam B — Representations</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<link rel="stylesheet" href="tools/explain-viz/explain-forms.css">
+</head>
+<body>
+<script src="tools/explain-viz/explain-forms.js"></script>
+<script>
+ExplainPack.init({
+  title:    'Georgian Driving Exam B/B1',
+  kicker:   'Licensing · teoria.on.ge bank · 1,032 questions / 31 themes',
+  subtitle: 'the full learning system',
+  created:  '2026-06-11',
+  model:
+    'The exam is not one subject — it is <b>1,032 questions in four memory loads</b>, each cracked by a different encoder: ' +
+    'numbers in a <b>Table</b> (pegs), signs by their <b>Grammar</b>, rules in an <b>Engine</b> (C-L-S-R), facts in a <b>Deck</b> (NEDF + SR). ' +
+    'Drill each to its floor, then book the exam only after <b>27/30 on three straight simulations</b> (official pass: 25/30).',
+
+  forms: [
+    { key: 'diagram', name: 'Diagram', sub: 'see the machine', kind: 'diagram',
+      src: 'georgian-driving-exam-b-diagram.html',
+      why: '<b>See the machine.</b> Bank → sorter → 4 clusters → 4 encoders → drill ladder → exam gate, ' +
+           'climbing Recognize → Synthesize with prediction, generation, and teach-back drills. Best for <b>first contact</b> and review.' },
+
+    { key: 'map', name: 'Theme map', sub: '31 themes · 4 chunks', kind: 'table',
+      why: '<b>The whole bank on one screen, chunked by phase and size.</b> Keystone rows are the four clusters in study order; ' +
+           'theme rows show size and which tool answers them. Click any row for the detail.',
+      table: {
+        cols: ['Theme · size', 'Cluster → tool'],
+        rows: [
+          ['PHASE 1 — NUMERIC · ~46q', 'Peg matrix → <5 s/cell', 'One evening. ~20 distinct values close the whole cluster; every value gets a frozen peg cell so near-neighbor distractors (80 vs 90) can\'t land.', true],
+          ['T17 — Speed limits (20q)', 'NUMERIC → peg cells', 'B: 60 settlement · 90 outside · 110 motorway; towing drops to 80 (trailer) / 50 (vehicle); tractor 40; electric two-wheel & residential zone 20.'],
+          ['T18 — Braking & following gap (18q)', 'NUMERIC → gap grid', 'The 2×2 grid: normal 2/3 s, ice 6/9 s. Relations self-check: ice triples; uninhabited steps up.'],
+          ['T25 — Learner driving (8q)', 'NUMERIC + rules', 'Smallest theme in the bank — instructor requirements plus learner speed rules.'],
+
+          ['PHASE 2 — VISUAL-SIGN · ~280q', 'Glyph grammar → <2 s/sign', 'Signs are read, not memorized: SHAPE → legal force, COLOR → polarity, INNER SYMBOL → referent. One fixation per sign. All 536 figure-dependent questions drillable in the offline figure gym.', true],
+          ['T5 — Prohibition signs (50q)', 'VISUAL-SIGN → red circle', 'Biggest sign theme. Red-bordered circle = forbidden; the bank lives on no-stopping vs no-parking and end-of-restriction cancellers.'],
+          ['T3 — Warning signs (32q)', 'VISUAL-SIGN → red triangle', 'Red-bordered triangle = hazard ahead; repetition/distance plates modify it.'],
+          ['T7 — Information signs (32q)', 'VISUAL-SIGN → blue rectangle', 'Blue rectangle = neutral information / route guidance.'],
+          ['T6 — Mandatory signs (22q)', 'VISUAL-SIGN → blue circle', 'Blue circle = you MUST (direction, minimum speed, lane).'],
+          ['T12 — Special signals (23q)', 'VISUAL-SIGN + rules', 'Blue/red beacons and sirens — who may ignore what, who must give way.'],
+          ['T8 — Service signs (20q)', 'VISUAL-SIGN → blue rectangle', 'Fuel, hospital, parking — recognition only, low trap density.'],
+          ['T9 — Supplementary plates (19q)', 'VISUAL-SIGN → modifier', 'White plates under a sign scope it: distance, direction, vehicle class.'],
+          ['T13 — Hazard lights (19q)', 'VISUAL-SIGN + rules', 'When hazard flashers + warning triangle are mandatory (15 m settlement / 30 m outside).'],
+          ['T4 — Priority signs (18q)', 'VISUAL-SIGN → unique shapes', 'The three shape-outliers whose silhouette alone is law: ◇ main road · ▽ yield · octagon STOP.'],
+          ['T28 — Road markings (16q)', 'VISUAL-SIGN → grammar on asphalt', 'Solid vs broken lines, box markings — same polarity logic as the signs.'],
+
+          ['PHASE 3 — RULE-ENGINE · ~345q', 'Priority lattice C-L-S-R → <8 s/scene', 'Derive, never memorize: Cops silence Lights silence Signs; equal roads fall to the Right-hand rule. Exception edges (tram, left-turn, flashing yellow) are explicit.', true],
+          ['T15 — Manoeuvring (60q)', 'RULE-ENGINE → lattice', 'Starting movement, lane changes, reversing — who yields when trajectories cross.'],
+          ['T10 — Traffic lights (54q)', 'RULE-ENGINE → lattice level L', 'Signal phases, arrow sections, flashing yellow = delegate down to signs.'],
+          ['T16 — Overtaking (54q)', 'RULE-ENGINE → lattice', 'Where overtaking is banned (100 m before crossings, humps, bends) and oncoming-priority rules.'],
+          ['T20 — Intersections (46q)', 'RULE-ENGINE → full C-L-S-R', 'The core derivation theme — every diagram question runs the checklist.'],
+          ['T19 — Stopping & parking (44q)', 'RULE-ENGINE + distances', 'The 5 m / 15 m / 50 m hooks slot into scenario rules.'],
+          ['T11 — Regulator signals (38q)', 'RULE-ENGINE → lattice level C', 'The controller\'s three poses × four audiences — overrides everything below.'],
+          ['T21 — Railway crossings (22q)', 'RULE-ENGINE + distances', 'Barrier present → behave like red; 5 m from barrier / 10 m from rail / 50 m parking.'],
+          ['T22 — Motorway (16q)', 'RULE-ENGINE + numbers', 'Entry bans (constructive speed ≤40), lane rules for >7 m / >3.5 t.'],
+          ['T23 — Residential zones (11q)', 'RULE-ENGINE + 20 km/h', 'Pedestrian priority everywhere; exit yields to everyone.'],
+
+          ['PHASE 4 — PROPOSITIONAL · ~360q', 'NEDF tables + SR deck (~200 cards)', 'Legal facts with near-miss twins. Every card encodes the wrong answer too — the only-vs-both swap is the bank\'s favorite weapon here.', true],
+          ['T30 — Traffic safety (102q)', 'PROPOSITIONAL → SR deck', 'Biggest theme in the bank: reaction time, alcohol/fatigue, skids, aquaplaning, night driving.'],
+          ['T1 — Duties & ID signs (72q)', 'PROPOSITIONAL → duty tables', 'Documents to carry, accident-scene obligations, pedestrian/passenger duties.'],
+          ['T29 — First aid (43q)', 'PROPOSITIONAL → NEDF table', 'CPR 30:2 · ~100/min, tourniquet times, transport positions. 2014 protocol — exam grades by the bank, not modern guidance.'],
+          ['T31 — Administrative law (43q)', 'PROPOSITIONAL → penalty tables', 'Fines, suspension vs deprivation vs termination (the permit triad). Most-amended area since 2014.'],
+          ['T14 — Lights & horn (39q)', 'PROPOSITIONAL → condition table', 'Which lamps when: dipped/main beam, fog, towing, daylight rules.'],
+          ['T27 — Bicycles & mopeds (26q)', 'PROPOSITIONAL → age/equipment rules', 'Minimum ages, where cycling is banned, animal-drawn cart rules.'],
+          ['T26 — People & cargo (24q)', 'PROPOSITIONAL → limit rules', 'Cargo overhang marking, passenger limits, children in front seats.'],
+          ['T24 — Towing (21q)', 'PROPOSITIONAL + numbers', 'Rope 4–6 m, rigid ≤4 m, ≥2 flags, 200×200 mm board, 50 km/h everywhere.'],
+        ],
+        quiz: {
+          prompt: 'Theme 20 (crossing intersections) — which tool answers its questions on exam day?',
+          options: [
+            { label: 'The C-L-S-R derivation checklist', correct: true,  reason: 'Right. Intersection diagrams are scenarios — you derive: Cops? Lights? Signs? then Right-hand rule, with tram/left-turn exceptions. Nothing to recall.' },
+            { label: 'A memorized answer per diagram',    correct: false, reason: 'The live exam redraws diagrams; memorized answers don\'t survive a rotation or an added tram. T20 is the rote-killer theme.' },
+            { label: 'The peg matrix',                    correct: false, reason: 'Pegs hold exact values (speeds, distances). T20 asks for an order of passage, which is derived, not stored.' },
+          ],
+        },
+      } },
+
+    { key: 'pegs', name: 'Peg cells', sub: 'every number, encoded', kind: 'table',
+      why: '<b>Every tested number bound to its frozen peg cell</b> (audio peg = tens, visual peg = units; the Donut is the wheel). ' +
+           'A pegged number is exact — near-neighbor distractors (80 vs 90, 3 s vs 4 s) bounce off. Scenes are proposals: re-anchor any that don\'t stick.',
+      table: {
+        cols: ['Number · where it rules', 'Peg cell → scene'],
+        rows: [
+          ['20 km/h — residential zone · electric two-wheel', 'Shoe × Donut', 'A baby\'s shoe rolls the wheel at walking pace past children playing in a courtyard.'],
+          ['40 km/h — tractors (all roads) · motorway entry bar', 'Door × Donut', 'A tractor\'s wheel jammed in a barn doorframe — and anything that can\'t beat 40 can\'t pass the motorway door.'],
+          ['50 km/h — towing another vehicle, everywhere', 'Hive × Donut', 'The tow-rope is a dripping honey strand; bees swarm both cars.'],
+          ['60 km/h — settlement default', 'Sticks × Donut', 'A bundle of sticks jammed through the wheel at the city-limit sign — the city slows everyone.'],
+          ['70 km/h — BE combinations', 'Heaven × Donut', 'The heavy rig floats up to heaven\'s cloud-gate on its wheel — no faster than 70.'],
+          ['80 km/h — B + light trailer · B1 · C · D1', 'Gate × Donut', 'A gate bar slams across the trailer\'s wheel the moment B tows anything light.'],
+          ['90 km/h — B outside settlements', 'Vine × Donut', 'A vine whips out of the open-country roadside, lassoes the wheel and drags the car along.', true],
+          ['110 km/h — B on the motorway (the max)', 'Sun × Magic Wand + wheel', 'A magic wand of sunlight spins a double-stacked wheel down an empty motorway.', true],
+          ['2 s — normal gap, inhabited', 'Swan', 'A swan glides calmly between your bumper and the car ahead in city traffic.'],
+          ['3 s — normal gap, uninhabited', 'Sideways Heart', 'A sideways heart tumbles down the open highway between the cars.'],
+          ['6 s — ice gap, inhabited', 'Cartoon Bomb', 'A cartoon bomb slides on the ice between the cars, fuse hissing — close the gap and it goes off.'],
+          ['9 s — ice gap, uninhabited', 'Balloon', 'A balloon drifts the whole icy open-road gap — that long. Checksum: ice triples (2→6, 3→9).'],
+          ['3 m — gap to a solid line when stopped', 'Sideways Heart', 'A sideways heart lies on the solid line — park closer and you crush it.'],
+          ['5 m — crossings · intersections · railway barrier · 5-min parking rule', 'Hook', 'One giant hook hangs over every crossing, corner, and barrier — its reach is 5; park inside it and it lifts your car away.', true],
+          ['10 m — from the nearest rail (no barrier)', 'Sun × Donut', 'The rail glows like a sun; your wheel keeps one full sun-roll from it.', true],
+          ['15 m — route-vehicle stop · warning triangle (settlement)', 'Sun × Hook', 'A sun-hot hook at the bus stop and behind your triangle — closer than 15 and it brands the bumper.'],
+          ['30 m — warning triangle (outside)', 'Tree × Donut', 'The triangle leans against a tree a long wheel-roll behind the car.'],
+          ['50 m — parking from a railway crossing', 'Hive × Donut', 'The crossing barrier wears a beehive — park within 50 and the swarm fills your wheels. Same cell as towing-50; the anchor (rails vs rope) disambiguates.'],
+          ['100 m — visibility bar · no overtaking before a crossing', 'Sun × double Donut', 'The sun rolls two stacked wheels over the blind hump — see both or don\'t stop / don\'t overtake.'],
+          ['4–6 m — flexible tow-rope (rigid ≤ 4)', 'Sail → Cartoon Bomb', 'The rope runs from a sail to a bomb: shorter than the sail it collides, longer than the bomb the fuse lights.'],
+        ],
+        quiz: {
+          prompt: 'Ice-covered road, uninhabited area — minimum following gap?',
+          options: [
+            { label: '9 s — the balloon',  correct: true,  reason: 'Right. 2 s base → uninhabited steps to 3 → ice triples to 9. The balloon drifts the whole icy gap.' },
+            { label: '6 s — the bomb',     correct: false, reason: 'The bomb is ice + INHABITED (2×3). You skipped the uninhabited step-up — run both relations.' },
+            { label: '12 s',               correct: false, reason: '12 appears in the bank only inside a distractor ("less than 12"). No real cell holds it.' },
+          ],
+        },
+      } },
+
+    { key: 'traps', name: 'Trap table', sub: 'distractor anatomy', kind: 'table',
+      why: '<b>The bank attacks with a handful of reusable shapes.</b> Train the shape once, and the wrong answers identify themselves everywhere. ' +
+           'Each row: the attack → the defence reflex.',
+      table: {
+        cols: ['Trap shape', 'Defence reflex'],
+        rows: [
+          ['Only-vs-both swap — a two-part rule offered as "only" half', 'Ask: does this statute have two halves? Verify, then pick "both" — never auto-pick it.', 'The bank\'s favorite. Example: driving is forbidden under suspension AND under deprivation/termination — the two "only" options are each half-true. But "both" is also planted as a trap on single-clause rules.', true],
+          ['Near-neighbor number — 80 beside 90, 3 s beside 4 s', 'Replay the peg scene. A pegged number is exact or absent — never "around 80".', 'Q573 offers ranges 20–40 / 40–60 / 40–90 for one sign. Fuzzy recall lands on a decoy by design; the vine (90) either appears or it doesn\'t.', true],
+          ['Vehicle-type substitution — true rule, wrong vehicle', 'Name the row first: WHO is driving (B, BE, B1, tractor, towing)? Then read the limit.', 'The 110 answer is correct for B — and planted on the B-with-trailer question, whose real answer is 80.'],
+          ['"No less than" vs "no more than" wording', 'Read the comparator word LAST, after you know the value — the translation hides the flip there.', 'T18 gap questions live on this flip; the machine-translated English makes it worse. The value is right; the direction is the test.'],
+          ['5-vs-10 railway swap', 'Barrier present → the 5 m hook hangs ON the barrier. No barrier → the 10 m glowing rail.', 'Two different percepts for the bank\'s most-repeated swap — the trap can\'t land if each side has its own image.'],
+          ['2014-vintage first aid', 'Answer with the BANK\'s value (CPR 30:2, ~100/min). Flag it mentally as dated — the exam grades by the bank, the street does not.', 'CPR doctrine, tourniquet rules, and ammonia-for-fainting have all moved since 2014. Two truths, one exam.'],
+          ['Figure-dependent questions (536)', 'The figure IS the question (or the options are pictures). Drill them in the offline figure gym — gyms/driving-exam-b-figure-gym.html — or the live simulator.', 'Every sign theme is 100% figures; T20 intersections 45/46. Measured by embedded-raster detection; the early ~225 count was a flawed heuristic.'],
+          ['Answer-position guessing', 'Don\'t. Key positions are near-uniform across all 1,032 questions.', 'The only working shortcuts are the encoders — that\'s why this system exists.'],
+        ],
+        quiz: {
+          prompt: 'Two options share 90% of their words; a third says "both of the above". The disciplined move?',
+          options: [
+            { label: 'Treat "both" as a hypothesis — check the rule has two halves', correct: true,  reason: 'Right. "Both" wins often because the law writes paired duties — but the bank plants it on single-clause rules precisely because you noticed. Recognize, then verify.' },
+            { label: 'Always pick "both"',                                            correct: false, reason: 'Over-fitting. The pattern tells you where to look, not what to answer.' },
+            { label: 'Patterns are superstition — read everything cold',              correct: false, reason: 'Under 60 s/question, refusing the pattern wastes the time you need for diagram questions.' },
+          ],
+        },
+      } },
+
+    { key: 'graph', name: 'Graph', sub: 'where it sits', kind: 'graph',
+      why: '<b>The system\'s place in the wiki.</b> Nine exam pages (middle/right) wired to the encoder machinery they instantiate (left). ' +
+           'Click a node to trace its connections and open the page in Obsidian.',
+      graph: {
+        viewBox: '0 0 980 540',
+        wikiBase: 'wiki/',
+        nodes: [
+          { id: 'peg',     x: 120, y: 70,  w: 170, label: 'Peg audio×visual matrix', wiki: 'wiki/learning-systems/peg-audio-visual-matrix', gloss: 'The frozen 10×10 number substrate — every exam value rides one of its cells.' },
+          { id: 'glyphp',  x: 120, y: 180, w: 170, label: 'Glyph-grammar pattern',   wiki: 'wiki/programming/glyph-grammar-pattern', gloss: 'Shape-alphabet encoding; road signs are its first physical-world legal domain (candidate instance).' },
+          { id: 'cast',    x: 120, y: 290, w: 170, label: 'CAST',                    wiki: 'wiki/encoders/cast-overview', gloss: 'Graph encoder — the priority lattice is its first statutory rule-engine instance.' },
+          { id: 'nedf',    x: 120, y: 400, w: 170, label: 'NEDF',                    wiki: 'wiki/encoders/nedf-overview', gloss: 'Name–Essence–Distinguisher–Failure cards; powers the first-aid and admin-law exception tables.' },
+          { id: 'sr',      x: 120, y: 490, w: 170, label: 'Spaced repetition',       wiki: 'wiki/learning-systems/spaced-repetition', gloss: 'The scheduling layer under the ~200-card deck.' },
+
+          { id: 'numeric', x: 400, y: 70,  w: 160, label: 'Numeric table',     wiki: 'georgian-driving-exam-b-numeric-table', gloss: 'Every tested value in compressed lookup tables + the near-neighbor trap list.' },
+          { id: 'signs',   x: 400, y: 180, w: 160, label: 'Sign glyph grammar', wiki: 'georgian-driving-exam-b-sign-glyph-grammar', gloss: 'SHAPE→force · COLOR→polarity · INNER→referent; <2 s/sign recognition gym.' },
+          { id: 'lattice', x: 400, y: 290, w: 160, label: 'Priority lattice',  wiki: 'georgian-driving-exam-b-priority-lattice', gloss: 'C-L-S-R override hierarchy with explicit exception edges — derive, never memorize.' },
+          { id: 'firstaid',x: 400, y: 400, w: 160, label: 'First-aid tables',  wiki: 'georgian-driving-exam-b-first-aid-tables', gloss: 'All 43 T29 questions as exception tables, 2014-vs-current flags included.' },
+          { id: 'adminlaw',x: 400, y: 490, w: 160, label: 'Admin-law rules',   wiki: 'georgian-driving-exam-b-admin-law-rules', gloss: 'Penalty / permit-triad / accident-scene decision tables (most-amended area).' },
+
+          { id: 'overview',x: 650, y: 120, w: 160, label: 'Overview (hub)',    wiki: 'georgian-driving-exam-b-overview', gloss: 'Exam format, 31-theme taxonomy, the 4 memory-load clusters, image-gap warning.' },
+          { id: 'protocol',x: 650, y: 250, w: 160, label: 'Learning protocol', wiki: 'georgian-driving-exam-b-learning-protocol', gloss: 'The 4-phase fastest path with METER gates — the answer to "how do I learn this in 2 weeks".' },
+          { id: 'ladder',  x: 650, y: 380, w: 160, label: 'Drill ladder',      wiki: 'georgian-driving-exam-b-drill-ladder', gloss: '8 rungs from peg reflex to the 27/30×3 verdict; every rung has a METER floor.' },
+          { id: 'deck',    x: 650, y: 490, w: 160, label: 'SR deck',           wiki: 'georgian-driving-exam-b-sr-deck', gloss: '~200 distractor-aware cards for the propositional cluster.' },
+
+          { id: 'drillgen',x: 880, y: 120, w: 150, label: 'Drill generator',   wiki: 'wiki/learning-systems/drill-generator', gloss: 'The ladder is its worked instantiation — first finite licensed-exam corpus.' },
+          { id: 'gym',     x: 880, y: 250, w: 150, label: 'Recognition gym',   wiki: 'wiki/problem-solving/recognition-gym-pattern', gloss: 'Sign gym, gesture gym, and the distractor-anatomy gym (candidate instance).' },
+          { id: 'meter',   x: 880, y: 380, w: 150, label: 'METER',             wiki: 'wiki/cross-cutting/meter-overview', gloss: 'The measurement spine: per-theme accuracy, latencies, lapse rates, the verdict gate.' },
+        ],
+        edges: [
+          { a: 'peg',     b: 'numeric',  label: 'cells' },
+          { a: 'glyphp',  b: 'signs',    label: 'instance' },
+          { a: 'cast',    b: 'lattice',  label: 'instance' },
+          { a: 'nedf',    b: 'firstaid' },
+          { a: 'nedf',    b: 'adminlaw' },
+          { a: 'sr',      b: 'deck',     label: 'schedules' },
+          { a: 'numeric', b: 'overview' },
+          { a: 'signs',   b: 'overview' },
+          { a: 'lattice', b: 'overview' },
+          { a: 'firstaid',b: 'overview' },
+          { a: 'adminlaw',b: 'overview' },
+          { a: 'overview',b: 'protocol', label: 'plan' },
+          { a: 'protocol',b: 'ladder',   label: 'gates' },
+          { a: 'ladder',  b: 'deck' },
+          { a: 'drillgen',b: 'ladder',   label: 'generates' },
+          { a: 'gym',     b: 'ladder' },
+          { a: 'gym',     b: 'signs',    dashed: true },
+          { a: 'meter',   b: 'ladder',   label: 'measures' },
+          { a: 'meter',   b: 'protocol', dashed: true },
+        ],
+      } },
+  ],
+
+  heavy: [
+    { name: 'Live exam simulator ↗', sub: 'teoria.on.ge · 30q / 30 min', href: 'https://teoria.on.ge/exam' },
+  ],
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FFUF Cheat Sheet</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    padding: 2rem;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    color: #f8fafc;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .wide { grid-column: span 2; }
+  @media (max-width: 740px) { .wide { grid-column: span 1; } }
+
+  .card {
+    background: #1e2130;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #2d3148;
+  }
+
+  .card-header {
+    padding: 0.6rem 1rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .card-body { padding: 0.75rem 1rem 1rem; }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #2a2f47;
+    gap: 1rem;
+  }
+  .row:last-child { border-bottom: none; }
+
+  .label {
+    color: #94a3b8;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+    max-width: 44%;
+  }
+
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: #111827;
+    white-space: nowrap;
+  }
+
+  .block-code {
+    background: #111827;
+    border-radius: 6px;
+    padding: 0.8rem;
+    margin-top: 0.5rem;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    line-height: 1.85;
+    color: #e2e8f0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .note {
+    border-left: 3px solid #475569;
+    padding: 0.45rem 0.75rem;
+    margin-top: 0.6rem;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    border-radius: 0 4px 4px 0;
+    background: #161b2e;
+  }
+
+  .warn {
+    border-left: 3px solid #f59e0b;
+    padding: 0.45rem 0.75rem;
+    margin-top: 0.6rem;
+    color: #fbbf24;
+    font-size: 0.8rem;
+    border-radius: 0 4px 4px 0;
+    background: #1f1500;
+  }
+
+  .tip {
+    border-left: 3px solid #10b981;
+    padding: 0.45rem 0.75rem;
+    margin-top: 0.6rem;
+    color: #6ee7b7;
+    font-size: 0.8rem;
+    border-radius: 0 4px 4px 0;
+    background: #051a10;
+  }
+
+  /* colors */
+  .orange .card-header { background: #3d2200; color: #fb923c; }
+  .blue   .card-header { background: #1e3a5f; color: #60a5fa; }
+  .green  .card-header { background: #14402a; color: #4ade80; }
+  .purple .card-header { background: #2d1f4e; color: #c084fc; }
+  .red    .card-header { background: #3b1010; color: #f87171; }
+  .teal   .card-header { background: #0f3033; color: #2dd4bf; }
+  .yellow .card-header { background: #3d2e00; color: #fbbf24; }
+  .pink   .card-header { background: #3b1a2e; color: #f472b6; }
+  .slate  .card-header { background: #1e2535; color: #94a3b8; }
+  .cyan   .card-header { background: #082f3a; color: #67e8f9; }
+  .lime   .card-header { background: #1a2e05; color: #a3e635; }
+  .rose   .card-header { background: #3b0a1a; color: #fb7185; }
+
+  .orange code { color: #fdba74; }
+  .blue   code { color: #93c5fd; }
+  .green  code { color: #86efac; }
+  .purple code { color: #d8b4fe; }
+  .red    code { color: #fca5a5; }
+  .teal   code { color: #5eead4; }
+  .yellow code { color: #fcd34d; }
+  .pink   code { color: #f9a8d4; }
+  .slate  code { color: #cbd5e1; }
+  .cyan   code { color: #a5f3fc; }
+  .lime   code { color: #bef264; }
+  .rose   code { color: #fda4af; }
+
+  /* syntax in block-code */
+  .kw   { color: #60a5fa; }   /* flag */
+  .val  { color: #86efac; }   /* value / wordlist */
+  .fuzz { color: #f472b6; font-weight: bold; }  /* FUZZ keyword */
+  .url  { color: #fbbf24; }   /* URL */
+  .cmt  { color: #4b5563; font-style: italic; }
+  .num  { color: #c084fc; }
+  .hdr  { color: #2dd4bf; }
+</style>
+</head>
+<body>
+
+<h1>FFUF Cheat Sheet</h1>
+<p class="subtitle">Fuzz Faster U Fool — Web Fuzzer Quick Reference</p>
+
+<div class="grid">
+
+  <!-- INSTALL -->
+  <div class="card slate">
+    <div class="card-header">⚙️ Install &amp; Run</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># Go install (latest)</span>
+go install github.com/ffuf/ffuf/v2@latest
+
+<span class="cmt"># apt</span>
+sudo apt install ffuf
+
+<span class="cmt"># verify</span>
+ffuf -V
+
+<span class="cmt"># basic syntax</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">/path/to/wordlist.txt</span></div>
+      <div class="note">The <span style="color:#f472b6;font-weight:bold">FUZZ</span> keyword marks the injection point. Custom keyword: <code>-w list.txt:MYWORD</code></div>
+    </div>
+  </div>
+
+  <!-- DIRECTORY FUZZING -->
+  <div class="card blue">
+    <div class="card-header">📁 Directory &amp; File Fuzzing</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># directories</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">~/wordlists/raft-medium-directories.txt</span>
+
+<span class="cmt"># files with extension</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span><span class="fuzz">FUZZ</span><span class="url">.php</span> \
+     <span class="kw">-w</span> <span class="val">~/wordlists/raft-medium-files.txt</span>
+
+<span class="cmt"># multiple extensions at once</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">wordlist.txt</span> \
+     <span class="kw">-e</span> <span class="val">.php,.html,.txt,.bak,.js</span>
+
+<span class="cmt"># recursive</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">wordlist.txt</span> \
+     <span class="kw">-recursion</span> <span class="kw">-recursion-depth</span> <span class="num">3</span></div>
+    </div>
+  </div>
+
+  <!-- VHOST & SUBDOMAIN -->
+  <div class="card green">
+    <div class="card-header">🌐 Subdomain &amp; VHost Fuzzing</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># subdomain (DNS)</span>
+ffuf <span class="kw">-u</span> <span class="url">https://</span><span class="fuzz">FUZZ</span><span class="url">.target.com</span> \
+     <span class="kw">-w</span> <span class="val">~/wordlists/subdomains.txt</span>
+
+<span class="cmt"># virtual host (Host header)</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com</span> \
+     <span class="kw">-H</span> <span class="hdr">"Host: </span><span class="fuzz">FUZZ</span><span class="hdr">.target.com"</span> \
+     <span class="kw">-w</span> <span class="val">~/wordlists/subdomains.txt</span> \
+     <span class="kw">-fs</span> <span class="num">1234</span>   <span class="cmt"># filter default response size</span></div>
+      <div class="note">For VHost: always filter by size (<code>-fs</code>) or words (<code>-fw</code>) to remove the default response.</div>
+    </div>
+  </div>
+
+  <!-- GET PARAM -->
+  <div class="card purple">
+    <div class="card-header">🔎 GET Parameter Fuzzing</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># fuzz parameter name</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/page?</span><span class="fuzz">FUZZ</span><span class="url">=value</span> \
+     <span class="kw">-w</span> <span class="val">~/wordlists/params.txt</span>
+
+<span class="cmt"># fuzz parameter value</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/page?id=</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">~/wordlists/numbers.txt</span>
+
+<span class="cmt"># fuzz both name and value</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/?</span><span class="fuzz">W1</span><span class="url">=</span><span class="fuzz">W2</span> \
+     <span class="kw">-w</span> <span class="val">params.txt</span><span class="kw">:W1</span> \
+     <span class="kw">-w</span> <span class="val">values.txt</span><span class="kw">:W2</span> \
+     <span class="kw">-mode</span> clusterbomb</div>
+    </div>
+  </div>
+
+  <!-- POST FUZZING -->
+  <div class="card orange">
+    <div class="card-header">📤 POST Data Fuzzing</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># POST body fuzz</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/login</span> \
+     <span class="kw">-X</span> POST \
+     <span class="kw">-d</span> <span class="val">"username=admin&amp;password=</span><span class="fuzz">FUZZ</span><span class="val">"</span> \
+     <span class="kw">-H</span> <span class="hdr">"Content-Type: application/x-www-form-urlencoded"</span> \
+     <span class="kw">-w</span> <span class="val">~/wordlists/passwords.txt</span>
+
+<span class="cmt"># JSON POST body</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/api/login</span> \
+     <span class="kw">-X</span> POST \
+     <span class="kw">-d</span> <span class="val">'{"username":"admin","password":"</span><span class="fuzz">FUZZ</span><span class="val">"}'</span> \
+     <span class="kw">-H</span> <span class="hdr">"Content-Type: application/json"</span> \
+     <span class="kw">-w</span> <span class="val">passwords.txt</span>
+
+<span class="cmt"># fuzz POST parameter name</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/form</span> \
+     <span class="kw">-X</span> POST \
+     <span class="kw">-d</span> <span class="val">"</span><span class="fuzz">FUZZ</span><span class="val">=value"</span> \
+     <span class="kw">-w</span> <span class="val">params.txt</span></div>
+    </div>
+  </div>
+
+  <!-- HEADER FUZZING -->
+  <div class="card teal">
+    <div class="card-header">📨 Header Fuzzing</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># fuzz header value</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span> \
+     <span class="kw">-H</span> <span class="hdr">"X-Forwarded-For: </span><span class="fuzz">FUZZ</span><span class="hdr">"</span> \
+     <span class="kw">-w</span> <span class="val">ips.txt</span>
+
+<span class="cmt"># fuzz header name</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span> \
+     <span class="kw">-H</span> <span class="hdr">"</span><span class="fuzz">FUZZ</span><span class="hdr">: ../../../etc/passwd"</span> \
+     <span class="kw">-w</span> <span class="val">headers.txt</span>
+
+<span class="cmt"># Authorization header</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/api/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-H</span> <span class="hdr">"Authorization: Bearer </span><span class="fuzz">TOKEN</span><span class="hdr">"</span> \
+     <span class="kw">-w</span> <span class="val">endpoints.txt</span><span class="kw">:FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">tokens.txt</span><span class="kw">:TOKEN</span>
+
+<span class="cmt"># cookie fuzzing</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/admin</span> \
+     <span class="kw">-b</span> <span class="val">"session=</span><span class="fuzz">FUZZ</span><span class="val">"</span> \
+     <span class="kw">-w</span> <span class="val">tokens.txt</span></div>
+    </div>
+  </div>
+
+  <!-- FILTER & MATCH -->
+  <div class="card red">
+    <div class="card-header">🎯 Matching &amp; Filtering</div>
+    <div class="card-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;">
+        <div>
+          <div style="color:#f87171; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">MATCH (keep these)</div>
+          <div class="row"><span class="label">status code</span><code>-mc 200,301</code></div>
+          <div class="row"><span class="label">response size</span><code>-ms 1234</code></div>
+          <div class="row"><span class="label">word count</span><code>-mw 42</code></div>
+          <div class="row"><span class="label">line count</span><code>-ml 10</code></div>
+          <div class="row"><span class="label">regex</span><code>-mr "admin"</code></div>
+          <div class="row"><span class="label">response time</span><code>-mt 500</code></div>
+        </div>
+        <div>
+          <div style="color:#f87171; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">FILTER (hide these)</div>
+          <div class="row"><span class="label">status code</span><code>-fc 404,403</code></div>
+          <div class="row"><span class="label">response size</span><code>-fs 1234</code></div>
+          <div class="row"><span class="label">word count</span><code>-fw 42</code></div>
+          <div class="row"><span class="label">line count</span><code>-fl 10</code></div>
+          <div class="row"><span class="label">regex</span><code>-fr "Not Found"</code></div>
+          <div class="row"><span class="label">response time</span><code>-ft 500</code></div>
+        </div>
+      </div>
+      <div class="row"><span class="label">auto-calibrate filter</span><code>-ac</code></div>
+      <div class="row"><span class="label">auto-calibrate per host</span><code>-acc</code></div>
+      <div class="note"><code>-ac</code> sends random requests first and auto-detects the baseline response to filter — great for unknown targets.</div>
+    </div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="card yellow">
+    <div class="card-header">💾 Output</div>
+    <div class="card-body">
+      <div class="row"><span class="label">save to file</span><code>-o results.json</code></div>
+      <div class="row"><span class="label">output format</span><code>-of json / csv / html / md / ecsv</code></div>
+      <div class="row"><span class="label">verbose</span><code>-v</code></div>
+      <div class="row"><span class="label">silent (results only)</span><code>-s</code></div>
+      <div class="row"><span class="label">no colors</span><code>-noninteractive</code></div>
+      <div class="row"><span class="label">show full URL</span><code>-v</code></div>
+      <div class="block-code"><span class="cmt"># save HTML report</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">wordlist.txt</span> \
+     <span class="kw">-o</span> <span class="val">report.html</span> \
+     <span class="kw">-of</span> html
+
+<span class="cmt"># pipe to other tools</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">wordlist.txt</span> <span class="kw">-s</span> | tee found.txt</div>
+    </div>
+  </div>
+
+  <!-- PERFORMANCE -->
+  <div class="card cyan">
+    <div class="card-header">⚡ Performance &amp; Rate Limiting</div>
+    <div class="card-body">
+      <div class="row"><span class="label">threads</span><code>-t 50</code></div>
+      <div class="row"><span class="label">req/sec rate limit</span><code>-rate 100</code></div>
+      <div class="row"><span class="label">delay between reqs</span><code>-p 0.1</code></div>
+      <div class="row"><span class="label">random delay range</span><code>-p 0.1-2.0</code></div>
+      <div class="row"><span class="label">request timeout</span><code>-timeout 10</code></div>
+      <div class="row"><span class="label">max errors before stop</span><code>-maxtime 60</code></div>
+      <div class="row"><span class="label">stop on 403/429</span><code>-sf</code></div>
+      <div class="row"><span class="label">stop on all errors</span><code>-se</code></div>
+      <div class="row"><span class="label">follow redirects</span><code>-r</code></div>
+      <div class="row"><span class="label">ignore SSL errors</span><code>-k</code></div>
+      <div class="row"><span class="label">proxy</span><code>-x http://127.0.0.1:8080</code></div>
+      <div class="warn">⚠ Default is 40 threads. Lower with <code>-t 10</code> to avoid detection or crashing the target.</div>
+    </div>
+  </div>
+
+  <!-- MULTI-WORD MODES -->
+  <div class="card pink">
+    <div class="card-header">🎲 Multi-Wordlist Modes</div>
+    <div class="card-body">
+      <div class="row"><span class="label">sniper (default)</span><code>one wordlist, one FUZZ</code></div>
+      <div class="row"><span class="label">pitchfork</span><code>N wordlists in sync (zip)</code></div>
+      <div class="row"><span class="label">clusterbomb</span><code>N wordlists × all combos</code></div>
+      <div class="block-code"><span class="cmt"># pitchfork — user:pass pairs (same index)</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/login</span> \
+     <span class="kw">-X</span> POST \
+     <span class="kw">-d</span> <span class="val">"user=</span><span class="fuzz">W1</span><span class="val">&amp;pass=</span><span class="fuzz">W2</span><span class="val">"</span> \
+     <span class="kw">-w</span> <span class="val">users.txt</span><span class="kw">:W1</span> <span class="kw">-w</span> <span class="val">passes.txt</span><span class="kw">:W2</span> \
+     <span class="kw">-mode</span> pitchfork
+
+<span class="cmt"># clusterbomb — every user × every pass</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/login</span> \
+     <span class="kw">-X</span> POST \
+     <span class="kw">-d</span> <span class="val">"user=</span><span class="fuzz">W1</span><span class="val">&amp;pass=</span><span class="fuzz">W2</span><span class="val">"</span> \
+     <span class="kw">-w</span> <span class="val">users.txt</span><span class="kw">:W1</span> <span class="kw">-w</span> <span class="val">passes.txt</span><span class="kw">:W2</span> \
+     <span class="kw">-mode</span> clusterbomb</div>
+    </div>
+  </div>
+
+  <!-- AUTH -->
+  <div class="card lime">
+    <div class="card-header">🔐 Authentication</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># Basic Auth</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">wordlist.txt</span> \
+     <span class="kw">-H</span> <span class="hdr">"Authorization: Basic YWRtaW46cGFzcw=="</span>
+
+<span class="cmt"># Bearer token</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/api/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">endpoints.txt</span> \
+     <span class="kw">-H</span> <span class="hdr">"Authorization: Bearer &lt;token&gt;"</span>
+
+<span class="cmt"># Cookie-based session</span>
+ffuf <span class="kw">-u</span> <span class="url">https://target.com/admin/</span><span class="fuzz">FUZZ</span> \
+     <span class="kw">-w</span> <span class="val">wordlist.txt</span> \
+     <span class="kw">-b</span> <span class="val">"PHPSESSID=abc123; auth=1"</span>
+
+<span class="cmt"># replay from Burp request file</span>
+ffuf <span class="kw">-request</span> <span class="val">req.txt</span> \
+     <span class="kw">-request-proto</span> https \
+     <span class="kw">-w</span> <span class="val">wordlist.txt</span></div>
+      <div class="note"><code>-request</code> loads a raw HTTP request file — paste from Burp Suite, replace the injection point with <span style="color:#f472b6;font-weight:bold">FUZZ</span>.</div>
+    </div>
+  </div>
+
+  <!-- WORDLISTS -->
+  <div class="card slate">
+    <div class="card-header">📚 Useful Wordlists</div>
+    <div class="card-body">
+      <div class="row"><span class="label">SecLists (all)</span><code>apt install seclists</code></div>
+      <div class="row"><span class="label">dirs (small)</span><code>SecLists/Discovery/Web-Content/common.txt</code></div>
+      <div class="row"><span class="label">dirs (medium)</span><code>raft-medium-directories.txt</code></div>
+      <div class="row"><span class="label">dirs (large)</span><code>directory-list-2.3-medium.txt</code></div>
+      <div class="row"><span class="label">files</span><code>raft-medium-files.txt</code></div>
+      <div class="row"><span class="label">subdomains</span><code>SecLists/Discovery/DNS/subdomains-top1million-5000.txt</code></div>
+      <div class="row"><span class="label">params (GET)</span><code>SecLists/Discovery/Web-Content/burp-parameter-names.txt</code></div>
+      <div class="row"><span class="label">API endpoints</span><code>SecLists/Discovery/Web-Content/api/api-endpoints.txt</code></div>
+      <div class="row"><span class="label">passwords</span><code>SecLists/Passwords/xato-net-10-million-passwords-10000.txt</code></div>
+      <div class="row"><span class="label">usernames</span><code>SecLists/Usernames/top-usernames-shortlist.txt</code></div>
+      <div class="row"><span class="label">LFI payloads</span><code>SecLists/Fuzzing/LFI/LFI-Jhaddix.txt</code></div>
+      <div class="row"><span class="label">XSS payloads</span><code>SecLists/Fuzzing/XSS/XSS-Jhaddix.txt</code></div>
+    </div>
+  </div>
+
+  <!-- COMMON SCENARIOS (wide) -->
+  <div class="card rose wide">
+    <div class="card-header">🧪 Common Attack Scenarios</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># ── LFI (Local File Inclusion) ───────────────────────────────</span>
+ffuf <span class="kw">-u</span> <span class="url">"https://target.com/page?file=</span><span class="fuzz">FUZZ</span><span class="url">"</span> \
+     <span class="kw">-w</span> <span class="val">LFI-Jhaddix.txt</span> \
+     <span class="kw">-mr</span> <span class="val">"root:"</span>   <span class="cmt"># match /etc/passwd content</span>
+
+<span class="cmt"># ── IDOR (Insecure Direct Object Reference) ──────────────────</span>
+ffuf <span class="kw">-u</span> <span class="url">"https://target.com/api/user/</span><span class="fuzz">FUZZ</span><span class="url">/profile"</span> \
+     <span class="kw">-w</span> <span class="val">&lt;(seq 1 1000)</span>   <span class="cmt"># bash process substitution</span> \
+     <span class="kw">-b</span> <span class="val">"session=victim_token"</span> \
+     <span class="kw">-mc</span> <span class="num">200</span>
+
+<span class="cmt"># ── API version fuzzing ───────────────────────────────────────</span>
+ffuf <span class="kw">-u</span> <span class="url">"https://target.com/</span><span class="fuzz">FUZZ</span><span class="url">/users"</span> \
+     <span class="kw">-w</span> <span class="val">&lt;(echo -e "v1\nv2\nv3\napi\napi/v1\napi/v2")</span>
+
+<span class="cmt"># ── Backup file discovery ─────────────────────────────────────</span>
+ffuf <span class="kw">-u</span> <span class="url">"https://target.com/</span><span class="fuzz">FUZZ</span><span class="url">"</span> \
+     <span class="kw">-w</span> <span class="val">wordlist.txt</span> \
+     <span class="kw">-e</span> <span class="val">.bak,.old,.orig,.backup,~,.swp</span> \
+     <span class="kw">-mc</span> <span class="num">200</span>
+
+<span class="cmt"># ── Username enumeration (different response size) ────────────</span>
+ffuf <span class="kw">-u</span> <span class="url">"https://target.com/login"</span> \
+     <span class="kw">-X</span> POST \
+     <span class="kw">-d</span> <span class="val">"username=</span><span class="fuzz">FUZZ</span><span class="val">&amp;password=wrongpass"</span> \
+     <span class="kw">-H</span> <span class="hdr">"Content-Type: application/x-www-form-urlencoded"</span> \
+     <span class="kw">-w</span> <span class="val">usernames.txt</span> \
+     <span class="kw">-fs</span> <span class="num">3271</span>   <span class="cmt"># baseline size for "wrong username" response</span>
+
+<span class="cmt"># ── Through Burp proxy (intercept &amp; analyse) ─────────────────</span>
+ffuf <span class="kw">-u</span> <span class="url">"https://target.com/</span><span class="fuzz">FUZZ</span><span class="url">"</span> \
+     <span class="kw">-w</span> <span class="val">wordlist.txt</span> \
+     <span class="kw">-x</span> <span class="val">http://127.0.0.1:8080</span> \
+     <span class="kw">-k</span></div>
+    </div>
+  </div>
+
+  <!-- ALL FLAGS QUICK REF -->
+  <div class="card blue wide">
+    <div class="card-header">🗂️ Full Flag Reference</div>
+    <div class="card-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 1.5rem;">
+        <div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; margin-bottom:0.4rem; text-transform:uppercase;">Target</div>
+          <div class="row"><span class="label">URL</span><code>-u &lt;url&gt;</code></div>
+          <div class="row"><span class="label">HTTP method</span><code>-X GET/POST/PUT…</code></div>
+          <div class="row"><span class="label">POST data</span><code>-d &lt;data&gt;</code></div>
+          <div class="row"><span class="label">header</span><code>-H "Name: Value"</code></div>
+          <div class="row"><span class="label">cookie</span><code>-b &lt;cookie&gt;</code></div>
+          <div class="row"><span class="label">raw request</span><code>-request &lt;file&gt;</code></div>
+          <div class="row"><span class="label">protocol</span><code>-request-proto https</code></div>
+          <div class="row"><span class="label">follow redirect</span><code>-r</code></div>
+          <div class="row"><span class="label">ignore TLS</span><code>-k</code></div>
+          <div class="row"><span class="label">proxy</span><code>-x &lt;url&gt;</code></div>
+          <div class="row"><span class="label">replay proxy</span><code>-replay-proxy &lt;url&gt;</code></div>
+        </div>
+        <div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; margin-bottom:0.4rem; text-transform:uppercase;">Wordlist</div>
+          <div class="row"><span class="label">wordlist</span><code>-w &lt;file&gt;[:KEYWORD]</code></div>
+          <div class="row"><span class="label">mode</span><code>-mode sniper/pitchfork/clusterbomb</code></div>
+          <div class="row"><span class="label">extensions</span><code>-e .php,.html</code></div>
+          <div class="row"><span class="label">ignore comments</span><code>-ic</code></div>
+          <div class="row"><span class="label">DirSearch compat</span><code>-D</code></div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; margin:0.6rem 0 0.4rem; text-transform:uppercase;">Recursion</div>
+          <div class="row"><span class="label">enable</span><code>-recursion</code></div>
+          <div class="row"><span class="label">depth</span><code>-recursion-depth &lt;n&gt;</code></div>
+          <div class="row"><span class="label">strategy</span><code>-recursion-strategy default/greedy</code></div>
+        </div>
+        <div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; margin-bottom:0.4rem; text-transform:uppercase;">Performance &amp; Output</div>
+          <div class="row"><span class="label">threads</span><code>-t &lt;n&gt;</code></div>
+          <div class="row"><span class="label">rate (req/s)</span><code>-rate &lt;n&gt;</code></div>
+          <div class="row"><span class="label">delay</span><code>-p &lt;sec&gt;</code></div>
+          <div class="row"><span class="label">timeout</span><code>-timeout &lt;sec&gt;</code></div>
+          <div class="row"><span class="label">max time</span><code>-maxtime &lt;sec&gt;</code></div>
+          <div class="row"><span class="label">output file</span><code>-o &lt;file&gt;</code></div>
+          <div class="row"><span class="label">format</span><code>-of json/csv/html/md</code></div>
+          <div class="row"><span class="label">verbose</span><code>-v</code></div>
+          <div class="row"><span class="label">silent</span><code>-s</code></div>
+          <div class="row"><span class="label">colorize</span><code>-c</code></div>
+          <div class="row"><span class="label">stop on 403</span><code>-sf</code></div>
+          <div class="row"><span class="label">stop on errors</span><code>-se</code></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p style="text-align:center; margin-top:2rem; color:#4b5563; font-size:0.75rem;">
+  FFUF v2 · For authorized testing only · Neural OS
+</p>
+
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-05">
+<head>
+<meta charset="utf-8">
+<title>CISSP Quantitative Risk Formulas — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166; --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+    --l1: #7ee787; --l2: #79c0ff; --l3: #f78166; --l4: #ffa657; --l5: #d2a8ff;
+    --right: #7ee787; --wrong: #f85149;
+    --finger: #d2a8ff; --merge: #f78166; --ledger: #7ee787;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .bloom-pill { display: inline-block; padding: 2px 9px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-right: 6px; }
+  .bloom-pill.l1 { background: rgba(126,231,135,0.16); color: var(--l1); }
+  .bloom-pill.l2 { background: rgba(121,192,255,0.16); color: var(--l2); }
+  .bloom-pill.l3 { background: rgba(247,129,102,0.16); color: var(--l3); }
+  .bloom-pill.l4 { background: rgba(255,166,87,0.16); color: var(--l4); }
+  .bloom-pill.l5 { background: rgba(210,168,255,0.18); color: var(--l5); }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .narration .wikilink { color: var(--l5); text-decoration: underline; text-decoration-color: rgba(210,168,255,0.4); cursor: pointer; }
+  .narration .wikilink:after { content: " ↗"; font-size: 10px; opacity: 0.6; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; } .s { color: #a5d6ff; } .t { color: #7ee787; } .n { color: #d2a8ff; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+  .choice { background: var(--bg); color: var(--text); border: 1px solid var(--line); padding: 7px 13px; border-radius: 7px; cursor: pointer; font: inherit; font-size: 13px; transition: all .15s; }
+  .choice:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .choice:disabled { cursor: not-allowed; opacity: 0.7; }
+  .choice.picked.correct { background: rgba(126,231,135,0.15); border-color: var(--right); color: var(--right); }
+  .choice.picked.wrong { background: rgba(248,81,73,0.15); border-color: var(--wrong); color: var(--wrong); }
+  .choice.correct:not(.picked) { border-style: dashed; border-color: var(--right); color: var(--right); }
+  .feedback { font-size: 13px; line-height: 1.55; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; display: none; }
+  .feedback.show { display: block; }
+  .feedback.right { background: rgba(126,231,135,0.10); color: var(--right); border-left: 3px solid var(--right); }
+  .feedback.wrong { background: rgba(248,81,73,0.10); color: var(--wrong); border-left: 3px solid var(--wrong); }
+  .ask { font-size: 13px; color: var(--muted); margin: 6px 0; font-style: italic; }
+  .finger { transition: opacity .35s, filter .35s, transform .35s; transform-origin: center; transform-box: fill-box; }
+  .finger.dim { opacity: 0.32; }
+  .finger.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .finger-body { fill: var(--panel); stroke: var(--finger); stroke-width: 2; }
+  .finger-symbol { font: 800 22px ui-monospace, monospace; text-anchor: middle; fill: var(--finger); }
+  .finger-name { font: 600 11px sans-serif; text-anchor: middle; fill: var(--muted); }
+  .finger-units { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: var(--muted); }
+  .merge-arrow { stroke: var(--merge); stroke-width: 2.5; fill: none; marker-end: url(#mergeArrow); opacity: 0; transition: opacity .4s; }
+  .merge-arrow.active { opacity: 1; animation: dash 0.8s linear infinite; stroke-dasharray: 5 4; }
+  @keyframes dash { to { stroke-dashoffset: -18; } }
+  .merge-label { font: 600 11px ui-monospace, monospace; fill: var(--merge); text-anchor: middle; opacity: 0; transition: opacity .4s; }
+  .merge-label.show { opacity: 1; }
+  .ledger { transition: opacity .4s; }
+  .ledger-rect { fill: rgba(126,231,135,0.10); stroke: var(--ledger); stroke-width: 1.5; }
+  .ledger-text { font: 700 14px ui-monospace, monospace; text-anchor: middle; fill: var(--ledger); }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--l1) 0%, var(--l2) 25%, var(--l3) 50%, var(--l4) 75%, var(--l5) 100%); transition: width .35s ease; width: 0; }
+  button.nav-btn { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button.nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button.nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>CISSP Quantitative Risk — AV·EF·SLE·ARO·ALE <small>— a visual walkthrough</small></h1>
+    <div class="step-count">
+      <span id="pill" class="bloom-pill l1">Recognize</span>
+      Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span>
+    </div>
+  </header>
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <p class="ask" id="ask"></p>
+      <div class="choices" id="choices"></div>
+      <div class="feedback" id="feedback"></div>
+      <svg id="stage" viewBox="0 0 560 380" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="mergeArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--merge)"/>
+          </marker>
+        </defs>
+
+        <!-- 5 finger nodes left to right -->
+        <g id="finger-1" class="finger" style="color: var(--finger)">
+          <rect class="finger-body" x="20" y="100" width="90" height="120" rx="10"/>
+          <text class="finger-name" x="65" y="122">Thumb</text>
+          <text class="finger-symbol" x="65" y="165">AV</text>
+          <text class="finger-name" x="65" y="190">Asset Value</text>
+          <text class="finger-units" x="65" y="208">$</text>
+        </g>
+        <g id="finger-2" class="finger" style="color: var(--finger)">
+          <rect class="finger-body" x="130" y="100" width="90" height="120" rx="10"/>
+          <text class="finger-name" x="175" y="122">Index</text>
+          <text class="finger-symbol" x="175" y="165">EF</text>
+          <text class="finger-name" x="175" y="190">Exposure Factor</text>
+          <text class="finger-units" x="175" y="208">0–1</text>
+        </g>
+        <g id="finger-3" class="finger" style="color: var(--finger)">
+          <rect class="finger-body" x="240" y="100" width="90" height="120" rx="10"/>
+          <text class="finger-name" x="285" y="122">Middle</text>
+          <text class="finger-symbol" x="285" y="165">SLE</text>
+          <text class="finger-name" x="285" y="190">Single Loss</text>
+          <text class="finger-units" x="285" y="208">$</text>
+        </g>
+        <g id="finger-4" class="finger" style="color: var(--finger)">
+          <rect class="finger-body" x="350" y="100" width="90" height="120" rx="10"/>
+          <text class="finger-name" x="395" y="122">Ring</text>
+          <text class="finger-symbol" x="395" y="165">ARO</text>
+          <text class="finger-name" x="395" y="190">Annual Rate</text>
+          <text class="finger-units" x="395" y="208">events/yr</text>
+        </g>
+        <g id="finger-5" class="finger" style="color: var(--finger)">
+          <rect class="finger-body" x="460" y="100" width="90" height="120" rx="10"/>
+          <text class="finger-name" x="505" y="122">Pinky</text>
+          <text class="finger-symbol" x="505" y="165">ALE</text>
+          <text class="finger-name" x="505" y="190">Annual Loss</text>
+          <text class="finger-units" x="505" y="208">$/year</text>
+        </g>
+
+        <!-- merge arrows: thumb+index → middle ; middle+ring → pinky -->
+        <path id="arr-12-3" class="merge-arrow" d="M 65 90 Q 175 50, 285 90"/>
+        <path id="arr-2-3"  class="merge-arrow" d="M 175 90 Q 230 60, 285 90"/>
+        <text id="lbl-mul-1" class="merge-label" x="175" y="48">×</text>
+
+        <path id="arr-34-5" class="merge-arrow" d="M 285 90 Q 395 50, 505 90"/>
+        <path id="arr-4-5"  class="merge-arrow" d="M 395 90 Q 450 60, 505 90"/>
+        <text id="lbl-mul-2" class="merge-label" x="395" y="48">×</text>
+
+        <!-- Ledger box for ALE (the load-bearing output) -->
+        <g id="ledger" class="ledger" style="opacity: 0">
+          <rect class="ledger-rect" x="425" y="240" width="160" height="50" rx="8"/>
+          <text class="ledger-text" x="505" y="265">LEDGER</text>
+          <text class="ledger-text" x="505" y="282" style="font-size: 11px;">budget number</text>
+        </g>
+
+        <!-- Caption -->
+        <text id="caption" class="caption" x="280" y="365"></text>
+      </svg>
+    </section>
+    <section class="panel">
+      <p class="label">Math</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+  <nav>
+    <button class="nav-btn" id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button class="nav-btn" id="next">Next →</button>
+  </nav>
+  <div class="hint">← / → arrow keys to navigate · Apply &amp; Analyze require a choice before Next unlocks</div>
+</div>
+
+<script>
+const ALL_FINGERS = [1,2,3,4,5];
+
+const steps = [
+  {
+    layer: "recognize",
+    title: "five fingers, one chain",
+    narration: `Five symbols, one hand, left to right: <b>AV → EF → SLE → ARO → ALE</b>. Thumb to pinky. Each pair multiplies into the next. The pinky is the only number that lands in the ledger.`,
+    code: [
+      '<span class="c">// the chain (read thumb → pinky):</span>',
+      '<span class="t">AV</span>   asset value           <span class="c">($)</span>',
+      '<span class="t">EF</span>   exposure factor       <span class="c">(0–1, dimensionless)</span>',
+      '<span class="t">SLE</span>  single loss expect.   <span class="c">($) = AV × EF</span>',
+      '<span class="t">ARO</span>  annual rate of occ.   <span class="c">(events/year)</span>',
+      '<span class="t">ALE</span>  annual loss expect.   <span class="c">($/year) = SLE × ARO</span>',
+      '',
+      '<span class="c">// ALE is the load-bearing number — the annual budget.</span>',
+    ],
+    f: { glow: [1,2,3,4,5], dim: [], mergeShow: [], ledger: false, hlLines: [], caption: "5 fingers, 5 symbols, 2 multiplications, 1 ledger entry" }
+  },
+  {
+    layer: "understand",
+    title: "first multiplication: SLE = AV × EF",
+    narration: `<b>Thumb (AV) and Index (EF) merge into Middle (SLE).</b> Asset value times the fraction lost when the threat hits. Units: <span class="pill">$</span> × <span class="pill">dimensionless</span> = <span class="pill">$</span>. The dollar units carry through.`,
+    code: [
+      '<span class="k">SLE</span> = <span class="t">AV</span> × <span class="t">EF</span>',
+      '',
+      '<span class="c">// units check:</span>',
+      '<span class="c">// $ × (0–1) = $</span>',
+      '',
+      '<span class="c">// example: laptop theft</span>',
+      '<span class="k">AV</span>   = <span class="n">$2,500</span>      <span class="c">// replacement + setup</span>',
+      '<span class="k">EF</span>   = <span class="n">0.6</span>          <span class="c">// hardware lost, data encrypted</span>',
+      '<span class="k">SLE</span>  = <span class="n">$1,500</span>      <span class="c">// per incident</span>',
+    ],
+    f: { glow: [1,2,3], dim: [4,5], mergeShow: ['arr-12-3','arr-2-3','lbl-mul-1'], ledger: false, hlLines: [0,1,2,3], caption: "thumb + index → middle (one event's expected $ loss)" }
+  },
+  {
+    layer: "understand",
+    title: "second multiplication: ALE = SLE × ARO",
+    narration: `<b>Middle (SLE) and Ring (ARO) merge into Pinky (ALE).</b> Per-event loss times events per year. Units: <span class="pill">$</span> × <span class="pill">events/year</span> = <span class="pill">$/year</span>. <i>Now</i> we have an annual budget number.`,
+    code: [
+      '<span class="k">ALE</span> = <span class="t">SLE</span> × <span class="t">ARO</span>',
+      '',
+      '<span class="c">// units check:</span>',
+      '<span class="c">// $ × events/year = $/year ✓</span>',
+      '',
+      '<span class="c">// laptop theft continued:</span>',
+      '<span class="k">SLE</span> = <span class="n">$1,500</span>',
+      '<span class="k">ARO</span> = <span class="n">4</span>              <span class="c">// 4 thefts per year fleet-wide</span>',
+      '<span class="k">ALE</span> = <span class="n">$6,000</span>/year   <span class="c">// the budget number</span>',
+    ],
+    f: { glow: [3,4,5], dim: [1,2], mergeShow: ['arr-34-5','arr-4-5','lbl-mul-2'], ledger: true, hlLines: [0,1,2,3], caption: "middle + ring → pinky (the annual loss expectancy)" }
+  },
+  {
+    layer: "apply",
+    title: "compute it: phishing scenario",
+    ask: "An admin credential is worth $50,000 if compromised (breach + IR + reputation). EF = 1.0 (full compromise). ARO = 0.25 (one successful phish per 4 years). What is ALE?",
+    choices: [
+      { label: "$50,000/yr",  correct: false, why: "That's the SLE, not ALE. SLE = AV × EF = $50,000 × 1.0 = $50,000 per event. ALE multiplies that by ARO." },
+      { label: "$12,500/yr",  correct: true,  why: "Right. SLE = $50,000 × 1.0 = $50,000. ALE = $50,000 × 0.25 = $12,500/year." },
+      { label: "$200,000/yr", correct: false, why: "That's dividing by ARO instead of multiplying. ARO < 1 means rare, so ALE should be SMALLER than SLE, not larger. ALE = SLE × ARO." },
+      { label: "$0.25/yr",    correct: false, why: "ARO alone isn't the loss — you multiplied without the dollar terms. ALE = SLE × ARO = $50,000 × 0.25." },
+    ],
+    narration: `<span class="pill">apply</span> — Walk the chain by hand. Wrong picks explain <i>why</i> the chain mis-applied.`,
+    code: [
+      '<span class="c">// scenario:</span>',
+      '<span class="k">AV</span>   = <span class="n">$50,000</span>     <span class="c">// admin credential breach impact</span>',
+      '<span class="k">EF</span>   = <span class="n">1.0</span>          <span class="c">// full compromise once creds work</span>',
+      '<span class="k">ARO</span>  = <span class="n">0.25</span>         <span class="c">// 1 in 4 years</span>',
+      '',
+      '<span class="k">SLE</span>  = AV × EF  = ?',
+      '<span class="k">ALE</span>  = SLE × ARO = ?',
+      '',
+      '<span class="c">// what is ALE?</span>',
+    ],
+    f: { glow: [], dim: [1,2,3,4,5], mergeShow: [], ledger: false, hlLines: [], caption: "walk thumb → pinky one merge at a time" }
+  },
+  {
+    layer: "apply",
+    title: "the cost-benefit rule",
+    ask: "Same phishing scenario (ALE = $12,500/yr). You propose MFA on 20 admin accounts at $40/admin/year. With MFA, ARO drops to 0.05. Is the MFA control justified?",
+    choices: [
+      { label: "No — MFA blocks the threat, no need for cost analysis", correct: false, why: "CISSP rule: every control must pass the inequality `annual_cost < ALE_before − ALE_after`. Skipping the math is the failure mode the formulas exist to prevent." },
+      { label: "Yes — annual cost $800 < ALE reduction $10,000",        correct: true,  why: "Right. Annual control cost = 20 × $40 = $800. New ALE = $50,000 × 0.05 = $2,500/yr. ALE reduction = $12,500 − $2,500 = $10,000/yr. Since $800 < $10,000, the control is strongly justified." },
+      { label: "Yes — any MFA spend is justified by compliance",        correct: false, why: "Compliance reasons fold into AV (regulatory fine = part of AV). They don't override the inequality. The inequality IS the rule." },
+      { label: "No — the new ALE is non-zero, residual risk remains",   correct: false, why: "Residual risk after Mitigate is normal — the question is whether the reduction is cost-effective. $10,000/yr reduction for $800/yr cost is a strong yes." },
+    ],
+    narration: `<span class="pill">apply</span> — The chain produces ALE. ALE is the input to the only decision rule: <span class="pill">annual_cost &lt; ΔALE</span>.`,
+    code: [
+      '<span class="c">// decision rule (the only one):</span>',
+      'annual_control_cost  <  (ALE_before − ALE_after)',
+      '',
+      '<span class="c">// MFA proposal:</span>',
+      'annual_cost   = <span class="n">20</span> × <span class="n">$40</span> = <span class="n">$800</span>/yr',
+      'ALE_before    = <span class="n">$12,500</span>/yr',
+      'ALE_after     = <span class="n">$50,000</span> × <span class="n">0.05</span> = <span class="n">$2,500</span>/yr',
+      'ΔALE          = <span class="n">$10,000</span>/yr',
+      '',
+      '<span class="k">$800 &lt; $10,000</span>  ?   <span class="c">// justified?</span>',
+    ],
+    f: { glow: [5], dim: [1,2,3,4], mergeShow: [], ledger: true, hlLines: [1], caption: "ALE is the ONLY budget number that enters the inequality" }
+  },
+  {
+    layer: "analyze",
+    title: "where the chain breaks",
+    ask: "Which of these is the highest-leverage failure mode of the AV·EF·SLE·ARO·ALE chain?",
+    choices: [
+      { label: "Mixing dollars and euros across the chain",                                       correct: false, why: "Real but mechanical — units sanity-check catches it. Not the deepest failure mode." },
+      { label: "ARO is rarely well-measured; teams plug in made-up numbers and trust the output", correct: true,  why: "The deepest. ARO usually has wide error bars. Garbage-in produces a precise-looking $ number that hides its own uncertainty. Sensitivity analysis ('if ARO doubles, is control still justified?') is the counter. Without it, quantitative risk gives false confidence." },
+      { label: "Forgetting to amortise one-time control costs",                                   correct: false, why: "Real and common, but easily caught — divide by useful-life years. A one-line fix. Not the load-bearing failure." },
+      { label: "Using SLE in place of ALE in cost-benefit",                                       correct: false, why: "Yes this happens, but the units mismatch catches it ($ vs $/year). Not the deepest." },
+    ],
+    narration: `<span class="pill">analyze</span> — All four are real failure modes. The question is which one most often <i>hides itself</i>. Pick the one that produces a precise-looking number with hidden uncertainty.`,
+    code: [
+      '<span class="c">// the deepest failure mode:</span>',
+      '<span class="c">// ARO is rarely well-measured.</span>',
+      '<span class="c">// → plug in a guess</span>',
+      '<span class="c">// → chain produces a precise $ output</span>',
+      '<span class="c">// → output looks authoritative</span>',
+      '<span class="c">// → false confidence at board level</span>',
+      '',
+      '<span class="c">// counter: sensitivity analysis</span>',
+      '<span class="c">// "if ARO doubles, is the control still justified?"</span>',
+      '<span class="c">// "if ARO halves?"</span>',
+      '<span class="c">// if answer flips → ARO precision matters → improve estimate</span>',
+    ],
+    f: { glow: [4], dim: [1,2,3,5], mergeShow: [], ledger: false, hlLines: [], caption: "ARO is the chain's softest input — sensitivity-test it" }
+  },
+  {
+    layer: "synthesize",
+    title: "the unlock & where it travels",
+    narration: `<b>The unlock</b>: the chain doesn't stop at ALE — it feeds <span class="wikilink" data-link="cissp-risk-treatment-quadrant">the treatment decision (Mitigate vs Accept)</span> via the cost-benefit inequality. And the chain itself is part of the <span class="wikilink" data-link="cissp-due-care-due-diligence">act-vs-prove meta-pattern</span> in <span class="wikilink" data-link="composability-index">composability-index</span>: computing ALE = the act (Due Care); preserving the assumptions + version history = the prove (Due Diligence). Mnemonic: <span class="pill">5-finger walk</span> (thumb→pinky). Checksum: <b>5 fingers · 5 symbols · 2 multiplications · units cancel to $/year</b>.`,
+    code: [
+      '<span class="c">// MNEMONIC: 5-finger walk (thumb → pinky)</span>',
+      '<span class="t">AV</span> × <span class="t">EF</span> → <span class="t">SLE</span>',
+      '<span class="t">SLE</span> × <span class="t">ARO</span> → <span class="t">ALE</span>',
+      '',
+      '<span class="c">// CHECKSUM</span>',
+      '<span class="c">// 5 fingers, 5 symbols, 2 multiplications</span>',
+      '<span class="c">// units must cancel to $/year</span>',
+      '<span class="c">// direction: thumb → pinky (LEFT to RIGHT)</span>',
+      '',
+      '<span class="c">// FEEDS INTO</span>',
+      '<span class="c">// → risk treatment (Mitigate iff cost &lt; ΔALE)</span>',
+      '<span class="c">// → Due Diligence (preserve computation = prove)</span>',
+    ],
+    f: { glow: [1,2,3,4,5], dim: [], mergeShow: ['arr-12-3','arr-2-3','arr-34-5','arr-4-5','lbl-mul-1','lbl-mul-2'], ledger: true, hlLines: [], caption: "the chain is half the picture — ledger + treatment + Due Diligence complete it" }
+  },
+];
+
+const BLOOM_LABELS = { recognize: "Recognize", understand: "Understand", apply: "Apply", analyze: "Analyze", synthesize: "Synthesize" };
+const BLOOM_PILL   = { recognize: "l1",         understand: "l2",         apply: "l3",   analyze: "l4",   synthesize: "l5" };
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+let answered = new Array(steps.length).fill(false);
+$('total').textContent = steps.length;
+
+function renderChoices(s) {
+  const ch = $('choices'); const fb = $('feedback'); const ask = $('ask');
+  ch.innerHTML = ''; fb.classList.remove('show', 'right', 'wrong'); fb.innerHTML = '';
+  if (!s.choices) { ask.textContent = ''; return; }
+  ask.textContent = s.ask || '';
+  s.choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice' + (answered[idx] && c.correct ? ' correct' : '');
+    btn.textContent = c.label; btn.disabled = answered[idx];
+    btn.addEventListener('click', () => pick(i));
+    ch.appendChild(btn);
+  });
+  if (answered[idx]) {
+    const picked = s._picked; const c = s.choices[picked];
+    fb.classList.add('show', c.correct ? 'right' : 'wrong');
+    fb.innerHTML = `<b>${c.correct ? '✓ ' + c.label : '✗ ' + c.label}</b> — ${c.why}`;
+    Array.from(ch.children).forEach((btn, i) => {
+      if (i === picked) btn.classList.add('picked', s.choices[i].correct ? 'correct' : 'wrong');
+    });
+  }
+}
+function pick(i) {
+  const s = steps[idx]; answered[idx] = true; s._picked = i;
+  renderChoices(s); updateNav();
+}
+function setMergeViz(activeIds) {
+  ['arr-12-3','arr-2-3','arr-34-5','arr-4-5'].forEach(id => $(id).classList.toggle('active', activeIds.includes(id)));
+  ['lbl-mul-1','lbl-mul-2'].forEach(id => $(id).classList.toggle('show', activeIds.includes(id)));
+}
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1; $('title').textContent = s.title;
+  const pill = $('pill'); pill.className = 'bloom-pill ' + BLOOM_PILL[s.layer]; pill.textContent = BLOOM_LABELS[s.layer];
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('code').innerHTML = s.code.map((line, i) => `<span class="ln${(s.f.hlLines||[]).includes(i) ? ' hl' : ''}">${line || '&nbsp;'}</span>`).join('');
+  ALL_FINGERS.forEach(n => {
+    const el = $('finger-' + n);
+    el.classList.toggle('dim', s.f.dim.includes(n));
+    el.classList.toggle('glow', s.f.glow.includes(n));
+  });
+  setMergeViz(s.f.mergeShow || []);
+  $('ledger').style.opacity = s.f.ledger ? 1 : 0;
+  $('caption').textContent = s.f.caption || '';
+  renderChoices(s); updateNav();
+}
+function updateNav() {
+  $('prev').disabled = idx === 0;
+  const s = steps[idx];
+  const gated = (s.layer === 'apply' || s.layer === 'analyze') && s.choices && !answered[idx];
+  $('next').disabled = idx === steps.length - 1 || gated;
+}
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return; idx = n; render();
+}
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); if (!$('next').disabled) go(1); }
+});
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('.wikilink');
+  if (!link) return;
+  window.open('obsidian://open?vault=Neural-OS-Research&file=' + encodeURIComponent(link.dataset.link), '_blank');
+});
+render();
+</script>
+</body>
+</html>

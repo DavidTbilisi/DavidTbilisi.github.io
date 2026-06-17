@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Composite Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --leaf: #7ee787; --comp: #ffa657; --result: #d2a8ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .n-label { font: 700 12px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .n-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.78; }
+  .node { transition: opacity .35s, filter .35s; }
+  .node.glow { filter: drop-shadow(0 0 10px currentColor); }
+  .edge { stroke: var(--muted); stroke-width: 1.5; fill: none; opacity: 0.55; }
+  .result-pill { fill: var(--result); font: 700 12px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .result-pill.on { opacity: 1; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .branch-warn { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .branch-warn.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Composite Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <text class="branch-warn" id="warn" x="260" y="40">if (n instanceof Folder) { for (k of n.kids) walk(k) } else { … }</text>
+
+        <line class="edge" x1="260" y1="106" x2="160" y2="160"/>
+        <line class="edge" x1="260" y1="106" x2="360" y2="160"/>
+        <line class="edge" x1="160" y1="188" x2="100" y2="240"/>
+        <line class="edge" x1="160" y1="188" x2="220" y2="240"/>
+        <line class="edge" x1="360" y1="188" x2="300" y2="240"/>
+        <line class="edge" x1="360" y1="188" x2="420" y2="240"/>
+        <line class="edge" x1="420" y1="268" x2="380" y2="320"/>
+        <line class="edge" x1="420" y1="268" x2="460" y2="320"/>
+
+        <g id="n-root" class="node" style="color: var(--comp)">
+          <rect x="220" y="70" width="80" height="40" rx="6" fill="var(--comp)" opacity="0.9"/>
+          <text class="n-label" x="260" y="90">/</text>
+          <text class="n-sub" x="260" y="104">Folder</text>
+          <text id="r-root" class="result-pill" x="260" y="58">240 KB</text>
+        </g>
+
+        <g id="n-src" class="node" style="color: var(--comp)">
+          <rect x="120" y="160" width="80" height="40" rx="6" fill="var(--comp)" opacity="0.9"/>
+          <text class="n-label" x="160" y="180">src/</text>
+          <text class="n-sub" x="160" y="194">Folder</text>
+          <text id="r-src" class="result-pill" x="160" y="148">80 KB</text>
+        </g>
+
+        <g id="n-docs" class="node" style="color: var(--comp)">
+          <rect x="320" y="160" width="80" height="40" rx="6" fill="var(--comp)" opacity="0.9"/>
+          <text class="n-label" x="360" y="180">docs/</text>
+          <text class="n-sub" x="360" y="194">Folder</text>
+          <text id="r-docs" class="result-pill" x="360" y="148">160 KB</text>
+        </g>
+
+        <g id="n-main" class="node" style="color: var(--leaf)">
+          <rect x="60" y="240" width="80" height="40" rx="6" fill="var(--leaf)" opacity="0.9"/>
+          <text class="n-label" x="100" y="260">main.ts</text>
+          <text class="n-sub" x="100" y="274">File</text>
+          <text id="r-main" class="result-pill" x="100" y="298">30 KB</text>
+        </g>
+
+        <g id="n-utils" class="node" style="color: var(--leaf)">
+          <rect x="180" y="240" width="80" height="40" rx="6" fill="var(--leaf)" opacity="0.9"/>
+          <text class="n-label" x="220" y="260">utils.ts</text>
+          <text class="n-sub" x="220" y="274">File</text>
+          <text id="r-utils" class="result-pill" x="220" y="298">50 KB</text>
+        </g>
+
+        <g id="n-readme" class="node" style="color: var(--leaf)">
+          <rect x="260" y="240" width="80" height="40" rx="6" fill="var(--leaf)" opacity="0.9"/>
+          <text class="n-label" x="300" y="260">readme</text>
+          <text class="n-sub" x="300" y="274">File</text>
+          <text id="r-readme" class="result-pill" x="300" y="298">20 KB</text>
+        </g>
+
+        <g id="n-img" class="node" style="color: var(--comp)">
+          <rect x="380" y="240" width="80" height="40" rx="6" fill="var(--comp)" opacity="0.9"/>
+          <text class="n-label" x="420" y="260">img/</text>
+          <text class="n-sub" x="420" y="274">Folder</text>
+          <text id="r-img" class="result-pill" x="420" y="228">140 KB</text>
+        </g>
+
+        <g id="n-logo" class="node" style="color: var(--leaf)">
+          <rect x="340" y="320" width="80" height="32" rx="6" fill="var(--leaf)" opacity="0.9"/>
+          <text class="n-label" x="380" y="338">logo.png</text>
+        </g>
+        <g id="n-icon" class="node" style="color: var(--leaf)">
+          <rect x="420" y="320" width="80" height="32" rx="6" fill="var(--leaf)" opacity="0.9"/>
+          <text class="n-label" x="460" y="338">icon.svg</text>
+        </g>
+
+        <text id="caption" class="caption" x="260" y="356"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL = ['n-root','n-src','n-docs','n-main','n-utils','n-readme','n-img','n-logo','n-icon'];
+const ALL_R = ['r-root','r-src','r-docs','r-main','r-utils','r-readme','r-img'];
+const steps = [
+  {
+    title: "trees made of two kinds of node",
+    narration: `A filesystem has <b>files</b> (size, no children) and <b>folders</b> (no own size, has children). Callers want simple things: "total size?", "list all paths?". With two unrelated types, every caller branches on which kind it just got.`,
+    code: [
+      '<span class="k">function</span> totalSize(node) {',
+      '  <span class="k">if</span> (node <span class="k">instanceof</span> File) <span class="k">return</span> node.bytes',
+      '  <span class="k">if</span> (node <span class="k">instanceof</span> Folder) {',
+      '    <span class="k">let</span> sum = <span class="n">0</span>',
+      '    <span class="k">for</span> (<span class="k">const</span> k <span class="k">of</span> node.children) sum += totalSize(k)',
+      '    <span class="k">return</span> sum',
+      '  }',
+      '}',
+      '<span class="c">// every caller writes this branch. add Symlink → patch every caller.</span>',
+    ],
+    state: { glow: [], results: [], warn: true, caption: "callers carry the type distinction everywhere" }
+  },
+  {
+    title: "one interface for both",
+    narration: `<b>Composite</b> says: give Leaf and Composite the <i>same interface</i>. The caller doesn't ask "are you a folder?" — it just calls the method. Each kind implements it for itself.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">FsNode</span> {',
+      '  size():     <span class="t">number</span>',
+      '  listPaths(prefix?: <span class="t">string</span>): <span class="t">string</span>[]',
+      '}',
+      '',
+      '<span class="c">// File and Folder both implement FsNode.</span>',
+      '<span class="c">// caller talks to FsNode and never branches on type.</span>',
+    ],
+    state: { glow: ['n-main','n-utils','n-readme','n-logo','n-icon','n-src','n-docs','n-root','n-img'], results: [], warn: false, caption: "Leaf and Composite agree on one shape" }
+  },
+  {
+    title: "Leaf does the work directly",
+    narration: `A <b>File</b> is a leaf. <span class="pill">size()</span> returns its byte count. <span class="pill">listPaths()</span> returns its own path. No recursion; the work stops here.`,
+    code: [
+      '<span class="k">class</span> <span class="t">File</span> <span class="k">implements</span> <span class="t">FsNode</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> name: <span class="t">string</span>, <span class="k">private</span> bytes: <span class="t">number</span>) {}',
+      '  size() { <span class="k">return</span> <span class="k">this</span>.bytes }',
+      '  listPaths(prefix = <span class="s">""</span>) {',
+      '    <span class="k">return</span> [prefix + <span class="k">this</span>.name]',
+      '  }',
+      '}',
+    ],
+    state: { glow: ['n-main','n-utils','n-readme','n-logo','n-icon'], results: ['r-main','r-utils','r-readme'], warn: false, caption: "Leaf knows its own answer; no children to ask" }
+  },
+  {
+    title: "Composite aggregates from children",
+    narration: `A <b>Folder</b> is a composite. <span class="pill">size()</span> asks each child for <i>their</i> size and sums. <span class="pill">listPaths()</span> concatenates their paths. Folder doesn't care what kind of node each child is — it only knows they're <span class="pill">FsNode</span>.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Folder</span> <span class="k">implements</span> <span class="t">FsNode</span> {',
+      '  <span class="k">private</span> kids: <span class="t">FsNode</span>[] = []',
+      '  <span class="k">constructor</span>(<span class="k">private</span> name: <span class="t">string</span>) {}',
+      '  add(n: <span class="t">FsNode</span>) { <span class="k">this</span>.kids.push(n) }',
+      '',
+      '  size() {',
+      '    <span class="k">return</span> <span class="k">this</span>.kids.reduce((s, k) =&gt; s + k.size(), <span class="n">0</span>)',
+      '  }',
+      '  listPaths(prefix = <span class="s">""</span>) {',
+      '    <span class="k">const</span> here = prefix + <span class="k">this</span>.name + <span class="s">"/"</span>',
+      '    <span class="k">return</span> <span class="k">this</span>.kids.flatMap(k =&gt; k.listPaths(here))',
+      '  }',
+      '}',
+    ],
+    state: { glow: ['n-root','n-src','n-docs','n-img'], results: ['r-src','r-docs','r-img','r-root'], warn: false, caption: "Composite delegates the same call to its children" }
+  },
+  {
+    title: "client treats both uniformly",
+    narration: `One call. The recursion unfolds inside the tree. The client never asks "what kind?" — and a new node type (a <b>Symlink</b> that resolves and forwards) drops in without touching any caller.`,
+    code: [
+      '<span class="k">const</span> root = <span class="k">new</span> Folder(<span class="s">""</span>)',
+      'root.add(srcFolder)        <span class="c">// Composite</span>',
+      'root.add(readmeFile)       <span class="c">// Leaf</span>',
+      'root.add(<span class="k">new</span> Symlink(<span class="s">"shared"</span>, sharedFolder))   <span class="c">// new node type, no caller change</span>',
+      '',
+      'console.log(root.size())            <span class="c">// → 240000</span>',
+      'console.log(root.listPaths())       <span class="c">// → ["/src/main.ts", ...]</span>',
+    ],
+    state: { glow: ALL, results: ALL_R, warn: false, caption: "uniform call shape across leaves, composites, and new kinds" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Composite turns "two kinds of node, branch everywhere" into "one shape, recurse cleanly." Pays off whenever you have <i>part-whole hierarchies</i>: filesystems, HTML/AST trees, scene graphs, org charts, UI widget trees, GUI composites. Costs: the shared interface either narrows to the Leaf's contract (limited) or widens to include child ops like <span class="pill">add()</span> on Leaf (where they're no-ops or errors). Close cousin of <b>[[interpreter-pattern]]</b> (AST <i>is</i> a composite) and <b>[[iterator-pattern]]</b> (the natural way to walk a composite); paired with <b>[[visitor-pattern]]</b> when many operations need to traverse the same composite without bloating each node class.`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - filesystems, ASTs, scene graphs, org charts</span>',
+      '<span class="c">//   - UI widget trees (React/SwiftUI components)</span>',
+      '<span class="c">//   - menu hierarchies, document outlines</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - flat structures with no recursion</span>',
+      '<span class="c">//   - leaf operations are wildly different from composite operations</span>',
+      '<span class="c">//   - the cost of widening Leaf to support add()/remove() outweighs the win</span>',
+    ],
+    state: { glow: ALL, results: [], warn: false, caption: "use it when part and whole deserve the same calling shape" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL.forEach(id => $(id).classList.toggle('glow', s.state.glow.includes(id)));
+  ALL_R.forEach(id => $(id).classList.toggle('on', s.state.results.includes(id)));
+  $('warn').classList.toggle('on', s.state.warn);
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git — ქართული სახელმძღვანელო</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    padding: 2rem;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    color: #f8fafc;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: #1e2130;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #2d3148;
+  }
+
+  .card-header {
+    padding: 0.6rem 1rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-body { padding: 0.75rem 1rem 1rem; }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #2a2f47;
+    gap: 1rem;
+  }
+  .row:last-child { border-bottom: none; }
+
+  .label {
+    color: #94a3b8;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+    max-width: 48%;
+  }
+
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: #111827;
+    white-space: nowrap;
+    color: #e2e8f0;
+  }
+
+  .block-code {
+    background: #111827;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    line-height: 1.8;
+    color: #e2e8f0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .note {
+    background: #1e2130;
+    border-left: 3px solid #475569;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .warn {
+    background: #2c1a00;
+    border-left: 3px solid #f59e0b;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+    color: #fbbf24;
+    font-size: 0.8rem;
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* section colors */
+  .orange .card-header { background: #3d2200; color: #fb923c; }
+  .blue   .card-header { background: #1e3a5f; color: #60a5fa; }
+  .green  .card-header { background: #14402a; color: #4ade80; }
+  .purple .card-header { background: #2d1f4e; color: #c084fc; }
+  .red    .card-header { background: #3b1010; color: #f87171; }
+  .teal   .card-header { background: #0f3033; color: #2dd4bf; }
+  .yellow .card-header { background: #3d2e00; color: #fbbf24; }
+  .pink   .card-header { background: #3b1a2e; color: #f472b6; }
+  .slate  .card-header { background: #1e2535; color: #94a3b8; }
+  .cyan   .card-header { background: #082f3a; color: #67e8f9; }
+  .lime   .card-header { background: #1a2e05; color: #a3e635; }
+  .rose   .card-header { background: #3b0a1a; color: #fb7185; }
+
+  .orange code { color: #fdba74; }
+  .blue   code { color: #93c5fd; }
+  .green  code { color: #86efac; }
+  .purple code { color: #d8b4fe; }
+  .red    code { color: #fca5a5; }
+  .teal   code { color: #5eead4; }
+  .yellow code { color: #fcd34d; }
+  .pink   code { color: #f9a8d4; }
+  .slate  code { color: #cbd5e1; }
+  .cyan   code { color: #a5f3fc; }
+  .lime   code { color: #bef264; }
+  .rose   code { color: #fda4af; }
+
+  .cmd  { color: #60a5fa; }
+  .flag { color: #fbbf24; }
+  .arg  { color: #86efac; }
+  .cmt  { color: #4b5563; font-style: italic; }
+  .sha  { color: #c084fc; }
+</style>
+</head>
+<body>
+
+<h1>Git სახელმძღვანელო</h1>
+<p class="subtitle">სრული სწრაფი მიმოხილვა — ქართულ ენაზე</p>
+
+<div class="grid">
+
+  <!-- SETUP -->
+  <div class="card orange">
+    <div class="card-header">⚙️ კონფიგურაცია</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სახელი</span><code>git config --global user.name "სახელი"</code></div>
+      <div class="row"><span class="label">ელ-ფოსტა</span><code>git config --global user.email "x@x.ge"</code></div>
+      <div class="row"><span class="label">ტექსტ-რედაქტორი</span><code>git config --global core.editor code</code></div>
+      <div class="row"><span class="label">ნაგულ. ტოტი</span><code>git config --global init.defaultBranch main</code></div>
+      <div class="row"><span class="label">კონფიგ. ნახვა</span><code>git config --list</code></div>
+      <div class="row"><span class="label">კონფიგ. ფაილი</span><code>git config --global --edit</code></div>
+      <div class="row"><span class="label">მეტსახელი (alias)</span><code>git config --global alias.st status</code></div>
+      <div class="row"><span class="label">ფერადი გამოსახვა</span><code>git config --global color.ui auto</code></div>
+    </div>
+  </div>
+
+  <!-- INIT & CLONE -->
+  <div class="card blue">
+    <div class="card-header">📁 შექმნა და კლონირება</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ახალი რეპო</span><code>git init</code></div>
+      <div class="row"><span class="label">ახალი + სახელი</span><code>git init my-project</code></div>
+      <div class="row"><span class="label">bare რეპო (სერვერი)</span><code>git init --bare repo.git</code></div>
+      <div class="row"><span class="label">კლონირება</span><code>git clone &lt;url&gt;</code></div>
+      <div class="row"><span class="label">კლონი + სახელი</span><code>git clone &lt;url&gt; my-folder</code></div>
+      <div class="row"><span class="label">კლონი — მხოლოდ ბოლო</span><code>git clone --depth 1 &lt;url&gt;</code></div>
+      <div class="row"><span class="label">კლონი + ტოტი</span><code>git clone -b dev &lt;url&gt;</code></div>
+    </div>
+  </div>
+
+  <!-- SAVE LOOP -->
+  <div class="card green">
+    <div class="card-header">💾 შენახვის ციკლი</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სტატუსი</span><code>git status</code></div>
+      <div class="row"><span class="label">ფაილის სტეიჯინგი</span><code>git add &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">ყველაფრის სტეიჯინგი</span><code>git add .</code></div>
+      <div class="row"><span class="label">ინტ. სტეიჯინგი</span><code>git add -p</code></div>
+      <div class="row"><span class="label">სტეიჯიდან მოხსნა</span><code>git restore --staged &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">კომიტი</span><code>git commit -m "შეტყობინება"</code></div>
+      <div class="row"><span class="label">add + commit ერთად</span><code>git commit -am "შეტყობინება"</code></div>
+      <div class="row"><span class="label">ბოლო კომიტის სწორება</span><code>git commit --amend --no-edit</code></div>
+      <div class="row"><span class="label">სხვაობა (unstaged)</span><code>git diff</code></div>
+      <div class="row"><span class="label">სხვაობა (staged)</span><code>git diff --staged</code></div>
+      <div class="row"><span class="label">ცვლ. გაუქმება</span><code>git restore &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">ფაილის წაშლა</span><code>git rm &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">ფაილის გადარქმ.</span><code>git mv ძველი ახალი</code></div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card teal">
+    <div class="card-header">📜 ისტორიის ნახვა</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ჟურნალი</span><code>git log</code></div>
+      <div class="row"><span class="label">მოკლე ჟურნალი</span><code>git log --oneline</code></div>
+      <div class="row"><span class="label">გრაფით</span><code>git log --oneline --graph --all</code></div>
+      <div class="row"><span class="label">ავტ. მიხედვით</span><code>git log --author="სახელი"</code></div>
+      <div class="row"><span class="label">სიტყვით ძიება</span><code>git log --grep="სიტყვა"</code></div>
+      <div class="row"><span class="label">თარიღის მიხ.</span><code>git log --since="2024-01-01"</code></div>
+      <div class="row"><span class="label">ფაილის ისტ.</span><code>git log -- &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">კომიტის დეტ.</span><code>git show &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">კომიტ. შედ.</span><code>git show --stat &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">ორ კომ. სხვ.</span><code>git diff HEAD~2 HEAD</code></div>
+      <div class="row"><span class="label">ფაილი ნებ. კომ.</span><code>git show &lt;hash&gt;:path/file.txt</code></div>
+    </div>
+  </div>
+
+  <!-- BRANCHING -->
+  <div class="card purple">
+    <div class="card-header">🌿 ტოტები (Branches)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სიის ნახვა</span><code>git branch</code></div>
+      <div class="row"><span class="label">ყველა (+ remote)</span><code>git branch -a</code></div>
+      <div class="row"><span class="label">ახ. ტოტი</span><code>git branch &lt;სახელი&gt;</code></div>
+      <div class="row"><span class="label">ახ. + გადასვლა</span><code>git switch -c &lt;სახელი&gt;</code></div>
+      <div class="row"><span class="label">გადასვლა</span><code>git switch &lt;სახელი&gt;</code></div>
+      <div class="row"><span class="label">წინა ტოტი</span><code>git switch -</code></div>
+      <div class="row"><span class="label">გადარქმევა</span><code>git branch -m ძველი ახალი</code></div>
+      <div class="row"><span class="label">წაშლა (შერწყ.)</span><code>git branch -d &lt;სახელი&gt;</code></div>
+      <div class="row"><span class="label">წაშლა (ძალით)</span><code>git branch -D &lt;სახელი&gt;</code></div>
+      <div class="row"><span class="label">remote ტოტ. წაშ.</span><code>git push origin --delete &lt;სახ.&gt;</code></div>
+      <div class="row"><span class="label">ტოტ. ბოლო კომ.</span><code>git branch -v</code></div>
+    </div>
+  </div>
+
+  <!-- MERGE -->
+  <div class="card yellow">
+    <div class="card-header">🔀 შერწყმა (Merge)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">შერწყმა</span><code>git merge &lt;ტოტი&gt;</code></div>
+      <div class="row"><span class="label">მხოლოდ ff</span><code>git merge --ff-only &lt;ტოტი&gt;</code></div>
+      <div class="row"><span class="label">ყოველ. merge-commit</span><code>git merge --no-ff &lt;ტოტი&gt;</code></div>
+      <div class="row"><span class="label">შეკუმშვით (squash)</span><code>git merge --squash &lt;ტოტი&gt;</code></div>
+      <div class="row"><span class="label">merge-ის გაუქმება</span><code>git merge --abort</code></div>
+      <div class="row"><span class="label">კონფლიქტები</span><code>git status</code></div>
+      <div class="row"><span class="label">კონფ. მონიშვნა</span><code>git add &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">merge დასრულება</span><code>git commit</code></div>
+      <div class="note">კონფლიქტის ნიშნები: &lt;&lt;&lt;&lt;&lt; HEAD / ======= / &gt;&gt;&gt;&gt;&gt; &lt;ტოტი&gt;. ამოშალე ნიშნები, შეინახე სასურველი კოდი.</div>
+    </div>
+  </div>
+
+  <!-- REMOTE -->
+  <div class="card cyan">
+    <div class="card-header">🌐 დისტანციური (Remote)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სიის ნახვა</span><code>git remote -v</code></div>
+      <div class="row"><span class="label">დამატება</span><code>git remote add origin &lt;url&gt;</code></div>
+      <div class="row"><span class="label">URL შეცვლა</span><code>git remote set-url origin &lt;url&gt;</code></div>
+      <div class="row"><span class="label">წაშლა</span><code>git remote remove origin</code></div>
+      <div class="row"><span class="label">მოტანა (fetch)</span><code>git fetch origin</code></div>
+      <div class="row"><span class="label">ყველა fetch</span><code>git fetch --all</code></div>
+      <div class="row"><span class="label">pull (fetch+merge)</span><code>git pull</code></div>
+      <div class="row"><span class="label">pull + rebase</span><code>git pull --rebase</code></div>
+      <div class="row"><span class="label">push</span><code>git push origin &lt;ტოტი&gt;</code></div>
+      <div class="row"><span class="label">push + tracking</span><code>git push -u origin &lt;ტოტი&gt;</code></div>
+      <div class="row"><span class="label">ყველა ტოტი</span><code>git push --all</code></div>
+      <div class="warn">⚠ git push --force — საშიშია. გამოიყენე --force-with-lease.</div>
+    </div>
+  </div>
+
+  <!-- UNDOING -->
+  <div class="card red">
+    <div class="card-header">↩️ გაუქმება (Undo)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ცვლ. გაუქმება</span><code>git restore &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">unstage</span><code>git restore --staged &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">reset --soft</span><code>git reset --soft HEAD~1</code></div>
+      <div class="row"><span class="label">reset --mixed</span><code>git reset HEAD~1</code></div>
+      <div class="row"><span class="label">reset --hard</span><code>git reset --hard HEAD~1</code></div>
+      <div class="row"><span class="label">revert (უსაფრთხო)</span><code>git revert &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">revert — no commit</span><code>git revert -n &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">merge-ის revert</span><code>git revert -m 1 &lt;hash&gt;</code></div>
+      <div class="note">
+        <b>reset</b> — ამოშლის კომიტს ლოკალურად.<br>
+        <b>revert</b> — ქმნის ახალ კომიტს, რომელიც უქმყოფს ცვლილებებს. გამოიყენე push-ის შემდეგ.
+      </div>
+    </div>
+  </div>
+
+  <!-- REBASE & HISTORY -->
+  <div class="card pink">
+    <div class="card-header">✏️ ისტ. გადაწერა (Rebase)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">rebase on main</span><code>git rebase main</code></div>
+      <div class="row"><span class="label">ინტ. rebase</span><code>git rebase -i HEAD~3</code></div>
+      <div class="row"><span class="label">rebase გაუქმება</span><code>git rebase --abort</code></div>
+      <div class="row"><span class="label">კონფლ. შემდ. გაგრ.</span><code>git rebase --continue</code></div>
+      <div class="row"><span class="label">ერთი კომ. გადატ.</span><code>git cherry-pick &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">cherry-pick — no commit</span><code>git cherry-pick -n &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">amend (ბოლო კომ.)</span><code>git commit --amend</code></div>
+      <div class="block-code"><span class="cmt"># ინტ. rebase ოპციები:</span>
+<span class="cmd">pick</span>   <span class="sha">abc1</span>  <span class="arg">კომიტი</span>   <span class="cmt"># დატოვე</span>
+<span class="cmd">reword</span> <span class="sha">abc2</span>  <span class="arg">კომიტი</span>   <span class="cmt"># შეტყ. შეცვლა</span>
+<span class="cmd">squash</span> <span class="sha">abc3</span>  <span class="arg">კომიტი</span>   <span class="cmt"># წინაში ჩართე</span>
+<span class="cmd">fixup</span>  <span class="sha">abc4</span>  <span class="arg">კომიტი</span>   <span class="cmt"># squash, შეტ. გარეშე</span>
+<span class="cmd">drop</span>   <span class="sha">abc5</span>  <span class="arg">კომიტი</span>   <span class="cmt"># წაშალე</span></div>
+      <div class="warn">⚠ rebase-ი ცვლის hash-ებს. არ გამოიყენო push-ის შემდეგ.</div>
+    </div>
+  </div>
+
+  <!-- STASH -->
+  <div class="card lime">
+    <div class="card-header">📦 დროებითი შენახვა (Stash)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">შენახვა</span><code>git stash</code></div>
+      <div class="row"><span class="label">სახელით შენახვა</span><code>git stash push -m "სახელი"</code></div>
+      <div class="row"><span class="label">+ untracked ფაილები</span><code>git stash -u</code></div>
+      <div class="row"><span class="label">სიის ნახვა</span><code>git stash list</code></div>
+      <div class="row"><span class="label">გამოყენება + წაშლა</span><code>git stash pop</code></div>
+      <div class="row"><span class="label">გამოყენება (ინახება)</span><code>git stash apply stash@{0}</code></div>
+      <div class="row"><span class="label">წაშლა</span><code>git stash drop stash@{0}</code></div>
+      <div class="row"><span class="label">ყველა წაშლა</span><code>git stash clear</code></div>
+      <div class="row"><span class="label">stash-ის ნახვა</span><code>git stash show -p stash@{0}</code></div>
+      <div class="row"><span class="label">ახ. ტოტად</span><code>git stash branch &lt;სახ.&gt; stash@{0}</code></div>
+    </div>
+  </div>
+
+  <!-- TAGS -->
+  <div class="card slate">
+    <div class="card-header">🏷️ ტეგები (Tags)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სიის ნახვა</span><code>git tag</code></div>
+      <div class="row"><span class="label">მსუბუქი ტეგი</span><code>git tag v1.0</code></div>
+      <div class="row"><span class="label">ანოტ. ტეგი</span><code>git tag -a v1.0 -m "release"</code></div>
+      <div class="row"><span class="label">კომ. ტეგი</span><code>git tag v1.0 &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">ტეგ. push</span><code>git push origin v1.0</code></div>
+      <div class="row"><span class="label">ყველა ტეგ. push</span><code>git push origin --tags</code></div>
+      <div class="row"><span class="label">ტეგ. წაშლა</span><code>git tag -d v1.0</code></div>
+      <div class="row"><span class="label">remote ტეგ. წაშლა</span><code>git push origin --delete v1.0</code></div>
+      <div class="row"><span class="label">ტეგ. checkout</span><code>git checkout v1.0</code></div>
+    </div>
+  </div>
+
+  <!-- DEBUGGING -->
+  <div class="card rose">
+    <div class="card-header">🔍 გამართვა (Debug)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ავტ. სტრიქ. მიხ.</span><code>git blame &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">blame + სტრიქ.</span><code>git blame -L 10,20 &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">ბინ. ძიება</span><code>git bisect start</code></div>
+      <div class="row"><span class="label">bisect — ცუდი</span><code>git bisect bad</code></div>
+      <div class="row"><span class="label">bisect — კარგი</span><code>git bisect good &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">bisect დასასრული</span><code>git bisect reset</code></div>
+      <div class="row"><span class="label">reflog (ყველა HEAD)</span><code>git reflog</code></div>
+      <div class="row"><span class="label">reflog ტოტი</span><code>git reflog &lt;ტოტი&gt;</code></div>
+      <div class="row"><span class="label">დაკარგ. კომ. აღდ.</span><code>git checkout &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">კოდ. ძიება</span><code>git grep "სიტყვა"</code></div>
+      <div class="row"><span class="label">ობიექ. ამოსლ.</span><code>git gc --prune=now</code></div>
+      <div class="note">reflog ინახავს ყველა HEAD-ის მოძრაობას 30 დღის განმავლობაში — reset --hard-ის შემდეგაც.</div>
+    </div>
+  </div>
+
+  <!-- WORKTREE -->
+  <div class="card blue">
+    <div class="card-header">🌳 Worktree</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ახ. worktree</span><code>git worktree add &lt;dir&gt; &lt;ტოტი&gt;</code></div>
+      <div class="row"><span class="label">სია</span><code>git worktree list</code></div>
+      <div class="row"><span class="label">წაშლა</span><code>git worktree remove &lt;dir&gt;</code></div>
+      <div class="row"><span class="label">გასუფთავება</span><code>git worktree prune</code></div>
+      <div class="note">worktree — ორი ტოტი ერთდროულად, stash-ის გარეშე.</div>
+    </div>
+  </div>
+
+  <!-- GITIGNORE -->
+  <div class="card green">
+    <div class="card-header">🙈 .gitignore</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># ფაილი</span>
+secret.txt
+
+<span class="cmt"># გაფართოება</span>
+*.log
+*.tmp
+
+<span class="cmt"># საქაღალდე</span>
+node_modules/
+dist/
+.env
+
+<span class="cmt"># გამონაკლისი (!) </span>
+!important.log</div>
+      <div class="row"><span class="label">თვალ. მოხსნა</span><code>git rm --cached &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">ignore-ის შემოწ.</span><code>git check-ignore -v &lt;ფაილი&gt;</code></div>
+      <div class="row"><span class="label">global ignore</span><code>git config --global core.excludesfile ~/.gitignore</code></div>
+    </div>
+  </div>
+
+  <!-- FLOW CHEATSHEET -->
+  <div class="card purple">
+    <div class="card-header">🔄 სტანდ. სამუშ. ციკლი</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt"># 1. ახ. ფიჩერი</span>
+<span class="cmd">git switch</span> <span class="flag">-c</span> <span class="arg">feature-login</span>
+
+<span class="cmt"># 2. მუშაობ, ინახავ</span>
+<span class="cmd">git add</span> <span class="flag">.</span>
+<span class="cmd">git commit</span> <span class="flag">-m</span> <span class="arg">"add login form"</span>
+
+<span class="cmt"># 3. main განახლდა — rebase</span>
+<span class="cmd">git fetch</span> origin
+<span class="cmd">git rebase</span> origin/main
+
+<span class="cmt"># 4. push</span>
+<span class="cmd">git push</span> <span class="flag">-u</span> origin feature-login
+
+<span class="cmt"># 5. merge main-ში</span>
+<span class="cmd">git switch</span> main
+<span class="cmd">git merge</span> <span class="flag">--no-ff</span> feature-login
+<span class="cmd">git push</span>
+
+<span class="cmt"># 6. ტოტის წაშლა</span>
+<span class="cmd">git branch</span> <span class="flag">-d</span> feature-login</div>
+    </div>
+  </div>
+
+  <!-- USEFUL ALIASES -->
+  <div class="card teal">
+    <div class="card-header">⚡ სასარგებლო Alias-ები</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmd">git config</span> <span class="flag">--global</span> alias.st  <span class="arg">"status"</span>
+<span class="cmd">git config</span> <span class="flag">--global</span> alias.co  <span class="arg">"switch"</span>
+<span class="cmd">git config</span> <span class="flag">--global</span> alias.br  <span class="arg">"branch"</span>
+<span class="cmd">git config</span> <span class="flag">--global</span> alias.lg  <span class="arg">"log --oneline --graph --all"</span>
+<span class="cmd">git config</span> <span class="flag">--global</span> alias.undo <span class="arg">"reset --soft HEAD~1"</span>
+<span class="cmd">git config</span> <span class="flag">--global</span> alias.wip  <span class="arg">"commit -am 'WIP'"</span>
+<span class="cmd">git config</span> <span class="flag">--global</span> alias.last <span class="arg">"log -1 HEAD --stat"</span></div>
+    </div>
+  </div>
+
+  <!-- HEAD & REFS -->
+  <div class="card yellow">
+    <div class="card-header">🧭 HEAD და მითითებები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">HEAD</span><code>მიმდინარე კომიტი</code></div>
+      <div class="row"><span class="label">ერთი კომ. უკან</span><code>HEAD~1 ან HEAD^</code></div>
+      <div class="row"><span class="label">N კომ. უკან</span><code>HEAD~N</code></div>
+      <div class="row"><span class="label">detached HEAD</span><code>git checkout &lt;hash&gt;</code></div>
+      <div class="row"><span class="label">detach-ის გასვლა</span><code>git switch main</code></div>
+      <div class="row"><span class="label">ტოტ. ბოლო კომ.</span><code>main ან origin/main</code></div>
+      <div class="row"><span class="label">ტეგი</span><code>v1.0</code></div>
+      <div class="row"><span class="label">ORIG_HEAD</span><code>merge/rebase-მდე HEAD</code></div>
+      <div class="row"><span class="label">MERGE_HEAD</span><code>შ/ს ტოტი merge-ისას</code></div>
+      <div class="note">HEAD~ = ქრონოლ. წინამორბ. / HEAD^ = მშობელი (merge-ში განსხვ.)</div>
+    </div>
+  </div>
+
+</div>
+
+<p style="text-align:center; margin-top:2rem; color:#4b5563; font-size:0.75rem;">
+  Git · ქართული სახელმძღვანელო · Neural OS
+</p>
+
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

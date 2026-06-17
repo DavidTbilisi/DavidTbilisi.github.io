@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-10">
+<head>
+<meta charset="utf-8">
+<title>CISSP Domain 1 — Representations</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<link rel="stylesheet" href="tools/explain-viz/explain-forms.css">
+<style>
+  /* topic flavor — professional humanist sans (macOS-native, offline-safe);
+     deliberately different from proof-theory's serif to prove per-topic override */
+  :root { --font-display: "Avenir Next", "Optima", "Gill Sans", -apple-system, sans-serif; }
+  .pack h1 small { font-style: normal; }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-forms.js"></script>
+<script>
+ExplainPack.init({
+  title:    'CISSP Domain 1',
+  kicker:   'Security & Risk Management · the spine',
+  subtitle: 'one domain, several representations',
+  created:  '2026-06-10',
+  model:
+    'Domain 1 is a <b>process</b>, not a technology: for any risk, <b>identify → quantify (ALE) → ' +
+    'classify → treat (ATMA) → document (Due Diligence)</b>. Every other domain inherits its governance and ' +
+    'risk vocabulary. Pick the view that fits what you\'re studying.',
+
+  forms: [
+    { key: 'diagram', name: 'Diagram', sub: 'the spine + anchors', kind: 'diagram',
+      src: 'cissp-domain-1-diagram.html',
+      why: '<b>See the spine.</b> The 8-domain ring, the 4 anchor concepts, and the 2 unlocks — climbing ' +
+           'Recognize → Synthesize with predict-first drills. Best for <b>first contact</b> and exam rehearsal.' },
+
+    { key: 'table', name: 'Confusable Pairs', sub: 'know the distinction', kind: 'table',
+      why: '<b>Drill the look-alikes.</b> CISSP is won and lost on telling near-twins apart. ' +
+           'Best for <b>recall under exam pressure</b> — click a row to lock in the distinction.',
+      table: {
+        cols: ['Term', 'Counterpart — the distinction'],
+        rows: [
+          ['Due care',     'Due diligence',  'Due care = DO the prudent thing (act). Due diligence = INVESTIGATE & document that you did (prove). The D1-wide act-vs-prove pattern (Unlock U2).', true],
+          ['Threat',       'Vulnerability',  'Threat = the actor/event that could harm. Vulnerability = the weakness it exploits. Risk = threat × vulnerability × impact.'],
+          ['Qualitative',  'Quantitative',   'Qualitative = ranked (high/med/low), fast, subjective. Quantitative = dollar figures (SLE, ALE), slow, data-hungry.'],
+          ['RTO',          'RPO',            'RTO = how long until service is restored (downtime tolerance). RPO = how much data loss is acceptable (backup interval).'],
+          ['BCP',          'DRP',            'BCP = keep the whole business operating. DRP = restore IT systems specifically. DRP ⊂ BCP.'],
+          ['Preventive',   'Detective',      'Preventive stops an event before it lands (lock, firewall). Detective identifies it during/after (SIEM, CCTV).'],
+          ['SLE',          'ALE',            'SLE = loss from ONE event (AV × EF). ALE = annualized (SLE × ARO). ALE is what justifies spend.'],
+          ['Avoid',        'Accept',         'Avoid = eliminate the activity entirely. Accept = knowingly retain the risk (within appetite). The two ends of ATMA.'],
+          ['Policy',       'Standard',       'Policy = high-level mandatory intent. Standard = specific mandatory implementation. (Guideline = optional; procedure = step-by-step.)'],
+        ],
+        quiz: {
+          prompt: 'A backup job runs every <b>6 hours</b>. That 6-hour window defines which metric?',
+          options: [
+            { label: 'RTO', correct: false, reason: 'RTO is how long you can be DOWN before restore — a time-to-recover budget, not a backup interval.' },
+            { label: 'RPO', correct: true,  reason: 'Right. RPO = maximum tolerable DATA loss = the gap between backups. A 6-hour backup interval is a 6-hour RPO.' },
+            { label: 'MTD', correct: false, reason: 'MTD (maximum tolerable downtime) is the ceiling RTO must fit under — about downtime, not data loss.' },
+          ],
+        },
+      } },
+
+    { key: 'graph', name: 'Spine Graph', sub: 'how the pieces wire', kind: 'graph',
+      why: '<b>See how D1 reasons.</b> Asset/Threat/Vulnerability → Risk → quantify → treat → control & document. ' +
+           'Best for <b>orientation and review</b>; each node opens its CISSP wiki page.',
+      graph: {
+        viewBox: '0 0 980 520',
+        wikiBase: 'wiki/fun-leisure/',
+        nodes: [
+          { id: 'asset',   x: 110, y: 70,  w: 132, label: 'Asset',                  gloss: 'What you protect — it has a value (AV) feeding the quantitative chain.' },
+          { id: 'threat',  x: 110, y: 165, w: 132, label: 'Threat',                 gloss: 'The actor or event that could cause harm.' },
+          { id: 'vuln',    x: 110, y: 260, w: 132, label: 'Vulnerability',          gloss: 'The weakness a threat exploits.' },
+          { id: 'risk',    x: 320, y: 165, w: 132, label: 'Risk',                   gloss: 'Threat × Vulnerability × Impact — the thing D1 manages.' },
+          { id: 'gov',     x: 320, y: 400, w: 152, label: 'Governance',             gloss: 'Policies, standards, and the 8 mindset rules — the substrate framing every decision.' },
+          { id: 'quant',   x: 545, y: 80,  w: 176, label: 'Quantitative risk',      wiki: 'cissp-quantitative-risk-formulas', gloss: 'SLE = AV × EF;  ALE = SLE × ARO. The dollar figures that justify (or kill) a control.' },
+          { id: 'atma',    x: 545, y: 210, w: 176, label: 'Risk treatment (ATMA)',  wiki: 'cissp-risk-treatment-quadrant', gloss: 'Avoid · Transfer · Mitigate · Accept — chosen by the risk class, not by gut.' },
+          { id: 'cynefin', x: 545, y: 330, w: 176, label: 'Cynefin (Unlock U1)',    wiki: 'wiki/problem-solving/external-problem-solving-frameworks', gloss: 'Sense-making domains; aligns 1-to-1 with ATMA. Mis-classifying Complex as Complicated is the top treatment error.' },
+          { id: 'controls',x: 800, y: 80,  w: 150, label: 'Controls (3×7)',         wiki: 'cissp-control-types-and-functions', gloss: '3 types × 7 functions = 21 cells. The mechanisms that actually treat a risk (mostly Mitigate).' },
+          { id: 'duecare', x: 800, y: 210, w: 160, label: 'Due care / diligence',   wiki: 'cissp-due-care-due-diligence', gloss: 'Act vs prove (Unlock U2). Every D1 decision needs both; "we acted" without a documented trail is the deepest D1 failure.' },
+          { id: 'bcp',     x: 800, y: 330, w: 150, label: 'BCP / DRP',              wiki: 'cissp-bcp-vs-drp-metrics', gloss: 'Continuity: BIA → RTO/RPO → recovery. An untested DR plan is aspiration, not a control.' },
+        ],
+        edges: [
+          { a: 'asset',  b: 'risk' },
+          { a: 'threat', b: 'risk' },
+          { a: 'vuln',   b: 'risk' },
+          { a: 'gov',    b: 'risk',     label: 'frames' },
+          { a: 'risk',   b: 'quant',    label: 'measure' },
+          { a: 'risk',   b: 'atma',     label: 'treat' },
+          { a: 'quant',  b: 'atma',     label: 'ALE informs', dashed: true },
+          { a: 'atma',   b: 'cynefin',  label: 'classify', dashed: true },
+          { a: 'atma',   b: 'controls', label: 'Mitigate via' },
+          { a: 'atma',   b: 'bcp',      label: 'recover' },
+          { a: 'controls', b: 'duecare', label: 'test & prove' },
+          { a: 'duecare', b: 'gov',     label: 'documents', dashed: true },
+        ],
+      } },
+  ],
+
+  heavy: [
+    { name: 'Risk Calculator ↗', sub: 'SLE · ALE · cost-benefit · heavy', href: 'cissp-risk-calc.html' },
+  ],
+});
+</script>
+</body>
+</html>

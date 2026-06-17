@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-10">
+<head>
+<meta charset="utf-8">
+<title>Proof Theory — Diagram (mechanism view)</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  :root {
+    --asm:  #7ee787;   /* assumptions / leaves        */
+    --rule: #79c0ff;   /* inference rules             */
+    --cut:  #f78166;   /* the detour                  */
+    --norm: #d2a8ff;   /* tidy / detour-free proof    */
+    --pay:  #ffa657;   /* what you gain               */
+  }
+  .viz-node.cut circle  { stroke: var(--cut);  stroke-width: 2.5; }
+  .viz-node.norm circle { stroke: var(--norm); stroke-width: 2; }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+  // ──────────────────────────────────────────────────────────────
+  // Diagram: a proof with a DETOUR (left), the SIMPLIFIER that
+  // removes it (middle), the tidy detour-free proof (right), and
+  // what that buys you (far right). Friendly labels — the formal
+  // names (cut-elimination, sub-formula property, ε₀) are revealed
+  // only in the Synthesize narration, per the comprehension ladder.
+  // ──────────────────────────────────────────────────────────────
+  const svg = `
+    <svg viewBox="0 0 880 380">
+      ${Explain.svgDefs()}
+
+      <!-- DETOUR: build A→B, then immediately use it -->
+      ${Explain.glyph('node',  { x: 85,  y: 48,  r: 16, label: '[A]¹', id: 'asm-A',  color: 'var(--asm)' })}
+      ${Explain.glyph('node',  { x: 85,  y: 120, r: 15, label: 'B',    id: 'sub-B',  color: 'var(--rule)' })}
+      ${Explain.glyph('box',   { x: 85,  y: 190, w: 62, h: 30, label: 'A→B', id: 'imp', color: 'var(--rule)' })}
+      ${Explain.glyph('node',  { x: 210, y: 150, r: 16, label: 'A',    id: 'prem-A', color: 'var(--asm)' })}
+      ${Explain.glyph('node',  { x: 140, y: 272, r: 19, label: 'B', sub: 'detour', id: 'cut-B', cls: 'cut', color: 'var(--cut)' })}
+
+      ${Explain.glyph('arrow', { from: [85, 65],  to: [85, 104],  id: 'e-deriv',  label: '⋮' })}
+      ${Explain.glyph('arrow', { from: [85, 136], to: [85, 173],  id: 'e-introI', label: 'build' })}
+      ${Explain.glyph('arrow', { from: [98, 204], to: [127, 254], id: 'e-elimL',  label: 'use' })}
+      ${Explain.glyph('arrow', { from: [197, 162],to: [157, 257], id: 'e-elimR' })}
+
+      <!-- SIMPLIFIER -->
+      ${Explain.glyph('gear',  { x: 400, y: 215, label: 'simplify', sub: 'remove detours', id: 'engine', color: 'var(--accent)' })}
+      ${Explain.glyph('arrow', { from: [162, 274], to: [378, 222], id: 'e-reduce', curve: -0.35, label: 'remove detour' })}
+
+      <!-- TIDY (detour-free) PROOF -->
+      ${Explain.glyph('node',  { x: 560, y: 130, r: 16, label: 'A', id: 'norm-A', color: 'var(--asm)' })}
+      ${Explain.glyph('node',  { x: 560, y: 222, r: 19, label: 'B', sub: 'tidy', id: 'norm-B', cls: 'norm', color: 'var(--norm)' })}
+      ${Explain.glyph('arrow', { from: [560, 147], to: [560, 202], id: 'e-direct', label: '⋮' })}
+      ${Explain.glyph('arrow', { from: [421, 205], to: [543, 134], id: 'e-eng-norm', curve: -0.25, label: 'tidy form' })}
+
+      <!-- WHAT YOU GAIN -->
+      ${Explain.glyph('shield',{ x: 722, y: 120, label: 'on-topic', sub: 'every line', id: 'subf', color: 'var(--norm)' })}
+      ${Explain.glyph('arrow', { from: [582, 214], to: [702, 142], id: 'e-norm-subf' })}
+      ${Explain.glyph('stack', { x: 735, y: 288, w: 168, layers: ['consistency','decidable','witnesses'], label: 'what you gain', id: 'payoff', color: 'var(--pay)' })}
+      ${Explain.glyph('arrow', { from: [722, 152], to: [735, 244], id: 'e-subf-pay' })}
+    </svg>`;
+
+  // ──────────────────────────────────────────────────────────────
+  // Code panel: the same fact as runnable TypeScript (Curry–Howard).
+  // A "build-then-use" detour is the function call (λx.M)(a); the
+  // simplifier is just running it. Referenced lightly until late steps.
+  // ──────────────────────────────────────────────────────────────
+  const code = `<pre>
+<span class="ln"><span class="c">// A proof of "A → B" is just a function from A to B.</span></span>
+<span class="ln"><span class="c">//    A → B    ≡    (a: A) =&gt; B</span></span>
+<span class="ln"><span class="k">type</span> <span class="t">Imp</span>&lt;A, B&gt; = (a: A) =&gt; B;</span>
+<span class="ln"></span>
+<span class="ln"><span class="c">// BUILD an A→B: assume an A, hand back a B.</span></span>
+<span class="ln"><span class="k">const</span> <span class="n">build</span> =</span>
+<span class="ln">  &lt;A, B&gt;(fromA: (a: A) =&gt; B): <span class="t">Imp</span>&lt;A, B&gt; =&gt; fromA;</span>
+<span class="ln"></span>
+<span class="ln"><span class="c">// USE an A→B: feed it a real proof of A, get the B.</span></span>
+<span class="ln"><span class="k">const</span> <span class="n">use</span> =</span>
+<span class="ln">  &lt;A, B&gt;(f: <span class="t">Imp</span>&lt;A, B&gt;, a: A): B =&gt; f(a);</span>
+<span class="ln"></span>
+<span class="ln"><span class="c">// DETOUR: build one, then immediately use it. Round-trip!</span></span>
+<span class="ln"><span class="k">const</span> <span class="n">detour</span> =</span>
+<span class="ln">  &lt;A, B&gt;(fromA: (a: A) =&gt; B, a: A): B =&gt;</span>
+<span class="ln">    <span class="n">use</span>(<span class="n">build</span>(fromA), a);     <span class="c">// (λx. fromA x)(a)</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="c">// SIMPLIFY: the round-trip cancels. Just call fromA directly.</span></span>
+<span class="ln"><span class="k">const</span> <span class="n">tidy</span> =</span>
+<span class="ln">  &lt;A, B&gt;(fromA: (a: A) =&gt; B, a: A): B =&gt;</span>
+<span class="ln">    fromA(a);                <span class="c">// detour-free — same answer, no waste</span></span>
+</pre>`;
+
+  // ============================================================
+  // U — See (CAST): one picture, climbing the comprehension ladder.
+  // Recognize = no jargon → Synthesize = the formal names land.
+  // ============================================================
+  const uSee = [
+    {
+      layer: 'recognize',
+      title: 'A detour you can cut',
+      narration:
+        'Imagine a recipe that says: <i>make a sauce, then throw the sauce away and start the dish over.</i> ' +
+        'That sauce step is a <b>detour</b> — pure wasted effort you can delete without changing the meal. ' +
+        'A proof can carry the very same kind of detour. <b>Proof theory is the study of finding and cutting those detours</b> — treating a proof not as a verdict, but as something you can tidy up.',
+      codeLines: [1, 2],
+      onEnter: (e) => { e.glow('cut-B'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Build it up, then take it apart',
+      narration:
+        'Every step in a proof either <b>builds something up</b> or <b>takes something apart</b>. ' +
+        'A <span class="pill">detour</span> is when you build something up and then <i>immediately</i> take it back apart — like wrapping a gift only to unwrap it on the spot. ' +
+        'The thing you built was never really used. It was a round-trip to nowhere.',
+      codeLines: [5, 6, 9, 10],
+      onEnter: (e) => { e.glow('imp'); e.glow('cut-B'); e.activate('e-introI'); e.activate('e-elimL'); },
+    },
+    {
+      layer: 'understand',
+      title: 'The simplifier removes them',
+      narration:
+        'A good editor deletes the line <i>"as I\'ll now explain,"</i> when the explanation comes right after — the announcement added nothing. ' +
+        'Proof theory has a <b>simplifier</b> that does exactly this: find a detour, remove it, repeat until none are left. ' +
+        'What you end up with is a <span class="pill">tidy proof</span> — same conclusion, no round-trips.',
+      codeLines: [13, 16, 19, 21],
+      onEnter: (e) => { e.glow('engine'); e.activate('e-reduce'); e.activate('e-eng-norm'); },
+    },
+    {
+      layer: 'apply',
+      title: 'Predict what is left',
+      narration:
+        'Here is a detour: we <b>build</b> A→B (assume A, reach B), then <b>immediately use</b> it on a separate proof of A. ' +
+        'Remove the detour — what proof is left?',
+      codeLines: [16, 21],
+      choices: [
+        { label: 'A direct proof of B, with the real A slotted in', correct: true,
+          reason: 'Exactly. The round-trip cancels: wherever we assumed A, we drop in the actual proof of A. What remains is a direct proof of B.' },
+        { label: 'A→B, kept around as a result', correct: false,
+          reason: 'No — we built A→B only to use it on the spot. Once the detour is gone, A→B leaves no trace in the tidy proof.' },
+        { label: 'Nothing — the proof falls apart', correct: false,
+          reason: 'A detour is wasted work, not a mistake. Removing it leaves a shorter — but perfectly valid — proof of B.' },
+      ],
+      onEnter: (e) => { e.glow('cut-B'); e.glow('norm-B'); e.activate('e-reduce'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'When a detour is worth keeping',
+      narration:
+        'Now the twist. A detour has a second life: <b>reuse</b>. Prove one hard lemma, then lean on it in fifty places — each reuse is, technically, a detour. ' +
+        'Proof theory\'s name for this reusable detour is the <span class="pill">cut</span>. ' +
+        'So: you must prove 50 theorems that all rely on one big lemma. Remove every cut, or keep them?',
+      codeLines: [13, 16],
+      choices: [
+        { label: 'Keep the cuts — a cut is shared work', correct: true,
+          reason: 'Right. A cut lets one lemma be proved once and reused. Strip every cut and the lemma gets rebuilt from scratch at all 50 sites — the proof can balloon. Cut = compression.' },
+        { label: 'Remove every cut — tidy is always better', correct: false,
+          reason: 'Detour-free proofs are more transparent (every line is on-topic), but they can be far longer. "Always better" ignores the cost of re-deriving a shared lemma everywhere.' },
+        { label: 'It makes no difference to length', correct: false,
+          reason: 'It can change the length enormously — re-deriving one shared lemma at 50 sites is at least 50× the work, often much worse.' },
+      ],
+      onEnter: (e) => { e.glow('cut-B'); e.glow('imp'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'The names — and the payoff',
+      narration:
+        'Now the formal names land, all pointing at this one picture. The simplifier is <span class="wikilink" data-wiki="logic/cut-elimination-hauptsatz">[[cut-elimination-hauptsatz]]</span> for sequent calculus and <span class="wikilink" data-wiki="logic/normalization-theorem">[[normalization-theorem]]</span> for natural deduction. ' +
+        'A tidy proof has the <span class="pill">sub-formula property</span>: every line is a piece of what it proves — nothing off-topic can sneak in. That single fact buys <b>decidability</b>, <b>consistency</b>, and <b>explicit witnesses</b>. ' +
+        'It even let <span class="wikilink" data-wiki="logic/consistency-of-peano-arithmetic">[[consistency-of-peano-arithmetic|Gentzen]]</span> prove arithmetic consistent — by counting proofs down to a value called ε₀ — where <span class="wikilink" data-wiki="logic/godels-incompleteness">[[godels-incompleteness|Gödel]]</span> showed arithmetic can\'t do it alone. The whole field is <span class="wikilink" data-wiki="logic/gentzens-proof-theory">[[gentzens-proof-theory]]</span>; and since removing a detour <i>is</i> running a program, it\'s also <span class="wikilink" data-wiki="logic/curry-howard-correspondence">[[curry-howard-correspondence]]</span>.',
+      codeLines: [],
+      onEnter: (e) => { e.glow('subf'); e.glow('payoff'); e.glow('norm-B'); },
+    },
+  ];
+
+  // ============================================================
+  // D — Name (NEDF): what it's named for, and what it is NOT.
+  // ============================================================
+  const dName = [
+    {
+      layer: 'understand',
+      title: 'Named for the object it studies',
+      narration:
+        'You name a field by the object it studies. <b>Proof theory</b> studies <span class="pill">proofs themselves</span> — as things you can rewrite and simplify. ' +
+        'Its cousins study different objects: <b>model theory</b> studies <i>truth</i> (does it hold in this structure?), and <b>computability</b> studies <i>what a machine can compute</i>. ' +
+        'Same logic family, three different objects.',
+      codeLines: [1, 3],
+      onEnter: (e) => { e.glow('imp'); e.glow('cut-B'); e.glow('engine'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Spot the misnamed method',
+      narration:
+        'A colleague says: <i>"I checked all rows of the truth table and it came out valid — that\'s proof theory."</i> ' +
+        'Is it?',
+      codeLines: [],
+      choices: [
+        { label: 'No — a truth table is about truth, so it is model theory', correct: true,
+          reason: 'Right. A truth table checks truth in every case; it never builds a proof you can simplify. That is the semantic side — model theory, not proof theory.' },
+        { label: 'Yes — any way to show validity is proof theory', correct: false,
+          reason: 'There are two routes to validity: checking truth (model theory) and building a derivation (proof theory). The truth table is the first; proof theory is the second.' },
+        { label: 'No — it is computability theory', correct: false,
+          reason: 'A truth table is a procedure, but the claim is about truth in all cases — that is model theory, not what-a-machine-can-compute.' },
+      ],
+      onEnter: (e) => { e.glow('cut-B'); },
+    },
+  ];
+
+  // ============================================================
+  // F — Do (SPEAR): the action loop.
+  // ============================================================
+  const fDo = [
+    {
+      layer: 'recognize',
+      title: 'The whole method is a short loop',
+      narration:
+        'The method fits on a sticky note: <b>(1)</b> find a detour, <b>(2)</b> remove it, <b>(3)</b> repeat until none are left. ' +
+        'It always finishes, because each removal makes the proof structurally simpler — there is no way to loop forever.',
+      codeLines: [13, 16, 19, 21],
+      onEnter: (e) => { e.glow('engine'); e.glow('cut-B'); e.glow('norm-B'); e.activate('e-reduce'); },
+    },
+    {
+      layer: 'apply',
+      title: 'What survives the removal',
+      narration:
+        'You spot this detour: we glue proofs of A and B together into <b>A∧B</b>, then immediately pull the <b>A</b> back out. ' +
+        'Remove the detour — what is left?',
+      codeLines: [13, 14, 15],
+      choices: [
+        { label: 'Just the original proof of A', correct: true,
+          reason: 'Right. We built A∧B only to take A back out, so the gluing and the B-half both vanish. The proof of A was sitting there all along.' },
+        { label: 'Both A and B, separately', correct: false,
+          reason: 'We only pulled A out; the B-half was never used after gluing, so it drops away with the detour. Just A survives.' },
+        { label: 'Nothing — removing the glue breaks it', correct: false,
+          reason: 'The glue (∧) was the detour. Removing it breaks nothing; the proof of A underneath stands on its own.' },
+      ],
+      onEnter: (e) => { e.glow('cut-B'); e.glow('norm-A'); },
+    },
+  ];
+
+  // ============================================================
+  // B — Watch (HEART): the failure mode to monitor.
+  // ============================================================
+  const bWatch = [
+    {
+      layer: 'understand',
+      title: 'Build and use must balance',
+      narration:
+        'A connective\'s two rules have to <b>balance</b>: the rule that <i>uses</i> it must never hand back more than the rule that <i>builds</i> it put in. ' +
+        'If a connective is allowed to give out more than it took in, you have made a leak — and through that leak you can derive anything at all.',
+      codeLines: [5, 9],
+      onEnter: (e) => { e.glow('imp'); e.glow('cut-B'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'The leaky connective',
+      narration:
+        'Someone invents a connective. Its <b>build</b> rule only ever needs a proof of <i>A</i> — but its <b>use</b> rule hands back a proof of <i>any</i> <b>B</b> you like. ' +
+        'What goes wrong?',
+      codeLines: [5, 9],
+      choices: [
+        { label: 'From any A you can now reach any B — the system is broken', correct: true,
+          reason: 'Right. The use-rule pays out more than the build-rule took in. Chain A → (this connective) → any B, and every statement becomes provable. Balance is what keeps a logic honest.' },
+        { label: 'Nothing — it is just a new connective', correct: false,
+          reason: 'A connective is legitimate only if its rules balance. This one pays out more than it took in, so it launders any A into any B — the system collapses.' },
+        { label: 'Only the tidiness is lost', correct: false,
+          reason: 'Far worse than untidy: the system can now prove everything, including false things. That is a collapse, not a blemish.' },
+      ],
+      onEnter: (e) => { e.glow('imp'); e.glow('cut-B'); },
+    },
+  ];
+
+  // ============================================================
+  // L — Predict (ORACLE): predict-from-input.
+  // ============================================================
+  const lPredict = [
+    {
+      layer: 'apply',
+      title: 'What a tidy existence proof gives you',
+      narration:
+        'You hold a <b>detour-free</b> proof that <i>"something with property P exists."</i> ' +
+        'Beyond a plain existence proof, what extra can you read off it?',
+      codeLines: [21],
+      choices: [
+        { label: 'An actual example — a specific thing with property P', correct: true,
+          reason: 'Right. With the detours gone, the proof can\'t hide its example behind a lemma — the witness is sitting right there. Detour-free existence proofs are constructive.' },
+        { label: 'Nothing more than "it exists"', correct: false,
+          reason: 'That is what a non-tidy proof gives. Removing detours is exactly what drags the hidden example out into the open.' },
+        { label: 'It stops being true', correct: false,
+          reason: 'Simplifying a proof never changes what it proves — it just makes the example findable.' },
+      ],
+      onEnter: (e) => { e.glow('norm-B'); e.glow('subf'); e.activate('e-norm-subf'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'How far past arithmetic you must reach',
+      narration:
+        'Gentzen proved <b>arithmetic itself is consistent</b> by ranking every proof and showing the simplifier always walks that ranking <i>downward</i> until it stops. ' +
+        'The ranking climbs to a value called <b>ε₀</b> — and it sits just <i>beyond</i> what arithmetic can reach on its own. Why must it be beyond?',
+      codeLines: [],
+      choices: [
+        { label: 'A system can\'t prove its own consistency, so the proof needs a bit more reach', correct: true,
+          reason: 'Right. If ordinary arithmetic sufficed, arithmetic would prove its own consistency — which Gödel showed is impossible. ε₀ is the smallest extra reach that does the job.' },
+        { label: 'Because ε₀ is uncountably large', correct: false,
+          reason: 'ε₀ is small and concrete — you can write its ranking down. Its power isn\'t size; it\'s that it sits just past arithmetic\'s own reach.' },
+        { label: 'Because ordinary induction is already enough', correct: false,
+          reason: 'If ordinary induction sufficed, arithmetic would prove its own consistency — impossible by Gödel. You need one step beyond it.' },
+      ],
+      onEnter: (e) => { e.glow('payoff'); e.glow('engine'); },
+    },
+  ];
+
+  // ============================================================
+  // R — Act (GRACE): the in-the-moment reflex.
+  // ============================================================
+  const rAct = [
+    {
+      layer: 'apply',
+      title: 'The reflex when a proof lands',
+      narration:
+        'Train the reflex: <b>spot</b> the detour → <b>remove</b> it → <b>check</b> the result stays on-topic (every line is a piece of the goal) → <b>read off</b> what it gives you. ' +
+        'Which step do people skip — and regret?',
+      codeLines: [13, 16, 21],
+      choices: [
+        { label: 'Check — they assume it simplified and never confirm it stayed on-topic', correct: true,
+          reason: 'Right. The on-topic check is your proof that the simplification actually worked. Skip it and you can\'t claim the payoff (a decision, or an example).' },
+        { label: 'Spot — detours are always obvious', correct: false,
+          reason: 'Detours hide inside big proofs. Miss one and you stop simplifying too early, never reaching the tidy form.' },
+        { label: 'Read off — the payoff doesn\'t matter', correct: false,
+          reason: 'Reading off the example or the decision is usually the whole reason you simplified. Skipping it throws away what you worked for.' },
+      ],
+      onEnter: (e) => { e.glow('engine'); e.glow('cut-B'); e.glow('subf'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'The reflex, wired to the wiki',
+      narration:
+        'The reflex for any proof: <i>spot the detour → remove it → check it stayed on-topic → read off the payoff.</i> ' +
+        'The mechanism is <span class="wikilink" data-wiki="logic/gentzens-proof-theory">[[gentzens-proof-theory]]</span>; the "every line on-topic" guarantee is the <span class="wikilink" data-wiki="logic/sub-formula-property">[[sub-formula-property]]</span>; and the idea that a connective <i>means</i> exactly what its build/use rules let you do is <span class="wikilink" data-wiki="logic/proof-theoretic-semantics">[[proof-theoretic-semantics]]</span>.',
+      codeLines: [],
+      onEnter: (e) => { e.glow('subf'); e.glow('norm-B'); },
+    },
+  ];
+
+  // ============================================================
+  // BRIDGE: cross-domain analogies (confirmed). Synthesize layer —
+  // the one place dense cross-domain vocabulary is welcome.
+  // ============================================================
+  const bridge = [
+    {
+      layer: 'synthesize',
+      title: 'Simplifying a proof ≈ an optimizing compiler',
+      narration:
+        '<b>Tidying a proof</b> and an <b>optimizing compiler</b> do the same job: rewrite to a clean form by removing redundancy, one step at a time. ' +
+        'A <span class="pill">detour</span> ≈ an inlinable function call; a built-then-discarded value ≈ <b>dead code</b> the compiler deletes; the tidy proof ≈ the optimized output; "every line on-topic" ≈ "no leftover temporary variables." ' +
+        'Even the trap matches: inline too eagerly and the code bloats — exactly the size cost of removing every cut.',
+      codeLines: [16, 21],
+      onEnter: (e) => { e.glow('engine'); e.glow('norm-B'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Simplifying a proof ≈ running a program',
+      narration:
+        'This one is an <b>exact match</b>, not a loose analogy. A <b>proof</b> is a <b>program</b>; a <b>statement</b> is a <b>type</b>; a <b>detour</b> is a piece of code waiting to run; <b>simplifying the proof</b> is <b>running the program</b>; the <b>tidy proof</b> is the <b>final value</b>. ' +
+        'Removing a build-then-use detour is literally evaluating <span class="pill">(λx. f x)(a)</span> down to <span class="pill">f(a)</span>. ' +
+        'Studying how proofs simplify and how programs run are the same mathematics — see <span class="wikilink" data-wiki="logic/curry-howard-correspondence">[[curry-howard-correspondence]]</span>.',
+      codeLines: [13, 14, 15, 16, 21],
+      onEnter: (e) => { e.glow('cut-B'); e.glow('norm-B'); e.activate('e-reduce'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Removing cuts ≈ a database query optimizer',
+      narration:
+        '<b>Removing cuts</b> and a <b>database query optimizer</b> share a move: push every intermediate step down until it is part of the final answer. ' +
+        'A <span class="pill">cut</span> ≈ a saved <b>temp table</b> (a stored lemma); a <b>cut-free proof</b> ≈ a plan with no temp tables, computed in one pass. ' +
+        'And the same warning applies — expand a saved table at every place it is used, and the query can blow up in size.',
+      codeLines: [13, 16],
+      onEnter: (e) => { e.glow('imp'); e.glow('cut-B'); e.glow('subf'); },
+    },
+  ];
+
+  Explain.init({
+    title:    'Proof Theory',
+    subtitle: 'mechanism view · CAST matrix — one of several representations',
+    created:  '2026-06-10',
+    svg, code,
+    matrix: {
+      'u-see':     { name: 'U — See',     framework: 'CAST',   steps: uSee },
+      'd-name':    { name: 'D — Name',    framework: 'NEDF',   steps: dName },
+      'f-do':      { name: 'F — Do',      framework: 'SPEAR',  steps: fDo },
+      'b-watch':   { name: 'B — Watch',   framework: 'HEART',  steps: bWatch },
+      'l-predict': { name: 'L — Predict', framework: 'ORACLE', steps: lPredict },
+      'r-act':     { name: 'R — Act',     framework: 'GRACE',  steps: rAct },
+      'bridge':    { name: 'BRIDGE',      framework: 'cross-domain', steps: bridge },
+    },
+  });
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

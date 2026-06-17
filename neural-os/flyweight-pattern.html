@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flyweight Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --intrinsic: #79c0ff; --extrinsic: #ffa657; --shared: #7ee787;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .particle { transition: opacity .35s, fill .35s; }
+  .ref-line { stroke: var(--shared); stroke-width: 1; opacity: 0; transition: opacity .35s; stroke-dasharray: 2 2; }
+  .ref-line.on { opacity: 0.5; }
+  .pool-box { fill: var(--panel); stroke: var(--shared); stroke-width: 2; opacity: 0; transition: opacity .35s; }
+  .pool-label { fill: var(--text); font: 700 12px sans-serif; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .on { opacity: 1 !important; }
+  .ext-box { fill: var(--extrinsic); opacity: 0; transition: opacity .35s; }
+  .ext-label { fill: #0d1117; font: 600 10px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .counter { fill: var(--text); font: 700 14px ui-monospace, monospace; text-anchor: middle; transition: fill .35s; }
+  .counter-label { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .good { fill: var(--shared); }
+  .bad { fill: var(--warn); }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Flyweight Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <g id="particles"></g>
+        <g id="refs"></g>
+
+        <g id="pool">
+          <rect class="pool-box" id="pool-box" x="20" y="220" width="180" height="120" rx="8"/>
+          <text class="pool-label" id="pool-label" x="110" y="240">FlyweightFactory</text>
+          <g id="fw-spark">
+            <circle cx="60"  cy="280" r="14" fill="var(--intrinsic)" opacity="0"/>
+            <text x="60"  y="284" text-anchor="middle" font="600 9px ui-monospace, monospace" fill="#0d1117" opacity="0">spark</text>
+          </g>
+          <g id="fw-smoke">
+            <circle cx="110" cy="280" r="14" fill="var(--intrinsic)" opacity="0"/>
+            <text x="110" y="284" text-anchor="middle" font="600 9px ui-monospace, monospace" fill="#0d1117" opacity="0">smoke</text>
+          </g>
+          <g id="fw-debris">
+            <circle cx="160" cy="280" r="14" fill="var(--intrinsic)" opacity="0"/>
+            <text x="160" y="284" text-anchor="middle" font="600 9px ui-monospace, monospace" fill="#0d1117" opacity="0">debris</text>
+          </g>
+          <text id="fw-count" class="pool-label" x="110" y="324">3 intrinsic</text>
+        </g>
+
+        <g id="ext">
+          <rect class="ext-box" id="ext-box" x="320" y="240" width="180" height="80" rx="8"/>
+          <text class="ext-label" id="ext-l1" x="410" y="260">extrinsic per call:</text>
+          <text class="ext-label" id="ext-l2" x="410" y="280">(x, y, vx, vy, life)</text>
+          <text class="ext-label" id="ext-l3" x="410" y="304">passed as args, not stored</text>
+        </g>
+
+        <text id="count-before-label" class="counter-label" x="260" y="40">objects in memory</text>
+        <text id="count-num" class="counter" x="260" y="62">10,000</text>
+
+        <text id="caption" class="caption" x="260" y="356"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const PARTICLES = [];
+const TYPES = ['spark','smoke','debris'];
+const TYPE_FILL = { spark: 'var(--intrinsic)', smoke: '#888', debris: '#a06030' };
+const N = 80;
+(function seed(){
+  for (let i=0;i<N;i++) {
+    const t = TYPES[i % 3];
+    const x = 220 + ((i * 17) % 280);
+    const y = 100 + ((i * 23) % 100);
+    PARTICLES.push({i,t,x,y});
+  }
+})();
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+
+function renderParticles(sharedRefs) {
+  const ng = $('particles');
+  ng.innerHTML = '';
+  const rg = $('refs');
+  rg.innerHTML = '';
+  PARTICLES.forEach(p => {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 3.6);
+    c.setAttribute('fill', TYPE_FILL[p.t]); c.setAttribute('opacity', 0.85);
+    ng.appendChild(c);
+    if (sharedRefs) {
+      const tx = p.t === 'spark' ? 60 : p.t === 'smoke' ? 110 : 160;
+      const ty = 280;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', p.x); line.setAttribute('y1', p.y);
+      line.setAttribute('x2', tx); line.setAttribute('y2', ty);
+      line.setAttribute('class', 'ref-line on');
+      rg.appendChild(line);
+    }
+  });
+}
+
+const steps = [
+  {
+    title: "explosion of identical-looking objects",
+    narration: `A particle system with 10,000 sparks, smoke puffs, and debris. Each particle holds <span class="pill">sprite, color, mass</span> — fields that are the <i>same</i> for every spark, every smoke. Multiply by 10,000 and the heap is mostly duplicates.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Particle</span> {',
+      '  <span class="k">constructor</span>(',
+      '    <span class="k">public</span> sprite:  <span class="t">Bitmap</span>,    <span class="c">// same for every spark</span>',
+      '    <span class="k">public</span> color:   <span class="t">string</span>,    <span class="c">// same</span>',
+      '    <span class="k">public</span> mass:    <span class="t">number</span>,    <span class="c">// same</span>',
+      '    <span class="k">public</span> x: <span class="t">number</span>, <span class="k">public</span> y: <span class="t">number</span>,',
+      '    <span class="k">public</span> vx: <span class="t">number</span>, <span class="k">public</span> vy: <span class="t">number</span>, <span class="k">public</span> life: <span class="t">number</span>,',
+      '  ) {}',
+      '}',
+      '<span class="c">// 10,000 × ~200 bytes ≈ 2 MB — most of it duplicated bitmap pointers.</span>',
+    ],
+    state: { pool: false, refs: false, ext: false, count: '10,000', countCls: 'bad', countLabel: 'objects in memory', fwCount: '3 intrinsic', caption: "every particle carries its own copy of immutable state" }
+  },
+  {
+    title: "split state in two",
+    narration: `<b>Intrinsic</b> state = doesn't depend on the individual (sprite, color, mass). <b>Extrinsic</b> state = unique per particle (x, y, vx, vy, life). Move intrinsic into a shared <span class="pill">Flyweight</span>; keep extrinsic outside.`,
+    code: [
+      '<span class="k">class</span> <span class="t">ParticleType</span> {                <span class="c">// the flyweight</span>',
+      '  <span class="k">constructor</span>(',
+      '    <span class="k">readonly</span> sprite: <span class="t">Bitmap</span>,',
+      '    <span class="k">readonly</span> color:  <span class="t">string</span>,',
+      '    <span class="k">readonly</span> mass:   <span class="t">number</span>,',
+      '  ) {}',
+      '',
+      '  draw(ctx, x, y) {                  <span class="c">// extrinsic passed in</span>',
+      '    ctx.blit(<span class="k">this</span>.sprite, x, y, <span class="k">this</span>.color)',
+      '  }',
+      '}',
+    ],
+    state: { pool: true, refs: false, ext: true, count: '10,000', countCls: 'bad', countLabel: 'particle records (extrinsic only)', fwCount: '3 intrinsic', caption: "shared truth → flyweight; per-instance → arguments" }
+  },
+  {
+    title: "the factory deduplicates",
+    narration: `A <b>FlyweightFactory</b> hands out flyweights by key. Ask for spark twice → get the same object pointer. The pool size = number of <i>distinct</i> intrinsic configurations, regardless of how many instances exist.`,
+    code: [
+      '<span class="k">class</span> <span class="t">ParticleTypePool</span> {',
+      '  <span class="k">private</span> pool = <span class="k">new</span> Map&lt;<span class="t">string</span>, <span class="t">ParticleType</span>&gt;()',
+      '',
+      '  get(name: <span class="t">string</span>): <span class="t">ParticleType</span> {',
+      '    <span class="k">if</span> (!<span class="k">this</span>.pool.has(name)) {',
+      '      <span class="k">this</span>.pool.set(name, makeType(name))',
+      '    }',
+      '    <span class="k">return</span> <span class="k">this</span>.pool.get(name)!',
+      '  }',
+      '}',
+      '',
+      '<span class="k">const</span> types = <span class="k">new</span> ParticleTypePool()',
+      'types.get(<span class="s">"spark"</span>) === types.get(<span class="s">"spark"</span>)  <span class="c">// → true</span>',
+    ],
+    state: { pool: true, refs: true, ext: true, count: '10,000', countCls: 'bad', countLabel: 'extrinsic records + 3 flyweights', fwCount: '3 intrinsic', caption: "10,000 references → 3 distinct objects" }
+  },
+  {
+    title: "instances become tiny",
+    narration: `Each particle now holds <i>only</i> extrinsic state plus a pointer to its flyweight. The flyweight is shared. Memory drops by orders of magnitude — instances are 32 bytes, not 200.`,
+    code: [
+      '<span class="k">type</span> <span class="t">Particle</span> = {',
+      '  type: <span class="t">ParticleType</span>     <span class="c">// 1 pointer, shared</span>',
+      '  x: <span class="t">number</span>, y: <span class="t">number</span>,',
+      '  vx: <span class="t">number</span>, vy: <span class="t">number</span>, life: <span class="t">number</span>,',
+      '}',
+      '',
+      '<span class="k">const</span> particles: <span class="t">Particle</span>[] = []',
+      '<span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i &lt; <span class="n">10000</span>; i++) {',
+      '  particles.push({',
+      '    type: types.get(<span class="s">"spark"</span>),     <span class="c">// shared</span>',
+      '    x: rand(), y: rand(), vx: rand(), vy: rand(), life: <span class="n">1.0</span>,',
+      '  })',
+      '}',
+    ],
+    state: { pool: true, refs: true, ext: true, count: '10,003', countCls: 'good', countLabel: 'objects total (10k thin + 3 flyweights)', fwCount: '3 intrinsic', caption: "shared intrinsic; extrinsic stays per particle" }
+  },
+  {
+    title: "operations take extrinsic as parameters",
+    narration: `Methods on the flyweight accept extrinsic state as arguments. The flyweight never stores per-particle data — that would defeat the share. The caller threads x/y/life in.`,
+    code: [
+      '<span class="k">function</span> tick(particles, ctx) {',
+      '  <span class="k">for</span> (<span class="k">const</span> p <span class="k">of</span> particles) {',
+      '    p.x += p.vx',
+      '    p.y += p.vy',
+      '    p.life -= <span class="n">0.01</span>',
+      '    p.type.draw(ctx, p.x, p.y)        <span class="c">// extrinsic in, no per-p state on type</span>',
+      '  }',
+      '}',
+      '',
+      '<span class="c">// Critical rule: flyweight is immutable. If it had per-particle</span>',
+      '<span class="c">// state, all 10,000 particles would corrupt each other.</span>',
+    ],
+    state: { pool: true, refs: true, ext: true, count: '10,003', countCls: 'good', countLabel: 'objects total — flyweight immutable', fwCount: '3 intrinsic', caption: "extrinsic passed each call; flyweight stays read-only" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Flyweight is the answer when "we have a million things, but only a dozen kinds." Pays off massively for particles, glyphs (text rendering — <i>every</i> font system is a Flyweight pool), tile maps, chess pieces, syntax-highlight tokens, ECS components. Costs: discipline (flyweight must stay immutable), API noise (every method takes extrinsic args), and complexity if instances are already cheap. Sister of <b>[[singleton-pattern]]</b> (Singleton = one global instance; Flyweight = small fixed pool of shared instances) and <b>[[prototype-pattern]]</b> (Prototype clones to make many; Flyweight shares to avoid making many).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - text rendering (glyph cache), tile maps, particle systems</span>',
+      '<span class="c">//   - chess / Go pieces (one Pawn flyweight, 16 positions)</span>',
+      '<span class="c">//   - syntax tokens in an editor (keyword vs identifier vs string)</span>',
+      '<span class="c">//   - cached enum instances, interned strings</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - few instances (the pool is the overhead)</span>',
+      '<span class="c">//   - state can\'t be cleanly split intrinsic / extrinsic</span>',
+      '<span class="c">//   - hot path is dominated by extrinsic state lookup, not allocation</span>',
+    ],
+    state: { pool: true, refs: false, ext: false, count: '10,003', countCls: 'good', countLabel: 'objects total — shared intrinsic', fwCount: '3 intrinsic', caption: "use it when many instances share most of their state" }
+  },
+];
+
+$('total') && ($('total').textContent = steps.length);
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  renderParticles(s.state.refs);
+
+  $('pool-box').classList.toggle('on', s.state.pool);
+  $('pool-label').classList.toggle('on', s.state.pool);
+  ['fw-spark','fw-smoke','fw-debris'].forEach(id => {
+    [...$(id).children].forEach(el => el.setAttribute('opacity', s.state.pool ? 0.9 : 0));
+  });
+  $('fw-count').classList.toggle('on', s.state.pool);
+  $('fw-count').textContent = s.state.fwCount;
+
+  $('ext-box').classList.toggle('on', s.state.ext);
+  ['ext-l1','ext-l2','ext-l3'].forEach(id => $(id).classList.toggle('on', s.state.ext));
+
+  $('count-num').textContent = s.state.count;
+  $('count-num').setAttribute('class', 'counter ' + s.state.countCls);
+  $('count-before-label').textContent = s.state.countLabel;
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+$('total').textContent = steps.length;
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Template Method Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --fixed: #79c0ff; --hook: #f78166; --optional: #d2a8ff; --csv: #ffa657; --json: #7ee787; --xml: #f7b3c4;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .slot { transition: fill .35s, filter .35s; }
+  .slot.active { filter: drop-shadow(0 0 12px currentColor); }
+  .slot-label { font: 700 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .slot-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.78; }
+  .lock { font: 700 12px sans-serif; text-anchor: middle; fill: #0d1117; opacity: 0.85; }
+  .hook-icon { font: 700 14px sans-serif; text-anchor: middle; fill: #0d1117; opacity: 0.85; }
+  .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; opacity: 0.5; }
+  .skeleton-label { fill: var(--muted); font: 600 11px ui-monospace, monospace; text-anchor: start; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Template Method Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <text class="skeleton-label" x="40" y="40">parse(file)</text>
+
+        <g id="slot-1" class="slot">
+          <rect x="40" y="60" width="180" height="44" rx="6" fill="var(--fixed)" opacity="0.9"/>
+          <text class="slot-label" x="130" y="80">openFile</text>
+          <text class="lock" x="195" y="92">🔒</text>
+          <text class="slot-sub" x="130" y="96">fixed</text>
+        </g>
+
+        <g id="slot-2" class="slot">
+          <rect id="slot-2-rect" x="40" y="116" width="180" height="44" rx="6" fill="var(--hook)" opacity="0.9"/>
+          <text id="slot-2-label" class="slot-label" x="130" y="136">readHeader</text>
+          <text class="hook-icon" x="195" y="148">◊</text>
+          <text id="slot-2-sub" class="slot-sub" x="130" y="152">hook</text>
+        </g>
+
+        <g id="slot-3" class="slot">
+          <rect id="slot-3-rect" x="40" y="172" width="180" height="44" rx="6" fill="var(--hook)" opacity="0.9"/>
+          <text id="slot-3-label" class="slot-label" x="130" y="192">parseRows</text>
+          <text class="hook-icon" x="195" y="204">◊</text>
+          <text id="slot-3-sub" class="slot-sub" x="130" y="208">hook</text>
+        </g>
+
+        <g id="slot-4" class="slot">
+          <rect id="slot-4-rect" x="40" y="228" width="180" height="44" rx="6" fill="var(--optional)" opacity="0.9"/>
+          <text class="slot-label" x="130" y="248">validate</text>
+          <text class="hook-icon" x="195" y="260">≈</text>
+          <text class="slot-sub" x="130" y="264">optional</text>
+        </g>
+
+        <g id="slot-5" class="slot">
+          <rect x="40" y="284" width="180" height="44" rx="6" fill="var(--fixed)" opacity="0.9"/>
+          <text class="slot-label" x="130" y="304">closeFile</text>
+          <text class="lock" x="195" y="316">🔒</text>
+          <text class="slot-sub" x="130" y="320">fixed</text>
+        </g>
+
+        <line class="arrow" x1="130" y1="104" x2="130" y2="116"/>
+        <line class="arrow" x1="130" y1="160" x2="130" y2="172"/>
+        <line class="arrow" x1="130" y1="216" x2="130" y2="228"/>
+        <line class="arrow" x1="130" y1="272" x2="130" y2="284"/>
+
+        <g id="subclass-csv" style="opacity: 0; transition: opacity .35s;">
+          <rect x="300" y="80" width="180" height="100" rx="8" fill="var(--csv)" opacity="0.9"/>
+          <text class="slot-label" x="390" y="106">CsvParser</text>
+          <text class="slot-sub" x="390" y="124">readHeader → split(",")</text>
+          <text class="slot-sub" x="390" y="140">parseRows → readlines</text>
+          <text class="slot-sub" x="390" y="156">validate → none</text>
+        </g>
+        <g id="subclass-json" style="opacity: 0; transition: opacity .35s;">
+          <rect x="300" y="190" width="180" height="100" rx="8" fill="var(--json)" opacity="0.9"/>
+          <text class="slot-label" x="390" y="216">JsonParser</text>
+          <text class="slot-sub" x="390" y="234">readHeader → JSON.parse(line0)</text>
+          <text class="slot-sub" x="390" y="250">parseRows → JSON.parse(each)</text>
+          <text class="slot-sub" x="390" y="266">validate → check schema</text>
+        </g>
+
+        <text id="caption" class="caption" x="260" y="350"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const steps = [
+  {
+    title: "the shared skeleton",
+    narration: `<b>CsvParser</b>, <b>JsonParser</b>, <b>XmlParser</b>: they all open a file, read a header, parse rows, maybe validate, then close. The skeleton is the same. The middle three steps differ. Duplicate the skeleton in each class and you've duplicated the order, the cleanup, the error handling — every time.`,
+    code: [
+      '<span class="k">class</span> <span class="t">CsvParser</span> {',
+      '  parse(path) {',
+      '    <span class="k">const</span> f = openFile(path)',
+      '    <span class="k">try</span> {',
+      '      <span class="k">const</span> hdr = csvHeader(f)        <span class="c">// differs</span>',
+      '      <span class="k">return</span> csvRows(f, hdr)         <span class="c">// differs</span>',
+      '    } <span class="k">finally</span> { closeFile(f) }',
+      '  }',
+      '}',
+      '<span class="k">class</span> <span class="t">JsonParser</span> { <span class="c">/* same shape, jsonHeader/jsonRows */</span> }',
+      '<span class="k">class</span> <span class="t">XmlParser</span>  { <span class="c">/* same shape, xmlHeader/xmlRows  */</span> }',
+    ],
+    state: { active: [], label2: 'readHeader', label3: 'parseRows', csv: false, json: false, caption: "same skeleton, three classes, three copies of the cleanup logic" }
+  },
+  {
+    title: "lift the skeleton into a base class",
+    narration: `A <b>base class</b> owns the <span class="pill">parse()</span> method — the order, the try/finally, the lifecycle. The varying steps become <b>abstract methods</b> the subclass must fill: hooks in the skeleton.`,
+    code: [
+      '<span class="k">abstract</span> <span class="k">class</span> <span class="t">Parser</span> {',
+      '  parse(path: <span class="t">string</span>): <span class="t">Row</span>[] {',
+      '    <span class="k">const</span> f = openFile(path)        <span class="c">// 🔒 fixed</span>',
+      '    <span class="k">try</span> {',
+      '      <span class="k">const</span> hdr  = <span class="k">this</span>.readHeader(f)  <span class="c">// ◊ hook</span>',
+      '      <span class="k">const</span> rows = <span class="k">this</span>.parseRows(f, hdr) <span class="c">// ◊ hook</span>',
+      '      <span class="k">this</span>.validate(rows)            <span class="c">// ≈ optional</span>',
+      '      <span class="k">return</span> rows',
+      '    } <span class="k">finally</span> { closeFile(f) }      <span class="c">// 🔒 fixed</span>',
+      '  }',
+      '  <span class="k">protected</span> <span class="k">abstract</span> readHeader(f: <span class="t">File</span>): <span class="t">Header</span>',
+      '  <span class="k">protected</span> <span class="k">abstract</span> parseRows(f: <span class="t">File</span>, h: <span class="t">Header</span>): <span class="t">Row</span>[]',
+      '  <span class="k">protected</span> validate(_: <span class="t">Row</span>[]): <span class="t">void</span> {}    <span class="c">// default = no-op</span>',
+      '}',
+    ],
+    state: { active: ['slot-1','slot-5'], label2: 'readHeader', label3: 'parseRows', csv: false, json: false, caption: "fixed steps live in the base; varying steps become abstract hooks" }
+  },
+  {
+    title: "the subclass fills the hooks",
+    narration: `<b>CsvParser</b> implements only the hooks. It doesn't write a <span class="pill">parse()</span> method — it inherits the whole skeleton. The base class calls *into* the subclass at exactly the right moments. ("Don't call us, we'll call you.")`,
+    code: [
+      '<span class="k">class</span> <span class="t">CsvParser</span> <span class="k">extends</span> <span class="t">Parser</span> {',
+      '  <span class="k">protected</span> readHeader(f) {',
+      '    <span class="k">return</span> f.readLine().split(<span class="s">","</span>)',
+      '  }',
+      '  <span class="k">protected</span> parseRows(f, hdr) {',
+      '    <span class="k">return</span> f.readLines().map(l =&gt; zip(hdr, l.split(<span class="s">","</span>)))',
+      '  }',
+      '  <span class="c">// no parse() — inherited.</span>',
+      '  <span class="c">// no validate() — default no-op inherited.</span>',
+      '}',
+    ],
+    state: { active: ['slot-2','slot-3'], label2: 'split(",")', label3: 'readlines', csv: true, json: false, caption: "subclass = just the slots; base orchestrates" }
+  },
+  {
+    title: "multiple subclasses, same skeleton",
+    narration: `<b>JsonParser</b> fills the same three hooks with different bodies. It picks up the lifecycle, error handling, and resource cleanup for free. Cross-cutting fixes in the base class help every subclass at once.`,
+    code: [
+      '<span class="k">class</span> <span class="t">JsonParser</span> <span class="k">extends</span> <span class="t">Parser</span> {',
+      '  <span class="k">protected</span> readHeader(f) {',
+      '    <span class="k">return</span> JSON.parse(f.readLine())',
+      '  }',
+      '  <span class="k">protected</span> parseRows(f, hdr) {',
+      '    <span class="k">return</span> f.readLines().map(l =&gt; JSON.parse(l))',
+      '  }',
+      '  <span class="k">protected</span> validate(rows) {',
+      '    <span class="k">if</span> (!rows.every(matchesSchema)) <span class="k">throw</span> <span class="k">new</span> Error(<span class="s">"bad row"</span>)',
+      '  }',
+      '}',
+    ],
+    state: { active: ['slot-2','slot-3','slot-4'], label2: 'JSON.parse(line0)', label3: 'JSON.parse(each)', csv: false, json: true, caption: "swap subclass; skeleton untouched" }
+  },
+  {
+    title: "optional hooks",
+    narration: `Some steps have <b>defaults</b> — the base implements them as no-ops or sensible defaults; subclasses override only when they need to. The optional hook is the pattern's escape hatch from over-abstraction.`,
+    code: [
+      '<span class="c">// base default: do nothing</span>',
+      '<span class="k">protected</span> validate(_: <span class="t">Row</span>[]) {}',
+      '',
+      '<span class="c">// CsvParser keeps the default — no override needed</span>',
+      '',
+      '<span class="c">// JsonParser overrides to add a schema check</span>',
+      '<span class="k">protected</span> validate(rows) { ... }',
+      '',
+      '<span class="c">// Optional hooks are how Template Method avoids forcing every subclass</span>',
+      '<span class="c">// to write boilerplate for every variation point.</span>',
+    ],
+    state: { active: ['slot-4'], label2: 'readHeader', label3: 'parseRows', csv: true, json: true, caption: "≈ optional = base ships a sensible default" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Template Method centralizes the algorithm and lets subclasses change only the parts that differ. Pays off when the skeleton is real and stable, and the variations are few and well-defined. Costs: inheritance is rigid, you can't pick a different skeleton at runtime, and "Hollywood inversion" makes the control flow hard to read for newcomers. Sister to <b>[[strategy-pattern]]</b>: Strategy puts variation in *composition* (swap an object at runtime) where Template Method puts it in *inheritance* (subclass at compile time). Prefer Strategy when variation is runtime; Template Method when the skeleton is the contract.`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - parsers, renderers, builders that share lifecycle</span>',
+      '<span class="c">//   - test fixtures with setUp/tearDown skeletons</span>',
+      '<span class="c">//   - framework "extend this class and fill these methods"</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - need to swap the algorithm at runtime → use [[strategy-pattern]]</span>',
+      '<span class="c">//   - skeleton itself varies → not a Template Method, it\'s composition</span>',
+      '<span class="c">//   - JS / TS where mixins or higher-order functions read more clearly</span>',
+    ],
+    state: { active: [], label2: 'readHeader', label3: 'parseRows', csv: true, json: true, caption: "use it when the order is sacred and the steps vary" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ['slot-1','slot-2','slot-3','slot-4','slot-5'].forEach(id => {
+    $(id).classList.toggle('active', s.state.active.includes(id));
+  });
+  $('slot-2-label').textContent = s.state.label2;
+  $('slot-3-label').textContent = s.state.label3;
+  $('subclass-csv').style.opacity  = s.state.csv  ? 1 : 0;
+  $('subclass-json').style.opacity = s.state.json ? 1 : 0;
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

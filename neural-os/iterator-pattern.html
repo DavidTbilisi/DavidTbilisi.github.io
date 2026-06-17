@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Iterator Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --item: #79c0ff; --cur: #f78166; --done: #7ee787;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .item { transition: opacity .3s, filter .3s, fill .3s; }
+  .item.done { fill: var(--done); }
+  .item.cur  { fill: var(--cur); filter: drop-shadow(0 0 12px var(--cur)); }
+  .item.pending { fill: var(--item); }
+  .item-label { font: 700 12px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .cursor { fill: var(--cur); stroke: var(--cur); transition: transform .45s cubic-bezier(.4,1.4,.4,1); }
+  .container-label { fill: var(--muted); font: 600 11px ui-monospace, monospace; text-anchor: middle; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .badge { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .badge.on { opacity: 1; }
+  .tree-edge { stroke: var(--muted); stroke-width: 1.5; fill: none; opacity: 0.5; }
+  .stream-mark { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .stream-mark.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Iterator Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--cur)"/>
+          </marker>
+        </defs>
+
+        <text class="container-label" x="260" y="62">collection</text>
+
+        <g id="items">
+          <rect class="item pending" id="it-0" x="40"  y="80" width="64" height="48" rx="6"/>
+          <text class="item-label" x="72"  y="110">a</text>
+          <rect class="item pending" id="it-1" x="120" y="80" width="64" height="48" rx="6"/>
+          <text class="item-label" x="152" y="110">b</text>
+          <rect class="item pending" id="it-2" x="200" y="80" width="64" height="48" rx="6"/>
+          <text class="item-label" x="232" y="110">c</text>
+          <rect class="item pending" id="it-3" x="280" y="80" width="64" height="48" rx="6"/>
+          <text class="item-label" x="312" y="110">d</text>
+          <rect class="item pending" id="it-4" x="360" y="80" width="64" height="48" rx="6"/>
+          <text class="item-label" x="392" y="110">e</text>
+          <rect class="item pending" id="it-5" x="440" y="80" width="64" height="48" rx="6"/>
+          <text class="item-label" x="472" y="110">f</text>
+        </g>
+
+        <g id="cursor" class="cursor" transform="translate(72, 150)">
+          <polygon points="0,-12 -10,4 10,4" />
+          <text y="22" text-anchor="middle" font="600 10px ui-monospace, monospace" fill="var(--cur)">cursor</text>
+        </g>
+
+        <g id="tree-view" style="opacity: 0; transition: opacity .35s;">
+          <path class="tree-edge" d="M 260 220 L 180 260"/>
+          <path class="tree-edge" d="M 260 220 L 340 260"/>
+          <path class="tree-edge" d="M 180 280 L 130 320"/>
+          <path class="tree-edge" d="M 180 280 L 230 320"/>
+          <path class="tree-edge" d="M 340 280 L 290 320"/>
+          <path class="tree-edge" d="M 340 280 L 390 320"/>
+          <circle cx="260" cy="220" r="14" fill="var(--item)"/>
+          <circle cx="180" cy="280" r="12" fill="var(--item)"/>
+          <circle cx="340" cy="280" r="12" fill="var(--item)"/>
+          <circle cx="130" cy="328" r="10" fill="var(--item)"/>
+          <circle cx="230" cy="328" r="10" fill="var(--item)"/>
+          <circle cx="290" cy="328" r="10" fill="var(--item)"/>
+          <circle cx="390" cy="328" r="10" fill="var(--item)"/>
+          <text class="container-label" x="260" y="345">tree — same Iterator interface</text>
+        </g>
+
+        <text id="stream-mark" class="stream-mark" x="260" y="225">stream: lazy, infinite — pulls one at a time</text>
+
+        <text id="caption" class="caption" x="260" y="345"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const POS = [72, 152, 232, 312, 392, 472];
+const steps = [
+  {
+    title: "every collection has its own traversal",
+    narration: `<b>Array</b> has indices. <b>Linked list</b> follows <span class="pill">node.next</span>. <b>Tree</b> recurses. <b>Stream</b> blocks. Each call site re-implements walking, leaking the collection's shape into the consumer.`,
+    code: [
+      '<span class="c">// array</span>',
+      '<span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i &lt; xs.length; i++) consume(xs[i])',
+      '',
+      '<span class="c">// linked list</span>',
+      '<span class="k">let</span> n = head; <span class="k">while</span> (n) { consume(n.value); n = n.next }',
+      '',
+      '<span class="c">// tree</span>',
+      '<span class="k">function</span> walk(t) { consume(t.value); t.kids.forEach(walk) }',
+    ],
+    code_hl: [], cur: 0, done: [], treeOn: false, streamOn: false, caption: "consumer must know the shape of the data"
+  },
+  {
+    title: "extract the cursor",
+    narration: `An <b>Iterator</b> is the cursor extracted into its own object. It carries position and exposes <span class="pill">hasNext()</span> / <span class="pill">next()</span>. The consumer talks to the cursor, never to the collection's shape.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">Iterator</span>&lt;T&gt; {',
+      '  hasNext(): <span class="t">boolean</span>',
+      '  next():    <span class="t">T</span>',
+      '}',
+      '',
+      '<span class="k">interface</span> <span class="t">Iterable</span>&lt;T&gt; {',
+      '  iterator(): <span class="t">Iterator</span>&lt;T&gt;',
+      '}',
+    ],
+    code_hl: [], cur: 0, done: [], treeOn: false, streamOn: false, caption: "one tiny interface, two methods"
+  },
+  {
+    title: "implement it for an array",
+    narration: `An <b>ArrayIterator</b> holds the array and an index. <span class="pill">hasNext()</span> compares the index to length; <span class="pill">next()</span> returns the value and advances. The array's shape stays inside the iterator.`,
+    code: [
+      '<span class="k">class</span> <span class="t">ArrayIterator</span>&lt;T&gt; <span class="k">implements</span> <span class="t">Iterator</span>&lt;T&gt; {',
+      '  <span class="k">private</span> i = <span class="n">0</span>',
+      '  <span class="k">constructor</span>(<span class="k">private</span> xs: T[]) {}',
+      '  hasNext() { <span class="k">return</span> <span class="k">this</span>.i &lt; <span class="k">this</span>.xs.length }',
+      '  next()    { <span class="k">return</span> <span class="k">this</span>.xs[<span class="k">this</span>.i++] }',
+      '}',
+    ],
+    code_hl: [], cur: 0, done: [], treeOn: false, streamOn: false, caption: "the index lives inside the cursor, not the caller"
+  },
+  {
+    title: "walk it",
+    narration: `The consumer's loop becomes the universal three-liner. Same code shape no matter what's behind the iterator. Each <span class="pill">next()</span> advances the cursor.`,
+    code: [
+      '<span class="k">const</span> it = collection.iterator()',
+      '<span class="k">while</span> (it.hasNext()) {',
+      '  consume(it.next())',
+      '}',
+      '',
+      '<span class="c">// this loop never changes, regardless of collection shape.</span>',
+    ],
+    code_hl: [], cur: 4, done: [0,1,2,3], treeOn: false, streamOn: false, caption: "the consumer loop is now shape-blind"
+  },
+  {
+    title: "same shape, different containers",
+    narration: `A <b>TreeIterator</b> can do depth-first or breadth-first traversal — same <span class="pill">hasNext / next</span>. A <b>StreamIterator</b> pulls from a socket. The consumer code from step 4 still works unchanged.`,
+    code: [
+      '<span class="k">class</span> <span class="t">TreeIterator</span>&lt;T&gt; <span class="k">implements</span> <span class="t">Iterator</span>&lt;T&gt; {',
+      '  <span class="k">private</span> stack: <span class="t">Node</span>&lt;T&gt;[] = []',
+      '  <span class="k">constructor</span>(root: <span class="t">Node</span>&lt;T&gt;) { <span class="k">this</span>.stack.push(root) }',
+      '  hasNext() { <span class="k">return</span> <span class="k">this</span>.stack.length &gt; <span class="n">0</span> }',
+      '  next() {',
+      '    <span class="k">const</span> n = <span class="k">this</span>.stack.pop()!',
+      '    n.kids.forEach(k =&gt; <span class="k">this</span>.stack.push(k))   <span class="c">// DFS order</span>',
+      '    <span class="k">return</span> n.value',
+      '  }',
+      '}',
+    ],
+    code_hl: [], cur: 5, done: [0,1,2,3,4], treeOn: true, streamOn: false, caption: "swap the iterator, keep the consumer"
+  },
+  {
+    title: "lazy & infinite",
+    narration: `Because <span class="pill">next()</span> is pulled on demand, an iterator can be <b>lazy</b> — values computed when asked — or <b>infinite</b>. <span class="pill">take(5)</span> bounds the consumer, not the source.`,
+    code: [
+      '<span class="k">function</span>* primes() {',
+      '  <span class="k">for</span> (<span class="k">let</span> n = <span class="n">2</span>; ; n++) <span class="k">if</span> (isPrime(n)) <span class="k">yield</span> n',
+      '}',
+      '',
+      '<span class="k">for</span> (<span class="k">const</span> p <span class="k">of</span> take(primes(), <span class="n">5</span>)) {',
+      '  console.log(p)   <span class="c">// 2 3 5 7 11 — infinite source, finite walk</span>',
+      '}',
+    ],
+    code_hl: [], cur: 5, done: [0,1,2,3,4], treeOn: false, streamOn: true, caption: "lazy iterator = infinite source, bounded by the consumer"
+  },
+  {
+    title: "the trade-off",
+    narration: `Iterator decouples *what you walk* from *how you walk it*. Pays for itself the moment a second container shape appears, or the moment you need lazy / infinite. The cost is one tiny interface and the temptation to over-iterate when a plain <span class="pill">for-of</span> is enough. Modern languages bake it in (<span class="pill">Symbol.iterator</span>, <span class="pill">__iter__</span>, <span class="pill">IEnumerable</span>) so you rarely hand-write it. Close cousin of <b>[[visitor-pattern]]</b> (also "traverse a structure" but visitor brings the op to the structure, iterator hands the elements out) and <b>[[composite-pattern]]</b> (the typical shape iterators walk).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - multiple container shapes, one consumer style</span>',
+      '<span class="c">//   - lazy / infinite sequences (streams, pages, generators)</span>',
+      '<span class="c">//   - language-level for-of / for-in over custom types</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - single array, single consumer — just use for / map</span>',
+      '<span class="c">//   - the op needs the whole collection at once (no streaming)</span>',
+    ],
+    code_hl: [], cur: 5, done: [0,1,2,3,4], treeOn: false, streamOn: false, caption: "use it when shape varies but traversal should not"
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  for (let i = 0; i < 6; i++) {
+    const el = $('it-' + i);
+    el.classList.remove('done','cur','pending');
+    if (s.done.includes(i)) el.classList.add('done');
+    else if (i === s.cur) el.classList.add('cur');
+    else el.classList.add('pending');
+  }
+  $('cursor').setAttribute('transform', `translate(${POS[Math.min(s.cur, 5)]}, 150)`);
+  $('tree-view').style.opacity = s.treeOn ? 1 : 0;
+  $('items').style.opacity = s.treeOn ? 0.2 : 1;
+  $('stream-mark').classList.toggle('on', s.streamOn);
+  $('caption').textContent = s.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

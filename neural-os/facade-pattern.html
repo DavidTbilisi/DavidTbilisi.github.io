@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Facade Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --client: #79c0ff; --facade: #ffa657; --sub: #d2a8ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .b-label { font: 700 12px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .b-sub { font: 500 9px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.75; }
+  .sub { transition: opacity .35s, filter .35s; }
+  .sub.dim { opacity: 0.3; }
+  .sub.live { filter: drop-shadow(0 0 10px currentColor); }
+  .wire { stroke: var(--muted); stroke-width: 1.5; fill: none; opacity: 0.45; transition: opacity .3s, stroke .3s; }
+  .wire.live { opacity: 1; stroke: var(--pick); animation: dash 0.8s linear infinite; stroke-dasharray: 4 3; }
+  .wire.hidden { opacity: 0; }
+  @keyframes dash { to { stroke-dashoffset: -14; } }
+  .facade-box { fill: var(--facade); stroke: var(--facade); stroke-width: 2; opacity: 0; transition: opacity .35s; }
+  .facade-label { fill: #0d1117; font: 700 14px sans-serif; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .facade-sub { fill: #0d1117; font: 500 10px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .on { opacity: 1 !important; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Facade Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <g id="client">
+          <rect x="20" y="150" width="100" height="60" rx="10" fill="var(--client)" opacity="0.9"/>
+          <text class="b-label" x="70" y="178">Client</text>
+          <text class="b-sub" x="70" y="196">checkout()</text>
+        </g>
+
+        <g id="facade">
+          <rect class="facade-box" id="facade-box" x="160" y="150" width="120" height="60" rx="10"/>
+          <text class="facade-label" id="facade-label" x="220" y="178">CheckoutFacade</text>
+          <text class="facade-sub" id="facade-sub" x="220" y="196">.run(cart)</text>
+        </g>
+
+        <g id="sub-1" class="sub" style="color: var(--sub)">
+          <rect x="340" y="40" width="150" height="42" rx="6" fill="var(--sub)" opacity="0.9"/>
+          <text class="b-label" x="415" y="58">InventoryService</text>
+          <text class="b-sub" x="415" y="74">reserve(items)</text>
+        </g>
+        <g id="sub-2" class="sub" style="color: var(--sub)">
+          <rect x="340" y="92" width="150" height="42" rx="6" fill="var(--sub)" opacity="0.9"/>
+          <text class="b-label" x="415" y="110">PricingEngine</text>
+          <text class="b-sub" x="415" y="126">total(items, coupon)</text>
+        </g>
+        <g id="sub-3" class="sub" style="color: var(--sub)">
+          <rect x="340" y="144" width="150" height="42" rx="6" fill="var(--sub)" opacity="0.9"/>
+          <text class="b-label" x="415" y="162">TaxCalculator</text>
+          <text class="b-sub" x="415" y="178">tax(total, zip)</text>
+        </g>
+        <g id="sub-4" class="sub" style="color: var(--sub)">
+          <rect x="340" y="196" width="150" height="42" rx="6" fill="var(--sub)" opacity="0.9"/>
+          <text class="b-label" x="415" y="214">PaymentGateway</text>
+          <text class="b-sub" x="415" y="230">charge(card, amt)</text>
+        </g>
+        <g id="sub-5" class="sub" style="color: var(--sub)">
+          <rect x="340" y="248" width="150" height="42" rx="6" fill="var(--sub)" opacity="0.9"/>
+          <text class="b-label" x="415" y="266">ShippingService</text>
+          <text class="b-sub" x="415" y="282">schedule(order)</text>
+        </g>
+        <g id="sub-6" class="sub" style="color: var(--sub)">
+          <rect x="340" y="300" width="150" height="42" rx="6" fill="var(--sub)" opacity="0.9"/>
+          <text class="b-label" x="415" y="318">EmailNotifier</text>
+          <text class="b-sub" x="415" y="334">confirm(order)</text>
+        </g>
+
+        <line id="w-direct-1" class="wire" x1="120" y1="170" x2="338" y2="60"  marker-end="url(#arrow)"/>
+        <line id="w-direct-2" class="wire" x1="120" y1="175" x2="338" y2="113" marker-end="url(#arrow)"/>
+        <line id="w-direct-3" class="wire" x1="120" y1="180" x2="338" y2="165" marker-end="url(#arrow)"/>
+        <line id="w-direct-4" class="wire" x1="120" y1="185" x2="338" y2="217" marker-end="url(#arrow)"/>
+        <line id="w-direct-5" class="wire" x1="120" y1="190" x2="338" y2="269" marker-end="url(#arrow)"/>
+        <line id="w-direct-6" class="wire" x1="120" y1="195" x2="338" y2="321" marker-end="url(#arrow)"/>
+
+        <line id="w-cf" class="wire" x1="120" y1="180" x2="158" y2="180" marker-end="url(#arrow)"/>
+
+        <line id="w-fs-1" class="wire" x1="280" y1="170" x2="338" y2="60"  marker-end="url(#arrow)"/>
+        <line id="w-fs-2" class="wire" x1="280" y1="175" x2="338" y2="113" marker-end="url(#arrow)"/>
+        <line id="w-fs-3" class="wire" x1="280" y1="180" x2="338" y2="165" marker-end="url(#arrow)"/>
+        <line id="w-fs-4" class="wire" x1="280" y1="185" x2="338" y2="217" marker-end="url(#arrow)"/>
+        <line id="w-fs-5" class="wire" x1="280" y1="190" x2="338" y2="269" marker-end="url(#arrow)"/>
+        <line id="w-fs-6" class="wire" x1="280" y1="195" x2="338" y2="321" marker-end="url(#arrow)"/>
+
+        <text id="caption" class="caption" x="260" y="350"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const SUBS = ['sub-1','sub-2','sub-3','sub-4','sub-5','sub-6'];
+const DIRECT = ['w-direct-1','w-direct-2','w-direct-3','w-direct-4','w-direct-5','w-direct-6'];
+const FACADE_WIRES = ['w-fs-1','w-fs-2','w-fs-3','w-fs-4','w-fs-5','w-fs-6'];
+const steps = [
+  {
+    title: "the subsystem soup",
+    narration: `Checkout has six moving parts: inventory, pricing, tax, payment, shipping, email. The client calls each one in order, threads errors between them, knows their constructors. The checkout button has become a god method.`,
+    code: [
+      '<span class="k">function</span> checkout(cart, card, zip) {',
+      '  inventory.reserve(cart.items)',
+      '  <span class="k">const</span> subtotal = pricing.total(cart.items, cart.coupon)',
+      '  <span class="k">const</span> total    = subtotal + tax.calc(subtotal, zip)',
+      '  <span class="k">const</span> tx       = payment.charge(card, total)',
+      '  shipping.schedule({ ...cart, txId: tx.id })',
+      '  email.confirm({ ...cart, tx })',
+      '}',
+      '<span class="c">// six imports, six call sites, six places to break.</span>',
+    ],
+    state: { directOn: true, facadeOn: false, facadeWires: [], dim: [], live: [], caption: "client imports half the codebase" }
+  },
+  {
+    title: "one door, smaller surface",
+    narration: `A <b>Facade</b> is one class with a small public surface that hides the subsystem. <span class="pill">checkoutFacade.run(cart)</span> is the only method the client calls. The subsystem stays exactly as complex as before — just not visible from outside.`,
+    code: [
+      '<span class="k">class</span> <span class="t">CheckoutFacade</span> {',
+      '  <span class="k">constructor</span>(',
+      '    <span class="k">private</span> inventory: <span class="t">InventoryService</span>,',
+      '    <span class="k">private</span> pricing:   <span class="t">PricingEngine</span>,',
+      '    <span class="k">private</span> tax:       <span class="t">TaxCalculator</span>,',
+      '    <span class="k">private</span> payment:   <span class="t">PaymentGateway</span>,',
+      '    <span class="k">private</span> shipping:  <span class="t">ShippingService</span>,',
+      '    <span class="k">private</span> email:     <span class="t">EmailNotifier</span>,',
+      '  ) {}',
+      '',
+      '  run(cart: <span class="t">Cart</span>, card: <span class="t">Card</span>, zip: <span class="t">string</span>): <span class="t">Receipt</span> {',
+      '    <span class="c">// ...orchestration here...</span>',
+      '  }',
+      '}',
+    ],
+    state: { directOn: false, facadeOn: true, facadeWires: [], dim: [], live: [], caption: "facade gathers the moving parts; surface shrinks" }
+  },
+  {
+    title: "orchestration moves into the facade",
+    narration: `The call order, error handling, and rollback all live inside <span class="pill">run()</span>. The client doesn't know what's involved — and importantly, doesn't need to.`,
+    code: [
+      'run(cart, card, zip) {',
+      '  <span class="k">const</span> reservation = <span class="k">this</span>.inventory.reserve(cart.items)',
+      '  <span class="k">try</span> {',
+      '    <span class="k">const</span> subtotal = <span class="k">this</span>.pricing.total(cart.items, cart.coupon)',
+      '    <span class="k">const</span> total    = subtotal + <span class="k">this</span>.tax.calc(subtotal, zip)',
+      '    <span class="k">const</span> tx       = <span class="k">this</span>.payment.charge(card, total)',
+      '    <span class="k">this</span>.shipping.schedule({ cart, tx })',
+      '    <span class="k">this</span>.email.confirm({ cart, tx })',
+      '    <span class="k">return</span> { ok: <span class="k">true</span>, tx }',
+      '  } <span class="k">catch</span> (e) {',
+      '    <span class="k">this</span>.inventory.release(reservation)',
+      '    <span class="k">throw</span> e',
+      '  }',
+      '}',
+    ],
+    state: { directOn: false, facadeOn: true, facadeWires: FACADE_WIRES, dim: [], live: SUBS, caption: "orchestration + rollback live in one place" }
+  },
+  {
+    title: "the client gets thin",
+    narration: `The client now imports one class, calls one method, passes the cart, gets a receipt. The 30 lines of orchestration are someone else's problem. Reading the call site, you see <i>what</i> not <i>how</i>.`,
+    code: [
+      '<span class="k">const</span> checkout = <span class="k">new</span> CheckoutFacade(',
+      '  inventory, pricing, tax, payment, shipping, email',
+      ')',
+      '',
+      'btn.onClick = () =&gt; {',
+      '  <span class="k">const</span> r = checkout.run(cart, card, user.zip)',
+      '  showReceipt(r)',
+      '}',
+      '<span class="c">// button code is six lines. it used to be sixty.</span>',
+    ],
+    state: { directOn: false, facadeOn: true, facadeWires: [], dim: SUBS, live: [], caption: "client sees only the facade" }
+  },
+  {
+    title: "the subsystem can change underneath",
+    narration: `Swap <b>Stripe → PayPal</b>, switch the tax engine, add a fraud check between payment and shipping — none of this leaks to the client because the facade's signature stayed the same. The facade is a versioning boundary.`,
+    code: [
+      '<span class="c">// rewire inside the facade — clients unchanged</span>',
+      '<span class="k">class</span> <span class="t">CheckoutFacade</span> {',
+      '  run(cart, card, zip) {',
+      '    <span class="c">// new: fraud screening</span>',
+      '    <span class="k">if</span> (<span class="k">this</span>.fraud.flag(cart, card)) <span class="k">throw</span> <span class="k">new</span> Error(<span class="s">"declined"</span>)',
+      '',
+      '    <span class="c">// new: A/B test which payment backend</span>',
+      '    <span class="k">const</span> gw = experiments.use(<span class="s">"paypal"</span>) ? paypal : stripe',
+      '    <span class="c">// ...same outer signature, evolving internals</span>',
+      '  }',
+      '}',
+    ],
+    state: { directOn: false, facadeOn: true, facadeWires: FACADE_WIRES, dim: [], live: ['sub-4','sub-2'], caption: "internals churn; the door stays the same" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Facade reduces the surface area a caller sees and turns "use the subsystem" from a knowledge tax into a single call. Pays off when many clients touch the same subsystem, when you want to vendor an internal API, or when the subsystem is in flux. Costs: facades drift into <b>god objects</b> if every new operation lands as a new method; and they don't <i>prevent</i> bypass — clients can still reach in. Common confusion with <b>[[adapter-pattern]]</b>: Adapter converts an existing interface to a required one (1-to-1 shape change); Facade <i>defines a new</i>, simpler interface over a subsystem (N-to-1 surface shrink). Also relates to <b>[[mediator-pattern]]</b> (Mediator coordinates *peers* who can't see each other; Facade hides a *subsystem* from outsiders).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - complex subsystem with one obvious "do the thing" use case</span>',
+      '<span class="c">//   - layering: API gateway in front of microservices</span>',
+      '<span class="c">//   - SDK clients hiding raw HTTP / protobuf calls</span>',
+      '<span class="c">//   - legacy wrapper as a migration boundary</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - subsystem already has one clean entry point (no facade needed)</span>',
+      '<span class="c">//   - callers actually need fine-grained access</span>',
+      '<span class="c">//   - facade grows past ~10 methods (split it)</span>',
+    ],
+    state: { directOn: false, facadeOn: true, facadeWires: [], dim: [], live: [], caption: "use it when a subsystem deserves one small front door" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  DIRECT.forEach(id => $(id).classList.toggle('hidden', !s.state.directOn));
+  $('w-cf').classList.toggle('hidden', !s.state.facadeOn);
+  $('facade-box').classList.toggle('on', s.state.facadeOn);
+  $('facade-label').classList.toggle('on', s.state.facadeOn);
+  $('facade-sub').classList.toggle('on', s.state.facadeOn);
+  FACADE_WIRES.forEach(id => {
+    $(id).classList.toggle('hidden', !s.state.facadeOn);
+    $(id).classList.toggle('live', s.state.facadeWires.includes(id));
+  });
+  SUBS.forEach(id => {
+    $(id).classList.toggle('dim', s.state.dim.includes(id));
+    $(id).classList.toggle('live', s.state.live.includes(id));
+  });
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

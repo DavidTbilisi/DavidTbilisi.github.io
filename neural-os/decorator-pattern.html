@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Decorator Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --core: #79c0ff; --d1: #ffa657; --d2: #7ee787; --d3: #d2a8ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .ring { transition: opacity .45s, r .45s, stroke-width .35s; }
+  .ring.live { stroke-width: 5; filter: drop-shadow(0 0 12px currentColor); }
+  .ring-label { font: 700 12px sans-serif; text-anchor: middle; fill: var(--text); transition: opacity .35s; }
+  .signal { fill: none; stroke: var(--pick); stroke-width: 2; stroke-dasharray: 4 3; opacity: 0; transition: opacity .35s; }
+  .signal.on { opacity: 1; animation: dash 0.6s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -14; } }
+  .explosion-block { transition: opacity .35s; }
+  .explosion-label { fill: var(--warn); font: 600 10px ui-monospace, monospace; text-anchor: start; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Decorator Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <g id="explosion" class="explosion-block">
+          <text class="explosion-label" x="20" y="34">DataSource</text>
+          <text class="explosion-label" x="20" y="52">EncryptedDataSource</text>
+          <text class="explosion-label" x="20" y="70">CompressedDataSource</text>
+          <text class="explosion-label" x="20" y="88">EncryptedCompressedDataSource</text>
+          <text class="explosion-label" x="20" y="106">CompressedEncryptedDataSource</text>
+          <text class="explosion-label" x="20" y="124">LoggedEncryptedCompressedDataSource</text>
+          <text class="explosion-label" x="20" y="142">… 2ⁿ subclasses</text>
+        </g>
+
+        <circle id="ring-3" class="ring" cx="260" cy="200" r="120" fill="var(--d3)" fill-opacity="0.18" stroke="var(--d3)" stroke-width="3" style="opacity: 0; color: var(--d3)"/>
+        <text id="ring-3-label" class="ring-label" x="260" y="86" style="opacity: 0">Logged</text>
+
+        <circle id="ring-2" class="ring" cx="260" cy="200" r="92" fill="var(--d2)" fill-opacity="0.18" stroke="var(--d2)" stroke-width="3" style="opacity: 0; color: var(--d2)"/>
+        <text id="ring-2-label" class="ring-label" x="260" y="116" style="opacity: 0">Compressed</text>
+
+        <circle id="ring-1" class="ring" cx="260" cy="200" r="64" fill="var(--d1)" fill-opacity="0.2" stroke="var(--d1)" stroke-width="3" style="opacity: 0; color: var(--d1)"/>
+        <text id="ring-1-label" class="ring-label" x="260" y="146" style="opacity: 0">Encrypted</text>
+
+        <circle id="core" cx="260" cy="200" r="36" fill="var(--core)" opacity="0.9" stroke="var(--core)" stroke-width="2" style="color: var(--core)"/>
+        <text class="ring-label" x="260" y="195">File</text>
+        <text class="ring-label" x="260" y="210" style="font-size: 10px;">DataSource</text>
+
+        <path id="signal-in" class="signal" d="M 50 200 L 220 200" stroke-linecap="round"/>
+        <path id="signal-out" class="signal" d="M 300 200 L 470 200" stroke-linecap="round"/>
+
+        <text id="caption" class="caption" x="260" y="340"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const steps = [
+  {
+    title: "the subclass explosion",
+    narration: `You have a <span class="pill">DataSource</span>. Then you want it encrypted. Then compressed. Then logged. With inheritance, each combination is its own class — 2ⁿ classes for n features. And the order matters: encrypt-then-compress ≠ compress-then-encrypt.`,
+    code: [
+      '<span class="k">class</span> <span class="t">FileDataSource</span>            { read() {} write() {} }',
+      '<span class="k">class</span> <span class="t">EncryptedFileDataSource</span>   <span class="k">extends</span> <span class="t">FileDataSource</span> {}',
+      '<span class="k">class</span> <span class="t">CompressedFileDataSource</span>  <span class="k">extends</span> <span class="t">FileDataSource</span> {}',
+      '<span class="k">class</span> <span class="t">EncryptedCompressedFileDataSource</span> <span class="k">extends</span> <span class="t">...</span> {}',
+      '<span class="k">class</span> <span class="t">CompressedEncryptedFileDataSource</span> <span class="k">extends</span> <span class="t">...</span> {}',
+      '<span class="c">// 8 classes for {encrypt, compress, log}. 16 for 4 features.</span>',
+    ],
+    state: { rings: [], explosion: true, signalIn: false, signalOut: false, caption: "every feature combination becomes a class — exponential class count" }
+  },
+  {
+    title: "wrap, don't subclass",
+    narration: `A <b>Decorator</b> implements the same interface and <i>holds</i> an instance of it. From outside it looks identical. Inside, it delegates and adds something. It's an Adapter that adapts <i>to itself</i>.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">DataSource</span> {',
+      '  read():  <span class="t">string</span>',
+      '  write(s: <span class="t">string</span>): <span class="t">void</span>',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">EncryptedDS</span> <span class="k">implements</span> <span class="t">DataSource</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> inner: <span class="t">DataSource</span>) {}',
+      '  read()        { <span class="k">return</span> decrypt(<span class="k">this</span>.inner.read()) }',
+      '  write(s) {    <span class="k">this</span>.inner.write(encrypt(s)) }',
+      '}',
+    ],
+    state: { rings: ['ring-1'], explosion: false, signalIn: false, signalOut: false, caption: "decorator = same interface, holds one inside" }
+  },
+  {
+    title: "decorator adds behavior around delegation",
+    narration: `Each decorator does work <b>before</b> calling the wrapped object, <b>after</b>, or both. Encrypt-on-write, decrypt-on-read; compress-on-write, decompress-on-read; log every call. The core class doesn't know any of this happened.`,
+    code: [
+      '<span class="k">class</span> <span class="t">CompressedDS</span> <span class="k">implements</span> <span class="t">DataSource</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> inner: <span class="t">DataSource</span>) {}',
+      '  read()  { <span class="k">return</span> unzip(<span class="k">this</span>.inner.read()) }',
+      '  write(s){ <span class="k">this</span>.inner.write(zip(s)) }',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">LoggedDS</span> <span class="k">implements</span> <span class="t">DataSource</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> inner: <span class="t">DataSource</span>) {}',
+      '  read()        { console.log(<span class="s">"read"</span>);  <span class="k">return</span> <span class="k">this</span>.inner.read() }',
+      '  write(s) { console.log(<span class="s">"write"</span>, s); <span class="k">this</span>.inner.write(s) }',
+      '}',
+    ],
+    state: { rings: ['ring-1','ring-2'], explosion: false, signalIn: false, signalOut: false, caption: "wrap something, do extra, delegate the rest" }
+  },
+  {
+    title: "stack them",
+    narration: `Each decorator takes a <span class="pill">DataSource</span> and <i>is</i> a <span class="pill">DataSource</span>, so they nest indefinitely. Three lines of constructor calls give you all three features — and the client sees one object with the original interface.`,
+    code: [
+      '<span class="k">let</span> ds: <span class="t">DataSource</span> = <span class="k">new</span> FileDataSource(<span class="s">"data.txt"</span>)',
+      'ds = <span class="k">new</span> EncryptedDS(ds)',
+      'ds = <span class="k">new</span> CompressedDS(ds)',
+      'ds = <span class="k">new</span> LoggedDS(ds)',
+      '',
+      'ds.write(<span class="s">"hello"</span>)',
+      '<span class="c">// log → compress → encrypt → file</span>',
+    ],
+    state: { rings: ['ring-1','ring-2','ring-3'], explosion: false, signalIn: true, signalOut: false, caption: "stack of decorators, all behind one interface" }
+  },
+  {
+    title: "order is composition",
+    narration: `Reorder the wrapping → reorder the effect. <span class="pill">Encrypt(Compress(file))</span> compresses then encrypts; <span class="pill">Compress(Encrypt(file))</span> encrypts then compresses (the latter compresses much worse — entropy). Composition is the configuration.`,
+    code: [
+      '<span class="c">// efficient: compress first, encrypt the small blob</span>',
+      'ds = <span class="k">new</span> EncryptedDS(<span class="k">new</span> CompressedDS(file))',
+      '',
+      '<span class="c">// bad: encrypt first → entropy ↑ → compression nearly useless</span>',
+      'ds = <span class="k">new</span> CompressedDS(<span class="k">new</span> EncryptedDS(file))',
+      '',
+      '<span class="c">// same parts, different order, very different outcome.</span>',
+    ],
+    state: { rings: ['ring-1','ring-2','ring-3'], explosion: false, signalIn: true, signalOut: true, caption: "wrap order is the program" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Decorator gives you exponential combinations of features from linear code. Pays off when behaviors are independent and runtime-composable: streams, middleware, UI widgets, retries/timeouts/logging on services. Costs: deep wrapper stacks are hard to debug (stack traces are tall), <span class="pill">instanceof</span> stops working past the outermost layer, and identity equality breaks. Same shape as <b>[[adapter-pattern]]</b> (wrap + delegate) but different intent: <b>Adapter changes the interface to fit a different shape; Decorator keeps the interface and adds behavior</b>. Also close to <b>[[proxy-pattern]]</b> (same wrap shape; Proxy controls access where Decorator augments).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - streams: BufferedReader(GzipReader(FileReader(...)))</span>',
+      '<span class="c">//   - middleware: cache(retry(timeout(httpClient)))</span>',
+      '<span class="c">//   - UI: ScrollPane(Border(TextArea))</span>',
+      '<span class="c">//   - Python @decorators on functions</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - shape needs to change (use [[adapter-pattern]])</span>',
+      '<span class="c">//   - control access / lazy loading (use [[proxy-pattern]])</span>',
+      '<span class="c">//   - one feature, will never grow (just edit the class)</span>',
+    ],
+    state: { rings: ['ring-1','ring-2','ring-3'], explosion: false, signalIn: false, signalOut: false, caption: "use it when features should stack without a subclass per combination" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ['ring-1','ring-2','ring-3'].forEach(id => {
+    const on = s.state.rings.includes(id);
+    $(id).style.opacity = on ? 1 : 0;
+    $(id + '-label').style.opacity = on ? 1 : 0;
+  });
+  $('explosion').style.opacity = s.state.explosion ? 1 : 0;
+  $('signal-in').classList.toggle('on', s.state.signalIn);
+  $('signal-out').classList.toggle('on', s.state.signalOut);
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

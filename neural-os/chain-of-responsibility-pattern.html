@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chain of Responsibility — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --h1: #79c0ff; --h2: #ffa657; --h3: #d2a8ff; --h4: #7ee787;
+    --handled: #7ee787;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .handler { transition: opacity .35s, filter .35s, fill .35s; }
+  .handler.dim { opacity: 0.25; }
+  .handler.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .handler.handled rect { fill: var(--handled); }
+  .h-label { font: 700 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .h-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.75; }
+  .link { stroke: var(--muted); stroke-width: 2; fill: none; marker-end: url(#arrow); opacity: 0.55; transition: opacity .3s, stroke .3s; }
+  .link.live { opacity: 1; stroke: var(--pick); animation: dash 0.8s linear infinite; stroke-dasharray: 5 4; }
+  @keyframes dash { to { stroke-dashoffset: -18; } }
+  .packet { fill: var(--pick); stroke: var(--pick); stroke-width: 1.5; transition: transform .65s cubic-bezier(.4,1.4,.4,1); transform-box: fill-box; transform-origin: center; }
+  .packet-label { font: 600 10px ui-monospace, monospace; fill: #0d1117; text-anchor: middle; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .tangle { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .tangle.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Chain of Responsibility <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <text id="tangle" class="tangle" x="260" y="40">if(type==="auth"){…} else if(type==="rate"){…} else if(type==="cache"){…} else if…</text>
+
+        <g id="h-1" class="handler" style="color: var(--h1)">
+          <rect x="20" y="160" width="100" height="60" rx="8" fill="var(--h1)" opacity="0.9"/>
+          <text class="h-label" x="70" y="186">Auth</text>
+          <text class="h-sub" x="70" y="204">401 if no token</text>
+        </g>
+        <g id="h-2" class="handler" style="color: var(--h2)">
+          <rect x="140" y="160" width="100" height="60" rx="8" fill="var(--h2)" opacity="0.9"/>
+          <text class="h-label" x="190" y="186">Rate</text>
+          <text class="h-sub" x="190" y="204">429 if &gt; limit</text>
+        </g>
+        <g id="h-3" class="handler" style="color: var(--h3)">
+          <rect x="260" y="160" width="100" height="60" rx="8" fill="var(--h3)" opacity="0.9"/>
+          <text class="h-label" x="310" y="186">Cache</text>
+          <text class="h-sub" x="310" y="204">return cached</text>
+        </g>
+        <g id="h-4" class="handler" style="color: var(--h4)">
+          <rect x="380" y="160" width="100" height="60" rx="8" fill="var(--h4)" opacity="0.9"/>
+          <text class="h-label" x="430" y="186">Route</text>
+          <text class="h-sub" x="430" y="204">app handler</text>
+        </g>
+
+        <line id="l-12" class="link" x1="120" y1="190" x2="138" y2="190"/>
+        <line id="l-23" class="link" x1="240" y1="190" x2="258" y2="190"/>
+        <line id="l-34" class="link" x1="360" y1="190" x2="378" y2="190"/>
+
+        <g id="packet" class="packet" transform="translate(-80, 100)">
+          <rect x="-32" y="-12" width="64" height="24" rx="4"/>
+          <text class="packet-label" y="4">HTTP req</text>
+        </g>
+
+        <text id="caption" class="caption" x="260" y="320"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const POS = { start: [-80,100], h1: [70,100], h2: [190,100], h3: [310,100], h4: [430,100], end: [560,100] };
+const steps = [
+  {
+    title: "the dispatch tangle",
+    narration: `A request hits the server. Some need auth, some hit cache, some are rate-limited, some go straight to the handler. The naive shape: one giant chain of <span class="pill">if/else</span>, repeated in every endpoint. Reordering means surgery.`,
+    code: [
+      '<span class="k">function</span> handle(req) {',
+      '  <span class="k">if</span> (!req.token) <span class="k">return</span> resp(<span class="n">401</span>)',
+      '  <span class="k">if</span> (rate.over(req.ip)) <span class="k">return</span> resp(<span class="n">429</span>)',
+      '  <span class="k">if</span> (cache.has(req.url)) <span class="k">return</span> cache.get(req.url)',
+      '  <span class="k">return</span> app.route(req)',
+      '}',
+      '<span class="c">// add CORS / logging / shadow-mode → another branch.</span>',
+      '<span class="c">// reorder them → audit every endpoint.</span>',
+    ],
+    state: { dim: ['h-1','h-2','h-3','h-4'], glow: [], handled: [], links: [], packet: 'start', tangle: true, caption: "linear logic frozen into one function" }
+  },
+  {
+    title: "each step becomes a handler",
+    narration: `Each step is a tiny object with one method: <span class="pill">handle(req)</span>. It either resolves the request or delegates to the next. Every handler keeps a reference to its successor.`,
+    code: [
+      '<span class="k">abstract</span> <span class="k">class</span> <span class="t">Handler</span> {',
+      '  <span class="k">private</span> next?: <span class="t">Handler</span>',
+      '  setNext(h: <span class="t">Handler</span>): <span class="t">Handler</span> { <span class="k">this</span>.next = h; <span class="k">return</span> h }',
+      '  handle(req: <span class="t">Req</span>): <span class="t">Resp</span> | <span class="k">null</span> {',
+      '    <span class="k">return</span> <span class="k">this</span>.next ? <span class="k">this</span>.next.handle(req) : <span class="k">null</span>',
+      '  }',
+      '}',
+    ],
+    state: { dim: [], glow: ['h-1','h-2','h-3','h-4'], handled: [], links: [], packet: 'start', tangle: false, caption: "every handler knows its successor, nothing else" }
+  },
+  {
+    title: "wire the chain",
+    narration: `Concrete handlers extend the base and call <span class="pill">super.handle()</span> when they pass. Build the chain once at startup. The order is data, not control flow.`,
+    code: [
+      '<span class="k">class</span> <span class="t">AuthHandler</span>  <span class="k">extends</span> <span class="t">Handler</span> {',
+      '  handle(r) { <span class="k">return</span> r.token ? <span class="k">super</span>.handle(r) : resp(<span class="n">401</span>) }',
+      '}',
+      '<span class="k">class</span> <span class="t">RateHandler</span>  <span class="k">extends</span> <span class="t">Handler</span> {',
+      '  handle(r) { <span class="k">return</span> rate.under(r.ip) ? <span class="k">super</span>.handle(r) : resp(<span class="n">429</span>) }',
+      '}',
+      '<span class="k">class</span> <span class="t">CacheHandler</span> <span class="k">extends</span> <span class="t">Handler</span> {',
+      '  handle(r) { <span class="k">return</span> cache.get(r.url) ?? <span class="k">super</span>.handle(r) }',
+      '}',
+      '',
+      '<span class="k">const</span> chain = <span class="k">new</span> AuthHandler()',
+      'chain.setNext(<span class="k">new</span> RateHandler()).setNext(<span class="k">new</span> CacheHandler()).setNext(<span class="k">new</span> RouteHandler())',
+    ],
+    state: { dim: [], glow: ['h-1','h-2','h-3','h-4'], handled: [], links: ['l-12','l-23','l-34'], packet: 'start', tangle: false, caption: "the chain is constructed, not coded" }
+  },
+  {
+    title: "request flows down",
+    narration: `<span class="pill">chain.handle(req)</span>. Auth lets it through. Rate lets it through. Cache <b>catches it</b> and returns a response — Route never runs. The request stops at the first handler that fully resolves it.`,
+    code: [
+      '<span class="k">function</span> serve(req) {',
+      '  <span class="k">return</span> chain.handle(req)',
+      '}',
+      '',
+      '<span class="c">// req with valid token, under-limit, URL in cache:</span>',
+      '<span class="c">// → Auth passes → Rate passes → Cache returns → Route never reached.</span>',
+    ],
+    state: { dim: [], glow: ['h-3'], handled: ['h-3'], links: ['l-12','l-23'], packet: 'h3', tangle: false, caption: "request walks the chain; first responder wins" }
+  },
+  {
+    title: "reorder, swap, skip",
+    narration: `Want to put cache <i>before</i> auth for public endpoints? Build a different chain. Want to A/B test rate-limiting? Skip that handler in one chain. Order, presence, and composition are all data.`,
+    code: [
+      '<span class="k">const</span> publicChain = <span class="k">new</span> CacheHandler()',
+      'publicChain.setNext(<span class="k">new</span> RateHandler()).setNext(<span class="k">new</span> RouteHandler())',
+      '<span class="c">// no auth on this chain — same handlers, different wiring</span>',
+      '',
+      '<span class="k">const</span> adminChain = <span class="k">new</span> AuthHandler()',
+      'adminChain.setNext(<span class="k">new</span> RoleCheckHandler()).setNext(<span class="k">new</span> RouteHandler())',
+      '<span class="c">// no cache, no rate limit on admin — different mix</span>',
+    ],
+    state: { dim: [], glow: ['h-2','h-3','h-4'], handled: [], links: ['l-23','l-34'], packet: 'start', tangle: false, caption: "the same handlers compose into many chains" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Chain of Responsibility decouples the sender from the receiver and turns dispatch into composition. Pays off when there's a clear linear order of handlers (middleware, event bubbling, approval flows, validators). Costs: there's no guarantee anyone handles the request; reordering breaks if handlers have hidden dependencies; debugging is "trace the chain." Modern web frameworks (Express, Koa, ASP.NET) <i>are</i> this pattern. Close cousin of <b>[[command-pattern]]</b> (commands queued, handled in order) and <b>[[mediator-pattern]]</b> (also "decouple via indirection," but Mediator routes many-to-many through one hub where Chain passes one request along a sequence).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - HTTP middleware (Express, ASP.NET, Rack)</span>',
+      '<span class="c">//   - event bubbling (DOM events)</span>',
+      '<span class="c">//   - approval workflows (junior → senior → CFO)</span>',
+      '<span class="c">//   - chained validators / sanitizers</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - dispatch is a simple switch (just write it)</span>',
+      '<span class="c">//   - request must hit every handler (use [[observer-pattern]])</span>',
+      '<span class="c">//   - handlers have ordering-fragile coupling (rethink, don\'t chain)</span>',
+    ],
+    state: { dim: [], glow: ['h-1','h-2','h-3','h-4'], handled: [], links: ['l-12','l-23','l-34'], packet: 'start', tangle: false, caption: "use it when the request walks past linear stages" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ['h-1','h-2','h-3','h-4'].forEach(id => {
+    const el = $(id);
+    el.classList.toggle('dim', s.state.dim.includes(id));
+    el.classList.toggle('glow', s.state.glow.includes(id));
+    el.classList.toggle('handled', s.state.handled.includes(id));
+  });
+  ['l-12','l-23','l-34'].forEach(id => $(id).classList.toggle('live', s.state.links.includes(id)));
+  $('tangle').classList.toggle('on', s.state.tangle);
+  const [x,y] = POS[s.state.packet];
+  $('packet').setAttribute('transform', `translate(${x}, ${y})`);
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

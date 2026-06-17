@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Command Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --cmd: #ffa657; --recv: #7ee787; --undo: #d2a8ff; --queue: #79c0ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .node { transition: opacity .35s, filter .35s, transform .35s; transform-origin: center; transform-box: fill-box; }
+  .node.dim { opacity: 0.25; }
+  .node.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .n-label { font: 700 12px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .n-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.75; }
+  .box { fill: var(--panel); stroke: var(--accent); stroke-width: 1.5; }
+  .box-label { fill: var(--text); font: 700 13px sans-serif; text-anchor: middle; }
+  .box-sub { fill: var(--muted); font: 11px ui-monospace, monospace; text-anchor: middle; }
+  .wire { stroke: var(--muted); stroke-width: 2; fill: none; marker-end: url(#arrow); opacity: 0.45; transition: opacity .3s, stroke .3s; }
+  .wire.live { opacity: 1; stroke: var(--pick); animation: dash 0.8s linear infinite; stroke-dasharray: 5 4; }
+  @keyframes dash { to { stroke-dashoffset: -18; } }
+  .wire-label { font: 600 10px ui-monospace, monospace; fill: var(--muted); text-anchor: middle; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .badge { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .badge.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Command Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <text id="tangle" class="badge" x="260" y="30">button.click = () =&gt; editor.cut(); … 40 lines of branches</text>
+
+        <g id="invoker">
+          <rect class="box" x="20" y="60" width="120" height="60" rx="8"/>
+          <text class="box-label" x="80" y="86">Invoker</text>
+          <text class="box-sub" x="80" y="104">button / menu / key</text>
+        </g>
+
+        <g id="cmd-1" class="node" style="color: var(--cmd)">
+          <rect x="200" y="50" width="120" height="40" rx="6" fill="var(--cmd)" opacity="0.9"/>
+          <text class="n-label" x="260" y="68">CutCommand</text>
+          <text class="n-sub" x="260" y="83">{ editor }</text>
+        </g>
+        <g id="cmd-2" class="node" style="color: var(--cmd)">
+          <rect x="200" y="100" width="120" height="40" rx="6" fill="var(--cmd)" opacity="0.7"/>
+          <text class="n-label" x="260" y="118">PasteCommand</text>
+          <text class="n-sub" x="260" y="133">{ editor, text }</text>
+        </g>
+        <g id="cmd-3" class="node" style="color: var(--cmd)">
+          <rect x="200" y="150" width="120" height="40" rx="6" fill="var(--cmd)" opacity="0.5"/>
+          <text class="n-label" x="260" y="168">SaveCommand</text>
+          <text class="n-sub" x="260" y="183">{ doc }</text>
+        </g>
+
+        <g id="receiver">
+          <rect class="box" x="380" y="80" width="120" height="80" rx="8"/>
+          <text class="box-label" x="440" y="108">Editor</text>
+          <text class="box-sub" x="440" y="128">(Receiver)</text>
+          <text class="box-sub" x="440" y="144">cut/paste/save</text>
+        </g>
+
+        <path id="w-iq" class="wire" d="M 140 90 L 195 78" marker-end="url(#arrow)"/>
+        <path id="w-ce" class="wire" d="M 320 120 L 378 120" marker-end="url(#arrow)"/>
+
+        <g id="stack" style="opacity: 0; transition: opacity .35s;">
+          <rect x="20" y="220" width="100" height="22" rx="3" fill="var(--undo)" opacity="0.9"/>
+          <text class="n-label" x="70" y="236" style="font-size: 10px;">CutCommand</text>
+          <rect x="20" y="244" width="100" height="22" rx="3" fill="var(--undo)" opacity="0.7"/>
+          <text class="n-label" x="70" y="260" style="font-size: 10px;">PasteCommand</text>
+          <rect x="20" y="268" width="100" height="22" rx="3" fill="var(--undo)" opacity="0.5"/>
+          <text class="n-label" x="70" y="284" style="font-size: 10px;">SaveCommand</text>
+          <text class="box-sub" x="70" y="306">undo stack</text>
+        </g>
+
+        <g id="queue" style="opacity: 0; transition: opacity .35s;">
+          <rect x="380" y="220" width="120" height="84" rx="6" fill="var(--queue)" opacity="0.18" stroke="var(--queue)" stroke-width="1.5"/>
+          <rect x="390" y="230" width="100" height="18" rx="3" fill="var(--queue)" opacity="0.9"/>
+          <rect x="390" y="252" width="100" height="18" rx="3" fill="var(--queue)" opacity="0.7"/>
+          <rect x="390" y="274" width="100" height="18" rx="3" fill="var(--queue)" opacity="0.5"/>
+          <text class="box-sub" x="440" y="318">job queue</text>
+        </g>
+
+        <text id="caption" class="caption" x="260" y="346"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const steps = [
+  {
+    title: "the tangle",
+    narration: `Every button, menu, shortcut, and macro calls editor methods directly. There's no record of what happened, no way to <span class="pill">undo</span>, no way to queue or replay. Adding "undo" later means crawling every call site.`,
+    code: [
+      'button.onClick   = () =&gt; editor.cut()',
+      'menu.onCut       = () =&gt; editor.cut()',
+      'key.onCtrlX      = () =&gt; editor.cut()',
+      'macro.run        = () =&gt; { editor.cut(); editor.paste() }',
+      '',
+      '<span class="c">// "undo" needs a record of what happened. there is none.</span>',
+    ],
+    state: { dim: ['cmd-1','cmd-2','cmd-3'], glow: [], live: [], tangle: true, stack: false, queue: false, caption: "callers wired straight to the receiver — nothing to roll back" }
+  },
+  {
+    title: "wrap the call in an object",
+    narration: `A <b>Command</b> is a request frozen as an object. It owns the receiver, the parameters, and one method: <span class="pill">execute()</span>. The action becomes data you can hold, pass, queue, and inspect.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">Command</span> {',
+      '  execute(): <span class="t">void</span>',
+      '  undo():    <span class="t">void</span>',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">CutCommand</span> <span class="k">implements</span> <span class="t">Command</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> editor: <span class="t">Editor</span>) {}',
+      '  <span class="k">private</span> saved = <span class="s">""</span>',
+      '  execute() { <span class="k">this</span>.saved = <span class="k">this</span>.editor.cut() }',
+      '  undo()    { <span class="k">this</span>.editor.paste(<span class="k">this</span>.saved) }',
+      '}',
+    ],
+    state: { dim: [], glow: ['cmd-1'], live: [], tangle: false, stack: false, queue: false, caption: "the request is an object that knows how to do and undo itself" }
+  },
+  {
+    title: "Invoker holds Commands",
+    narration: `The <b>Invoker</b> (button, key, menu) only knows about <span class="pill">Command</span> — never about <span class="pill">Editor</span>. Bind any command to any button without changing the button.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Button</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> cmd: <span class="t">Command</span>) {}',
+      '  click() { <span class="k">this</span>.cmd.execute() }',
+      '}',
+      '',
+      '<span class="k">const</span> cutBtn   = <span class="k">new</span> Button(<span class="k">new</span> CutCommand(editor))',
+      '<span class="k">const</span> pasteBtn = <span class="k">new</span> Button(<span class="k">new</span> PasteCommand(editor, clipboard))',
+      '<span class="c">// Button never imports Editor.</span>',
+    ],
+    state: { dim: ['cmd-3'], glow: ['cmd-1','cmd-2'], live: ['w-iq'], tangle: false, stack: false, queue: false, caption: "Invoker → Command → Receiver: three layers, decoupled" }
+  },
+  {
+    title: "execute()",
+    narration: `Press the button. <span class="pill">execute()</span> runs and the Command tells the Receiver what to do. From outside, nothing has changed — but every fired Command is now an object you can keep.`,
+    code: [
+      'cutBtn.click()',
+      '<span class="c">// → cmd.execute()</span>',
+      '<span class="c">//   → this.editor.cut()   ← Receiver does the actual work</span>',
+      '',
+      '<span class="c">// the Invoker has no idea what cut() does, or that an editor exists.</span>',
+    ],
+    state: { dim: ['cmd-2','cmd-3'], glow: ['cmd-1'], live: ['w-iq','w-ce'], tangle: false, stack: false, queue: false, caption: "Invoker fires Command; Command drives Receiver" }
+  },
+  {
+    title: "the undo stack",
+    narration: `Push every executed Command onto a <b>history stack</b>. To undo: pop the top one, call <span class="pill">undo()</span>. To redo: push it back, call <span class="pill">execute()</span>. Free feature, because the Command shape already includes both directions.`,
+    code: [
+      '<span class="k">class</span> <span class="t">History</span> {',
+      '  <span class="k">private</span> stack: <span class="t">Command</span>[] = []',
+      '  run(c: <span class="t">Command</span>) { c.execute(); <span class="k">this</span>.stack.push(c) }',
+      '  undo() {',
+      '    <span class="k">const</span> c = <span class="k">this</span>.stack.pop()',
+      '    <span class="k">if</span> (c) c.undo()',
+      '  }',
+      '}',
+    ],
+    state: { dim: [], glow: ['cmd-1','cmd-2','cmd-3'], live: [], tangle: false, stack: true, queue: false, caption: "history is just a list of Commands" }
+  },
+  {
+    title: "queue, log, replay",
+    narration: `Because Commands are data, you can <b>queue</b> them for background workers, <b>serialize</b> them for an audit log, <b>replay</b> them after a crash, or send them across the network. Same shape — every new use is free.`,
+    code: [
+      '<span class="c">// queue for a worker pool</span>',
+      'workQueue.push(<span class="k">new</span> ResizeImageCommand(img, <span class="n">800</span>))',
+      '',
+      '<span class="c">// audit log</span>',
+      'auditLog.append(JSON.stringify(cmd))',
+      '',
+      '<span class="c">// crash recovery</span>',
+      'savedCommands.forEach(c =&gt; c.execute())   <span class="c">// rebuild state</span>',
+      '',
+      '<span class="c">// send over the wire (RPC, transactions, macros)</span>',
+    ],
+    state: { dim: [], glow: ['cmd-1','cmd-2','cmd-3'], live: [], tangle: false, stack: true, queue: true, caption: "Commands as values: queue, log, ship, replay" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Command turns verbs into nouns. Pays off when you need undo/redo, macros, queueing, audit, or RPC over a uniform interface. Costs an interface + class per action — overkill when actions are one-shot and never need history. Cousin of <b>[[memento-pattern]]</b> (which captures *state* for undo where Command captures *the action*) and <b>[[strategy-pattern]]</b> (also "verb in an object" but for *which* algorithm, not *what to do and how to undo*).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - editors with undo/redo</span>',
+      '<span class="c">//   - job queues, transaction logs, CQRS</span>',
+      '<span class="c">//   - macro recording, keyboard remapping, batch ops</span>',
+      '<span class="c">//   - distributed action over RPC</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - simple side-effect-free calls (just call the function)</span>',
+      '<span class="c">//   - no undo, no queue, no history — pure ceremony</span>',
+    ],
+    state: { dim: [], glow: ['cmd-1','cmd-2','cmd-3'], live: [], tangle: false, stack: false, queue: false, caption: "use it when a verb needs to become a thing" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ['cmd-1','cmd-2','cmd-3'].forEach(id => {
+    const el = $(id);
+    el.classList.toggle('dim', s.state.dim.includes(id));
+    el.classList.toggle('glow', s.state.glow.includes(id));
+  });
+  ['w-iq','w-ce'].forEach(id => $(id).classList.toggle('live', s.state.live.includes(id)));
+  $('tangle').classList.toggle('on', s.state.tangle);
+  $('stack').style.opacity = s.state.stack ? 1 : 0;
+  $('queue').style.opacity = s.state.queue ? 1 : 0;
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-10">
+<head>
+<meta charset="utf-8">
+<title>CISSP — Quantitative Risk Calculator</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  :root {
+    --font-display: "Avenir Next", "Optima", "Gill Sans", -apple-system, sans-serif;
+    --font-mono: "SF Mono", "Berkeley Mono", ui-monospace, Menlo, Consolas, monospace;
+    --hair: rgba(230,237,243,0.09);
+  }
+  body { background:
+      radial-gradient(1000px 520px at 82% -12%, rgba(121,192,255,0.06), transparent 60%),
+      radial-gradient(820px 520px at -12% 112%, rgba(126,231,135,0.05), transparent 55%),
+      var(--bg); }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image: linear-gradient(var(--hair) 1px, transparent 1px), linear-gradient(90deg, var(--hair) 1px, transparent 1px);
+    background-size:30px 30px; opacity:.45;
+    -webkit-mask-image: radial-gradient(circle at 50% 25%, #000 28%, transparent 80%);
+            mask-image: radial-gradient(circle at 50% 25%, #000 28%, transparent 80%); }
+
+  .calc { max-width: 1040px; margin: 0 auto; padding: 40px 24px 36px; position: relative; z-index: 1; }
+  .backlink { display:inline-block; margin-bottom:14px; color:var(--accent); text-decoration:none; font:12px var(--font-mono); letter-spacing:.04em; opacity:.85; }
+  .backlink:hover { text-decoration:underline; }
+  .kicker { display:flex; align-items:center; gap:11px; margin-bottom:11px; font:600 11px/1 var(--font-mono); letter-spacing:.3em; text-transform:uppercase; color:var(--ok); opacity:.85; }
+  .kicker::before { content:""; width:28px; height:1px; background:var(--ok); opacity:.55; }
+  h1 { margin:0; font:600 32px/1.05 var(--font-display); letter-spacing:-.01em; }
+  h1 small { color:var(--muted); font-weight:400; font-size:16px; }
+  .model { margin:16px 0 22px; padding:18px 22px; background:linear-gradient(180deg, var(--panel), #12161d);
+    border:1px solid var(--line); border-left:3px solid var(--ok); border-radius:12px; font:15.5px/1.6 var(--font-display); }
+  .model b { color:var(--accent); }
+
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; box-shadow:0 18px 50px -32px rgba(0,0,0,.9); }
+  .panel h2 { margin:0 0 16px; font:600 12px var(--font-mono); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+
+  .field { margin-bottom:18px; }
+  .field label { display:flex; justify-content:space-between; align-items:baseline; font:13px var(--font-display); margin-bottom:6px; }
+  .field label .val { font:600 14px var(--font-mono); color:var(--accent); }
+  .field input[type=range] { width:100%; accent-color: var(--accent); }
+  .field .hint { font:11px var(--font-mono); color:var(--muted); margin-top:3px; }
+
+  .chain { font:13px var(--font-mono); }
+  .chain .row { display:flex; justify-content:space-between; align-items:baseline; padding:9px 0; border-bottom:1px solid rgba(48,54,61,.5); }
+  .chain .row .k { color:var(--muted); }
+  .chain .row .k b { color:var(--text); font-weight:600; }
+  .chain .row .v { font-weight:600; font-size:15px; color:var(--text); }
+  .chain .row.big .v { font-size:18px; }
+  .chain .row.before .v { color:var(--warn); }
+  .chain .row.after  .v { color:var(--accent); }
+  .chain .row.delta  .v { color:var(--ok); }
+
+  .verdict { margin-top:18px; padding:16px 18px; border-radius:12px; font:15px/1.5 var(--font-display);
+    border:1px solid var(--line); }
+  .verdict .rule { display:block; margin-top:6px; font:12.5px var(--font-mono); color:var(--muted); }
+  .verdict.go   { background:rgba(126,231,135,0.08); border-color:rgba(126,231,135,0.4); color:var(--ok); }
+  .verdict.stop { background:rgba(248,81,73,0.08);  border-color:rgba(248,81,73,0.4);  color:var(--warn); }
+  .verdict.flat { background:rgba(255,255,255,0.02); color:var(--muted); }
+  .verdict b { color:inherit; }
+</style>
+</head>
+<body>
+<div class="calc">
+  <a class="backlink" href="cissp-domain-1.html">‹ all representations</a>
+  <div class="kicker">Interactive · Quantitative Risk</div>
+  <h1>Risk Calculator <small>— SLE · ALE · cost-benefit</small></h1>
+
+  <div class="model">
+    Quantitative risk turns a scary scenario into <b>one decision</b>: deploy the safeguard only if it removes
+    more <b>annual loss</b> (ΔALE) than it costs. Drag the inputs — the verdict recomputes live.
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Inputs</h2>
+      <div class="field">
+        <label>Asset Value (AV) <span class="val" id="av-v"></span></label>
+        <input type="range" id="av" min="0" max="1000000" step="1000" value="100000">
+        <div class="hint">what the asset is worth</div>
+      </div>
+      <div class="field">
+        <label>Exposure Factor (EF) <span class="val" id="ef-v"></span></label>
+        <input type="range" id="ef" min="0" max="100" step="1" value="40">
+        <div class="hint">% of asset value lost per incident</div>
+      </div>
+      <div class="field">
+        <label>ARO — now <span class="val" id="aro-v"></span></label>
+        <input type="range" id="aro" min="0" max="5" step="0.05" value="0.5">
+        <div class="hint">annualized rate of occurrence (events / year)</div>
+      </div>
+      <div class="field">
+        <label>Safeguard cost <span class="val" id="cost-v"></span></label>
+        <input type="range" id="cost" min="0" max="60000" step="250" value="4000">
+        <div class="hint">ongoing annual cost of the control</div>
+      </div>
+      <div class="field">
+        <label>ARO — with safeguard <span class="val" id="aro2-v"></span></label>
+        <input type="range" id="aro2" min="0" max="5" step="0.05" value="0.1">
+        <div class="hint">residual event rate after the control</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>The chain</h2>
+      <div class="chain">
+        <div class="row"><span class="k"><b>SLE</b> = AV × EF</span><span class="v" id="sle"></span></div>
+        <div class="row before big"><span class="k"><b>ALE</b> now = SLE × ARO</span><span class="v" id="aleb"></span></div>
+        <div class="row after big"><span class="k"><b>ALE</b> with safeguard</span><span class="v" id="alea"></span></div>
+        <div class="row delta"><span class="k"><b>ΔALE</b> avoided / year</span><span class="v" id="dale"></span></div>
+        <div class="row"><span class="k">− safeguard cost</span><span class="v" id="cost2"></span></div>
+        <div class="row big"><span class="k"><b>Net benefit</b> / year</span><span class="v" id="net"></span></div>
+        <div class="row"><span class="k">ROSI = net ÷ cost</span><span class="v" id="rosi"></span></div>
+      </div>
+      <div class="verdict flat" id="verdict"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const usd = (n) => '$' + Math.round(n).toLocaleString('en-US');
+
+function update() {
+  const AV   = +$('av').value;
+  const EF   = +$('ef').value / 100;
+  const ARO  = +$('aro').value;
+  const cost = +$('cost').value;
+  const ARO2 = +$('aro2').value;
+
+  // live input readouts
+  $('av-v').textContent   = usd(AV);
+  $('ef-v').textContent   = (EF * 100).toFixed(0) + '%';
+  $('aro-v').textContent  = ARO.toFixed(2) + '/yr';
+  $('cost-v').textContent = usd(cost) + '/yr';
+  $('aro2-v').textContent = ARO2.toFixed(2) + '/yr';
+
+  // the canonical quantitative-risk chain
+  const SLE  = AV * EF;
+  const ALEb = SLE * ARO;
+  const ALEa = SLE * ARO2;
+  const dALE = ALEb - ALEa;
+  const net  = dALE - cost;
+  const rosi = cost > 0 ? net / cost : Infinity;
+
+  $('sle').textContent  = usd(SLE);
+  $('aleb').textContent = usd(ALEb) + '/yr';
+  $('alea').textContent = usd(ALEa) + '/yr';
+  $('dale').textContent = usd(dALE) + '/yr';
+  $('cost2').textContent = '−' + usd(cost) + '/yr';
+  $('net').textContent  = (net < 0 ? '−' : '') + usd(Math.abs(net)) + '/yr';
+  $('rosi').textContent = (rosi === Infinity) ? '∞ (free)' : (rosi * 100).toFixed(0) + '%';
+
+  const v = $('verdict');
+  if (net > 0) {
+    v.className = 'verdict go';
+    v.innerHTML = `✓ <b>Implement the safeguard.</b> It avoids ${usd(dALE)}/yr of loss for ${usd(cost)}/yr — ` +
+      `a net ${usd(net)}/yr gain.<span class="rule">D1 rule: safeguard cost &lt; ΔALE  →  ${usd(cost)} &lt; ${usd(dALE)} ✓</span>`;
+  } else if (net < 0) {
+    v.className = 'verdict stop';
+    v.innerHTML = `✗ <b>Don't implement.</b> It costs ${usd(cost)}/yr but only avoids ${usd(dALE)}/yr — ` +
+      `a net ${usd(Math.abs(net))}/yr loss.<span class="rule">D1 rule: safeguard cost &lt; ΔALE  →  ${usd(cost)} &lt; ${usd(dALE)} ✗</span>`;
+  } else {
+    v.className = 'verdict flat';
+    v.innerHTML = `Break-even — the safeguard exactly pays for itself. Decide on qualitative factors (compliance, reputation).`;
+  }
+}
+
+document.querySelectorAll('input[type=range]').forEach(el => el.addEventListener('input', update));
+update();
+</script>
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Visitor Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --line: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #79c0ff;
+    --visitor: #f78166;
+    --visitor-2: #d2a8ff;
+    --circle: #a5d6ff;
+    --square: #ffa657;
+    --triangle: #7ee787;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--visitor); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .code .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .code .ln.hl { background: var(--hl); border-left-color: var(--visitor); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--visitor)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .node-label { fill: var(--text); font: 600 13px sans-serif; text-anchor: middle; pointer-events: none; }
+  .node-shape { transition: transform .4s ease, opacity .3s, filter .3s; transform-origin: center; transform-box: fill-box; }
+  .node-shape.dim { opacity: 0.28; }
+  .node-shape.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .visitor-token { transition: transform .55s cubic-bezier(.4,1.4,.4,1), opacity .3s; }
+  .visitor-token text { fill: white; font: 600 11px sans-serif; text-anchor: middle; }
+  .dispatch { stroke: var(--visitor); stroke-width: 2; stroke-dasharray: 5 4; fill: none; opacity: 0; transition: opacity .25s; }
+  .dispatch.on { opacity: 1; animation: dash 0.8s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -18; } }
+  .badge-text { font: 600 10px ui-monospace, monospace; fill: var(--muted); text-anchor: middle; }
+  .accum { font: 600 14px ui-monospace, monospace; fill: var(--accent); text-anchor: middle; }
+  .warn-mark { fill: var(--warn); font: 700 18px sans-serif; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .warn-mark.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Visitor Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 340" preserveAspectRatio="xMidYMid meet">
+        <!-- shapes -->
+        <g id="shape-circle" class="node-shape" style="color: var(--circle)">
+          <circle cx="110" cy="240" r="38" fill="var(--circle)" opacity="0.85"/>
+          <text class="node-label" x="110" y="244" fill="#0d1117">Circle</text>
+        </g>
+        <g id="shape-square" class="node-shape" style="color: var(--square)">
+          <rect x="222" y="202" width="76" height="76" rx="6" fill="var(--square)" opacity="0.85"/>
+          <text class="node-label" x="260" y="244" fill="#0d1117">Square</text>
+        </g>
+        <g id="shape-triangle" class="node-shape" style="color: var(--triangle)">
+          <polygon points="410,202 458,278 362,278" fill="var(--triangle)" opacity="0.85"/>
+          <text class="node-label" x="410" y="252" fill="#0d1117">Triangle</text>
+        </g>
+
+        <!-- warn marks on each shape (used in step 2 + 7) -->
+        <text id="warn-circle" class="warn-mark" x="148" y="200">+</text>
+        <text id="warn-square" class="warn-mark" x="306" y="200">+</text>
+        <text id="warn-triangle" class="warn-mark" x="458" y="200">+</text>
+
+        <!-- new shape that appears in step 7 -->
+        <g id="shape-hex" class="node-shape" style="color: var(--visitor-2); opacity: 0">
+          <polygon points="40,40 78,40 97,72 78,104 40,104 21,72" fill="var(--visitor-2)" opacity="0.85" transform="translate(420,180)"/>
+          <text class="node-label" x="479" y="252" fill="#0d1117">Hexagon?</text>
+        </g>
+
+        <!-- dispatch arrows from visitor to a shape -->
+        <path id="dispatch-line" class="dispatch" d=""/>
+
+        <!-- visitor token -->
+        <g id="visitor" class="visitor-token" style="opacity: 0" transform="translate(260, 70)">
+          <rect x="-58" y="-22" width="116" height="44" rx="22" fill="var(--visitor)"/>
+          <text id="visitor-label" y="4">Visitor</text>
+        </g>
+
+        <!-- accumulator readout -->
+        <text id="accum" class="accum" x="260" y="40" opacity="0">Σ area = 0</text>
+
+        <!-- footer caption -->
+        <text id="caption" class="badge-text" x="260" y="320"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+// Each step describes: the narration, the code panel, and the SVG state.
+// Shape positions (center points) — kept consistent across steps.
+const POS = {
+  circle:   { x: 110, y: 240 },
+  square:   { x: 260, y: 240 },
+  triangle: { x: 410, y: 240 },
+};
+
+const steps = [
+  {
+    title: "the problem",
+    narration: `You have a stable hierarchy of <b>shapes</b>. Soon you'll want many operations on them: <span class="pill">area</span>, <span class="pill">render</span>, <span class="pill">serialize</span>, <span class="pill">tax</span>. If each operation lives <i>inside</i> the shape classes, every new operation modifies every class.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Circle</span> {',
+      '  <span class="c">area() { return π·r² }</span>',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">Square</span> {',
+      '  <span class="c">area() { return s² }</span>',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">Triangle</span> {',
+      '  <span class="c">area() { return ½·b·h }</span>',
+      '}',
+    ],
+    state: { visitor: 0, accum: 0, dim: [], glow: [], warn: [], hex: 0, caption: "stable hierarchy, no operations yet" }
+  },
+  {
+    title: "operations multiply",
+    narration: `Now add <span class="pill">render()</span>. You edit <b>all three</b> classes. Add <span class="pill">serialize()</span>? Edit all three again. Each new operation is an O(n) edit across the hierarchy.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Circle</span> {',
+      '  area()      { … }',
+      '  render()    { … }    <span class="c">// new!</span>',
+      '  serialize() { … }    <span class="c">// new!</span>',
+      '}',
+      '',
+      '<span class="c">// …and the same edits in Square, Triangle, …</span>',
+    ],
+    state: { visitor: 0, accum: 0, dim: [], glow: [], warn: ['circle','square','triangle'], hex: 0, caption: "every new op touches every shape" }
+  },
+  {
+    title: "flip it: visitor",
+    narration: `Visitor <b>inverts</b> the relationship. Operations live in their own <span class="pill">Visitor</span> classes. Each shape only needs <i>one</i> method, forever: <span class="pill">accept(visitor)</span>.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">Shape</span> {',
+      '  accept(v: <span class="t">ShapeVisitor</span>): <span class="t">void</span>',
+      '}',
+      '',
+      '<span class="k">interface</span> <span class="t">ShapeVisitor</span> {',
+      '  visitCircle(c: <span class="t">Circle</span>): <span class="t">void</span>',
+      '  visitSquare(s: <span class="t">Square</span>): <span class="t">void</span>',
+      '  visitTriangle(t: <span class="t">Triangle</span>): <span class="t">void</span>',
+      '}',
+    ],
+    state: { visitor: 1, accum: 0, dim: [], glow: [], warn: [], hex: 0, vlabel: "Visitor", vpos: [260, 70], caption: "two interfaces — element and visitor" }
+  },
+  {
+    title: "double dispatch",
+    narration: `When <span class="pill">circle.accept(v)</span> runs, the circle knows its own type and calls <span class="pill">v.visitCircle(this)</span>. <b>Two dispatches</b> — one on the element, one on the visitor — select exactly the right code.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Circle</span> <span class="k">implements</span> <span class="t">Shape</span> {',
+      '  <span class="k">constructor</span>(<span class="k">public</span> r: <span class="t">number</span>) {}',
+      '',
+      '  accept(v: <span class="t">ShapeVisitor</span>) {',
+      '    v.visitCircle(<span class="k">this</span>)   <span class="c">// ← second dispatch</span>',
+      '  }',
+      '}',
+    ],
+    state: { visitor: 1, accum: 0, dim: ['square','triangle'], glow: ['circle'], warn: [], hex: 0, vlabel: "Visitor", vpos: [110, 150], dispatch: 'circle', caption: "circle.accept(v) → v.visitCircle(circle)" }
+  },
+  {
+    title: "walk forward",
+    narration: `An <b>AreaVisitor</b> walks the structure. For each shape it visits, the matching <span class="pill">visit*</span> method runs and accumulates the total area. The shapes never changed.`,
+    code: [
+      '<span class="k">class</span> <span class="t">AreaVisitor</span> <span class="k">implements</span> <span class="t">ShapeVisitor</span> {',
+      '  total = <span class="n">0</span>',
+      '',
+      '  visitCircle(c)   { <span class="k">this</span>.total += Math.PI * c.r * c.r }',
+      '  visitSquare(s)   { <span class="k">this</span>.total += s.side * s.side }',
+      '  visitTriangle(t) { <span class="k">this</span>.total += <span class="n">0.5</span> * t.b * t.h }',
+      '}',
+      '',
+      '<span class="k">const</span> v = <span class="k">new</span> AreaVisitor()',
+      'shapes.forEach(s =&gt; s.accept(v))   <span class="c">// → v.total</span>',
+    ],
+    state: { visitor: 1, accum: 1, dim: [], glow: [], warn: [], hex: 0, vlabel: "AreaVisitor", vpos: [410, 150], dispatch: 'triangle', accumValue: "Σ area = 78.5 + 16 + 25 = 119.5", caption: "same structure, op runs once per node" }
+  },
+  {
+    title: "swap visitors",
+    narration: `<b>Same structure</b>, different visitor. <span class="pill">RenderVisitor</span> draws each shape; <span class="pill">SerializeVisitor</span> emits JSON. Adding a new operation is one new file — never an edit to a shape.`,
+    code: [
+      '<span class="k">class</span> <span class="t">RenderVisitor</span> <span class="k">implements</span> <span class="t">ShapeVisitor</span> {',
+      '  visitCircle(c)   { ctx.arc(…) }',
+      '  visitSquare(s)   { ctx.rect(…) }',
+      '  visitTriangle(t) { ctx.moveTo(…) }',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">SerializeVisitor</span> <span class="k">implements</span> <span class="t">ShapeVisitor</span> {',
+      '  out = []',
+      '  visitCircle(c)   { <span class="k">this</span>.out.push({kind:<span class="s">"circle"</span>, r:c.r}) }',
+      '  visitSquare(s)   { <span class="k">this</span>.out.push({kind:<span class="s">"square"</span>, s:s.side}) }',
+      '  visitTriangle(t) { <span class="k">this</span>.out.push({kind:<span class="s">"tri"</span>,    b:t.b, h:t.h}) }',
+      '}',
+    ],
+    state: { visitor: 1, accum: 0, dim: [], glow: ['circle','square','triangle'], warn: [], hex: 0, vlabel: "RenderVisitor", vpos: [260, 70], caption: "new ops are new files, not edits" }
+  },
+  {
+    title: "the trade-off",
+    narration: `The price: adding a <b>new element type</b> (say, <span class="pill">Hexagon</span>) forces <i>every</i> visitor to grow a new method. Use Visitor when the hierarchy is <b>stable</b> and operations multiply — ASTs, document trees, IRs.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">ShapeVisitor</span> {',
+      '  visitCircle(c: <span class="t">Circle</span>): <span class="t">void</span>',
+      '  visitSquare(s: <span class="t">Square</span>): <span class="t">void</span>',
+      '  visitTriangle(t: <span class="t">Triangle</span>): <span class="t">void</span>',
+      '  visitHexagon(h: <span class="t">Hexagon</span>): <span class="t">void</span>    <span class="c">// ← every visitor must add this</span>',
+      '}',
+      '',
+      '<span class="c">// the expression problem:</span>',
+      '<span class="c">//   classes-with-methods → new TYPES easy, new OPS hard</span>',
+      '<span class="c">//   visitor              → new OPS easy, new TYPES hard</span>',
+    ],
+    state: { visitor: 1, accum: 0, dim: ['circle','square','triangle'], glow: [], warn: [], hex: 1, vlabel: "every visitor", vpos: [260, 70], caption: "stability of hierarchy decides the pattern" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function setDispatch(target) {
+  const line = $('dispatch-line');
+  if (!target || !POS[target]) {
+    line.classList.remove('on');
+    return;
+  }
+  const v = $('visitor');
+  const t = v.getAttribute('transform').match(/translate\(([-\d.]+),\s*([-\d.]+)\)/);
+  const [vx, vy] = t ? [parseFloat(t[1]), parseFloat(t[2])] : [260, 70];
+  const { x, y } = POS[target];
+  line.setAttribute('d', `M ${vx} ${vy + 22} Q ${(vx + x) / 2} ${(vy + y) / 2 + 30}, ${x} ${y - 40}`);
+  line.classList.add('on');
+}
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  // Each entry in s.code is one full line of HTML; render verbatim.
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  // SVG state
+  const st = s.state;
+  ['circle', 'square', 'triangle'].forEach(name => {
+    const el = $('shape-' + name);
+    el.classList.toggle('dim', st.dim.includes(name));
+    el.classList.toggle('glow', st.glow.includes(name));
+    $('warn-' + name).classList.toggle('on', st.warn.includes(name));
+  });
+
+  // Hexagon (new type, step 7)
+  $('shape-hex').style.opacity = st.hex ? 1 : 0;
+
+  // Visitor token
+  const v = $('visitor');
+  v.style.opacity = st.visitor ? 1 : 0;
+  const [vx, vy] = st.vpos || [260, 70];
+  v.setAttribute('transform', `translate(${vx}, ${vy})`);
+  $('visitor-label').textContent = st.vlabel || 'Visitor';
+
+  // Accumulator readout
+  const acc = $('accum');
+  if (st.accum && st.accumValue) {
+    acc.textContent = st.accumValue;
+    acc.style.opacity = 1;
+  } else {
+    acc.style.opacity = 0;
+  }
+
+  // Caption
+  $('caption').textContent = st.caption || '';
+
+  // Dispatch line — set after position so it reads current visitor coords
+  requestAnimationFrame(() => setDispatch(st.dispatch));
+}
+
+function go(delta) {
+  const next = Math.max(0, Math.min(steps.length - 1, idx + delta));
+  if (next === idx) return;
+  idx = next;
+  render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

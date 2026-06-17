@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Proxy Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --client: #79c0ff; --proxy: #ffa657; --real: #7ee787; --cache: #d2a8ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .box { transition: opacity .35s, filter .35s; }
+  .box.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .box.dim { opacity: 0.25; }
+  .b-label { font: 700 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .b-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.78; }
+  .wire { stroke: var(--muted); stroke-width: 2; fill: none; marker-end: url(#arrow); opacity: 0.55; transition: opacity .3s, stroke .3s; }
+  .wire.live { opacity: 1; stroke: var(--pick); animation: dash 0.8s linear infinite; stroke-dasharray: 5 4; }
+  .wire.blocked { stroke: var(--warn); stroke-dasharray: 3 3; opacity: 0.7; }
+  .wire.hidden { opacity: 0; }
+  @keyframes dash { to { stroke-dashoffset: -18; } }
+  .gate { font: 700 28px sans-serif; text-anchor: middle; fill: #0d1117; transition: opacity .35s; }
+  .gate-x { fill: var(--warn); font: 700 22px sans-serif; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .gate-x.on { opacity: 1; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .pad { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Proxy Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <g id="client" class="box" style="color: var(--client)">
+          <rect x="20" y="140" width="100" height="60" rx="10" fill="var(--client)" opacity="0.9"/>
+          <text class="b-label" x="70" y="166">Client</text>
+          <text class="b-sub" x="70" y="186">image.load()</text>
+        </g>
+
+        <g id="proxy" class="box" style="color: var(--proxy)">
+          <rect x="180" y="120" width="160" height="100" rx="10" fill="var(--proxy)" opacity="0.9"/>
+          <text class="b-label" x="260" y="148">ImageProxy</text>
+          <text class="b-sub" x="260" y="166">implements Image</text>
+          <text class="gate" id="gate-icon" x="260" y="200">🔒</text>
+        </g>
+
+        <text id="gate-x" class="gate-x" x="290" y="210">✗</text>
+
+        <g id="real" class="box" style="color: var(--real)">
+          <rect x="400" y="140" width="100" height="60" rx="10" fill="var(--real)" opacity="0.9"/>
+          <text class="b-label" x="450" y="166">RealImage</text>
+          <text class="b-sub" x="450" y="186">heavy load</text>
+        </g>
+
+        <g id="cache" class="box" style="color: var(--cache); opacity: 0; transition: opacity .35s;">
+          <rect x="180" y="260" width="160" height="56" rx="6" fill="var(--cache)" opacity="0.85"/>
+          <text class="b-label" x="260" y="284">cache</text>
+          <text class="b-sub" x="260" y="302">last result kept</text>
+        </g>
+
+        <line id="w-cp" class="wire" x1="120" y1="170" x2="178" y2="170" marker-end="url(#arrow)"/>
+        <line id="w-pr" class="wire" x1="340" y1="170" x2="398" y2="170" marker-end="url(#arrow)"/>
+        <line id="w-direct" class="wire" x1="120" y1="170" x2="398" y2="170" marker-end="url(#arrow)" style="opacity: 0;"/>
+
+        <text id="caption" class="caption" x="260" y="345"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const steps = [
+  {
+    title: "the real thing is expensive",
+    narration: `An <b>image viewer</b> wants to render a list of 500 high-res photos. Loading every <span class="pill">RealImage</span> at startup eats memory and seconds. But you can't make the rendering code "smart" about loading — it just wants something with a <span class="pill">draw()</span> method.`,
+    code: [
+      '<span class="k">class</span> <span class="t">RealImage</span> <span class="k">implements</span> <span class="t">Image</span> {',
+      '  <span class="k">private</span> bitmap: <span class="t">Bitmap</span>',
+      '  <span class="k">constructor</span>(<span class="k">private</span> path: <span class="t">string</span>) {',
+      '    <span class="k">this</span>.bitmap = decode(readFile(path))   <span class="c">// slow + RAM-heavy</span>',
+      '  }',
+      '  draw(ctx) { ctx.blit(<span class="k">this</span>.bitmap) }',
+      '}',
+      '',
+      '<span class="c">// gallery preloads 500 — 8GB before the user scrolls.</span>',
+    ],
+    state: { proxyOn: false, cacheOn: false, gateIcon: '', gateX: false, dim: ['proxy','cache'], glow: ['client','real'], wires: ['w-direct'], wireBlocked: false, caption: "client must hold the real thing to call it" }
+  },
+  {
+    title: "stand-in object, same interface",
+    narration: `A <b>Proxy</b> implements the same <span class="pill">Image</span> interface as the real one. The client treats it identically. The proxy holds a <i>reference path</i> instead of the bitmap.`,
+    code: [
+      '<span class="k">class</span> <span class="t">ImageProxy</span> <span class="k">implements</span> <span class="t">Image</span> {',
+      '  <span class="k">private</span> real?: <span class="t">RealImage</span>      <span class="c">// nothing loaded yet</span>',
+      '  <span class="k">constructor</span>(<span class="k">private</span> path: <span class="t">string</span>) {}',
+      '',
+      '  draw(ctx) {',
+      '    <span class="k">if</span> (!<span class="k">this</span>.real) <span class="k">this</span>.real = <span class="k">new</span> RealImage(<span class="k">this</span>.path)',
+      '    <span class="k">this</span>.real.draw(ctx)',
+      '  }',
+      '}',
+    ],
+    state: { proxyOn: true, cacheOn: false, gateIcon: '🔒', gateX: false, dim: [], glow: ['proxy'], wires: ['w-cp'], wireBlocked: false, caption: "proxy looks identical from the outside" }
+  },
+  {
+    title: "control access — virtual proxy",
+    narration: `The proxy decides whether to forward, defer, or skip. <b>Virtual proxy</b>: instantiate the real object only on first use (lazy loading). 500 placeholders fit in memory; the real object loads when the row scrolls into view.`,
+    code: [
+      '<span class="k">const</span> gallery = paths.map(p =&gt; <span class="k">new</span> ImageProxy(p))',
+      '<span class="c">// gallery now holds 500 tiny proxies, ~500 bytes total</span>',
+      '',
+      '<span class="k">for</span> (<span class="k">const</span> img <span class="k">of</span> visibleRows()) img.draw(ctx)',
+      '<span class="c">// each .draw() triggers load-on-demand for that one image.</span>',
+    ],
+    state: { proxyOn: true, cacheOn: false, gateIcon: '🌗', gateX: false, dim: [], glow: ['proxy','real'], wires: ['w-cp','w-pr'], wireBlocked: false, caption: "virtual proxy = lazy load on first use" }
+  },
+  {
+    title: "control access — protection proxy",
+    narration: `Same shape, different rule. The proxy checks credentials before forwarding. Unauthorized callers get a <span class="pill">403</span>; the real object never runs. The real object stays simple; auth lives in the proxy.`,
+    code: [
+      '<span class="k">class</span> <span class="t">AdminApiProxy</span> <span class="k">implements</span> <span class="t">AdminApi</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> real: <span class="t">AdminApi</span>, <span class="k">private</span> user: <span class="t">User</span>) {}',
+      '  deleteUser(id) {',
+      '    <span class="k">if</span> (!<span class="k">this</span>.user.roles.includes(<span class="s">"admin"</span>)) {',
+      '      <span class="k">throw</span> <span class="k">new</span> Error(<span class="s">"403 forbidden"</span>)',
+      '    }',
+      '    <span class="k">return</span> <span class="k">this</span>.real.deleteUser(id)',
+      '  }',
+      '}',
+    ],
+    state: { proxyOn: true, cacheOn: false, gateIcon: '🔒', gateX: true, dim: ['real'], glow: ['proxy'], wires: ['w-cp'], wireBlocked: true, caption: "protection proxy = guard at the gate" }
+  },
+  {
+    title: "remote proxy & caching proxy",
+    narration: `<b>Remote proxy</b>: the real object is on another machine; the proxy marshals calls over HTTP/gRPC. <b>Caching proxy</b>: same call, same args, return the cached answer. The client's call site doesn't know any of this.`,
+    code: [
+      '<span class="k">class</span> <span class="t">CachingUserService</span> <span class="k">implements</span> <span class="t">UserService</span> {',
+      '  <span class="k">private</span> cache = <span class="k">new</span> Map()',
+      '  <span class="k">constructor</span>(<span class="k">private</span> real: <span class="t">UserService</span>) {}',
+      '  get(id) {',
+      '    <span class="k">if</span> (<span class="k">this</span>.cache.has(id)) <span class="k">return</span> <span class="k">this</span>.cache.get(id)',
+      '    <span class="k">const</span> u = <span class="k">this</span>.real.get(id)   <span class="c">// could be HTTP, gRPC, DB</span>',
+      '    <span class="k">this</span>.cache.set(id, u)',
+      '    <span class="k">return</span> u',
+      '  }',
+      '}',
+    ],
+    state: { proxyOn: true, cacheOn: true, gateIcon: '⚡', gateX: false, dim: [], glow: ['proxy','cache','real'], wires: ['w-cp','w-pr'], wireBlocked: false, caption: "cache hit → real never touched; remote call → over the wire" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Proxy gives you a place to intervene without modifying the real object or the caller. Pays off when the real thing is expensive, sensitive, remote, or worth observing. Costs: one more hop, and if the proxy's behavior diverges from the real (cache staleness, lazy-load surprise) clients debug a thing they didn't think existed. Same shape as <b>[[decorator-pattern]]</b> (wrap + delegate, same interface) but different intent: <b>Decorator adds behavior; Proxy controls access</b>. Also cousin of <b>[[adapter-pattern]]</b> (Adapter changes the interface; Proxy keeps it).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - lazy / expensive resources (images, DB connections)</span>',
+      '<span class="c">//   - access control, rate limiting, audit logging</span>',
+      '<span class="c">//   - remote objects: gRPC / REST clients are protection + remote proxies</span>',
+      '<span class="c">//   - memoization (caching proxy = poor man\'s React.memo)</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - real object is already cheap (just call it)</span>',
+      '<span class="c">//   - the wrap adds behavior, not gating (use [[decorator-pattern]])</span>',
+      '<span class="c">//   - the shape needs to change (use [[adapter-pattern]])</span>',
+    ],
+    state: { proxyOn: true, cacheOn: false, gateIcon: '🔒', gateX: false, dim: [], glow: ['proxy'], wires: [], wireBlocked: false, caption: "use it when something must sit between the caller and the real object" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  $('proxy').style.opacity = s.state.proxyOn ? 1 : 0;
+  $('cache').style.opacity = s.state.cacheOn ? 1 : 0;
+  $('gate-icon').textContent = s.state.gateIcon;
+  $('gate-x').classList.toggle('on', s.state.gateX);
+  ['client','proxy','real','cache'].forEach(id => {
+    $(id).classList.toggle('dim', s.state.dim.includes(id));
+    $(id).classList.toggle('glow', s.state.glow.includes(id));
+  });
+  ['w-cp','w-pr','w-direct'].forEach(id => {
+    $(id).style.opacity = s.state.wires.includes(id) ? '' : 0;
+    $(id).classList.toggle('live', s.state.wires.includes(id));
+  });
+  $('w-cp').classList.toggle('blocked', s.state.wireBlocked && s.state.wires.includes('w-cp'));
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

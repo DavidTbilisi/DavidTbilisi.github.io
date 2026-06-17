@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural OS</title>
+<style>
+:root{--bg:#0d1117;--surf:#161b22;--bdr:#30363d;--txt:#c9d1d9;--mute:#8b949e;--blue:#58a6ff;--grn:#3fb950;--gold:#d29922;--pur:#bc8cff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 16px 64px;max-width:560px;margin:0 auto;gap:32px}
+h1{font-size:1.6rem;font-weight:800;color:var(--blue);letter-spacing:-.02em}
+.sub{font-size:.85rem;color:var(--mute);margin-top:6px;line-height:1.6;text-align:center}
+.section-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);width:100%}
+.card-list{width:100%;display:flex;flex-direction:column;gap:10px}
+.card{width:100%;background:var(--surf);border:1.5px solid var(--bdr);border-radius:14px;padding:20px 22px;text-decoration:none;color:var(--txt);display:flex;justify-content:space-between;align-items:center;gap:12px;transition:border-color .15s,background .15s}
+.card:hover{border-color:var(--blue);background:#12181f}
+.card-left{display:flex;flex-direction:column;gap:5px}
+.card-title{font-size:1rem;font-weight:700}
+.card-desc{font-size:.78rem;color:var(--mute);line-height:1.5}
+.card-arrow{font-size:1.1rem;color:var(--mute);flex-shrink:0}
+.pill-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.pill{font-size:.66rem;font-weight:600;padding:2px 9px;border-radius:999px;border:1px solid}
+.blue{color:var(--blue);border-color:var(--blue);background:rgba(88,166,255,.08)}
+.grn{color:var(--grn);border-color:var(--grn);background:rgba(63,185,80,.08)}
+.gold{color:var(--gold);border-color:var(--gold);background:rgba(210,153,34,.08)}
+.pur{color:var(--pur);border-color:var(--pur);background:rgba(188,140,255,.08)}
+.mute{color:var(--mute);border-color:var(--bdr);background:transparent}
+footer{font-size:.72rem;color:var(--mute);text-align:center;line-height:1.8}
+</style>
+</head>
+<body>
+
+<div style="text-align:center">
+  <h1>Neural OS</h1>
+  <p class="sub">A personal knowledge operating system.<br>Memory palaces · Skill gyms · Encoding frameworks.</p>
+</div>
+
+<div class="section-label">Walkthroughs</div>
+<div class="card-list">
+
+  <a class="card" href="walkthroughs.html">
+    <div class="card-left">
+      <div class="card-title">All Walkthroughs →</div>
+      <div class="card-desc">Stepped visual explainers built with /explain. Climb the Bloom ladder from recognize to synthesize.</div>
+      <div class="pill-row">
+        <span class="pill gold">Design Patterns</span>
+        <span class="pill grn">AWS</span>
+        <span class="pill blue">Cheatsheets</span>
+        <span class="pill pur">Cybersec</span>
+        <span class="pill mute">+more</span>
+      </div>
+    </div>
+    <div class="card-arrow">→</div>
+  </a>
+
+</div>
+
+<footer>
+  Results saved in your browser (localStorage) — nothing sent to a server.<br>
+  github.com/DavidTbilisi/Neural-OS-Research
+</footer>
+
+</body>
+</html>

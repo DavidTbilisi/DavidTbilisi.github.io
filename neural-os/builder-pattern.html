@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Builder Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --bun: #ffa657; --patty: #7ee787; --cheese: #d2a8ff; --bacon: #f7b3c4;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .layer { transition: opacity .45s, transform .45s cubic-bezier(.4,1.4,.4,1); transform-origin: center; transform-box: fill-box; }
+  .layer.idle { opacity: 0; transform: translateY(-20px); }
+  .layer.on { opacity: 1; transform: translateY(0); }
+  .l-label { font: 700 11px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; }
+  .builder-arrow { stroke: var(--pick); stroke-width: 1.5; fill: none; opacity: 0; transition: opacity .35s; }
+  .builder-arrow.on { opacity: 1; animation: pulse 0.9s ease-out infinite; }
+  @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+  .ribbon { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .ribbon.on { opacity: 1; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .preset { fill: var(--accent); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .preset.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Builder Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <text id="ribbon" class="ribbon" x="260" y="40">new Burger(true,true,2,false,true,"medium",false,null) ← which arg is which?</text>
+
+        <g id="l-bun-top" class="layer idle">
+          <ellipse cx="260" cy="90" rx="100" ry="18" fill="var(--bun)" opacity="0.9"/>
+          <text class="l-label" x="260" y="94">top bun</text>
+        </g>
+        <g id="l-bacon" class="layer idle">
+          <rect x="170" y="106" width="180" height="14" rx="5" fill="var(--bacon)" opacity="0.9"/>
+          <text class="l-label" x="260" y="118">bacon</text>
+        </g>
+        <g id="l-cheese" class="layer idle">
+          <rect x="170" y="124" width="180" height="14" rx="5" fill="var(--cheese)" opacity="0.9"/>
+          <text class="l-label" x="260" y="136">cheese</text>
+        </g>
+        <g id="l-patty" class="layer idle">
+          <rect x="170" y="142" width="180" height="22" rx="5" fill="var(--patty)" opacity="0.9"/>
+          <text class="l-label" x="260" y="158">patty</text>
+        </g>
+        <g id="l-lettuce" class="layer idle">
+          <rect x="170" y="168" width="180" height="14" rx="5" fill="#9be08e" opacity="0.9"/>
+          <text class="l-label" x="260" y="180">lettuce</text>
+        </g>
+        <g id="l-bun-bot" class="layer idle">
+          <ellipse cx="260" cy="200" rx="100" ry="18" fill="var(--bun)" opacity="0.9"/>
+          <text class="l-label" x="260" y="204">bottom bun</text>
+        </g>
+
+        <text id="preset-name" class="preset" x="260" y="246">→ BigKing.build()</text>
+        <text id="preset-cheap" class="preset" x="260" y="262" style="opacity: 0">→ Cheapeats.build()</text>
+
+        <text id="caption" class="caption" x="260" y="300"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL_LAYERS = ['l-bun-top','l-bacon','l-cheese','l-patty','l-lettuce','l-bun-bot'];
+const steps = [
+  {
+    title: "the telescoping constructor",
+    narration: `A <span class="pill">Burger</span> has a dozen optional toppings. The naive constructor takes 12 booleans. Call sites become <span class="pill">new Burger(true,true,2,false,true,"medium",false,null)</span> — unreadable, error-prone, and any rearrangement is a silent bug.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Burger</span> {',
+      '  <span class="k">constructor</span>(',
+      '    bun: <span class="t">boolean</span>, cheese: <span class="t">boolean</span>, patties: <span class="t">number</span>,',
+      '    lettuce: <span class="t">boolean</span>, bacon: <span class="t">boolean</span>, doneness: <span class="t">string</span>,',
+      '    pickles: <span class="t">boolean</span>, sauce: <span class="t">string</span> | <span class="k">null</span>,',
+      '    onion: <span class="t">boolean</span>, tomato: <span class="t">boolean</span>, /* … */',
+      '  ) {}',
+      '}',
+      '',
+      '<span class="k">new</span> Burger(<span class="k">true</span>, <span class="k">true</span>, <span class="n">2</span>, <span class="k">false</span>, <span class="k">true</span>, <span class="s">"medium"</span>, <span class="k">false</span>, <span class="k">null</span>, <span class="k">true</span>, <span class="k">false</span>)',
+      '<span class="c">// good luck remembering which boolean is which.</span>',
+    ],
+    state: { layers: [], ribbon: true, presetA: false, presetB: false, caption: "twelve-argument constructor = read it once, get it wrong forever" }
+  },
+  {
+    title: "a step-by-step Builder",
+    narration: `Move construction into its own <b>Builder</b> class. Each part is added by a named method. The Builder collects state; the product is constructed at the end.`,
+    code: [
+      '<span class="k">class</span> <span class="t">BurgerBuilder</span> {',
+      '  <span class="k">private</span> parts: <span class="t">Partial</span>&lt;<span class="t">Burger</span>&gt; = {}',
+      '',
+      '  bun()              { <span class="k">this</span>.parts.bun = <span class="k">true</span>;            <span class="k">return</span> <span class="k">this</span> }',
+      '  patties(n: <span class="t">number</span>)  { <span class="k">this</span>.parts.patties = n;          <span class="k">return</span> <span class="k">this</span> }',
+      '  cheese()           { <span class="k">this</span>.parts.cheese = <span class="k">true</span>;         <span class="k">return</span> <span class="k">this</span> }',
+      '  bacon()            { <span class="k">this</span>.parts.bacon = <span class="k">true</span>;          <span class="k">return</span> <span class="k">this</span> }',
+      '  doneness(d: <span class="t">string</span>) { <span class="k">this</span>.parts.doneness = d;        <span class="k">return</span> <span class="k">this</span> }',
+      '',
+      '  build(): <span class="t">Burger</span> { <span class="k">return</span> <span class="k">new</span> Burger(<span class="k">this</span>.parts) }',
+      '}',
+    ],
+    state: { layers: [], ribbon: false, presetA: false, presetB: false, caption: "each part = a named step on the builder" }
+  },
+  {
+    title: "fluent chain reads as recipe",
+    narration: `Each setter returns <span class="pill">this</span>, so calls chain. The construction reads top-to-bottom as a recipe. Defaults stay in the Builder; the caller only mentions what's non-default.`,
+    code: [
+      '<span class="k">const</span> burger = <span class="k">new</span> BurgerBuilder()',
+      '  .bun()',
+      '  .patties(<span class="n">2</span>)',
+      '  .cheese()',
+      '  .bacon()',
+      '  .doneness(<span class="s">"medium"</span>)',
+      '  .build()',
+      '',
+      '<span class="c">// reads top to bottom. each line is what is added. order is layout.</span>',
+    ],
+    state: { layers: ['l-bun-bot'], ribbon: false, presetA: false, presetB: false, caption: "construction reads like a recipe — every line names its own intent" }
+  },
+  {
+    title: "the burger assembles",
+    narration: `Each <span class="pill">.method()</span> call drops in another layer. The Builder accumulates state until <span class="pill">.build()</span> snaps the final immutable product into existence.`,
+    code: [
+      '<span class="k">const</span> burger = <span class="k">new</span> BurgerBuilder()',
+      '  .bun()           <span class="c">// bottom bun added</span>',
+      '  .patties(<span class="n">2</span>)      <span class="c">// patty added</span>',
+      '  .cheese()        <span class="c">// cheese added</span>',
+      '  .bacon()         <span class="c">// bacon added</span>',
+      '  .build()         <span class="c">// top bun + return final Burger</span>',
+      '',
+      '<span class="c">// builder state is gone; you hold an immutable Burger.</span>',
+    ],
+    state: { layers: ['l-bun-bot','l-patty','l-cheese','l-bacon','l-bun-top'], ribbon: false, presetA: false, presetB: false, caption: "build() snapshots the accumulated parts" }
+  },
+  {
+    title: "validate at build()",
+    narration: `<span class="pill">build()</span> is the one place that sees the whole assembly — it can validate invariants ("must have a bun", "max 4 patties", "can't have bacon and vegetarian = true") before constructing. The Burger constructor stays strict and total; the Builder bears the squishy interaction logic.`,
+    code: [
+      'build(): <span class="t">Burger</span> {',
+      '  <span class="k">if</span> (!<span class="k">this</span>.parts.bun) <span class="k">throw</span> <span class="k">new</span> Error(<span class="s">"need a bun"</span>)',
+      '  <span class="k">if</span> ((<span class="k">this</span>.parts.patties ?? <span class="n">0</span>) &gt; <span class="n">4</span>) <span class="k">throw</span> <span class="k">new</span> Error(<span class="s">"max 4"</span>)',
+      '  <span class="k">if</span> (<span class="k">this</span>.parts.bacon &amp;&amp; <span class="k">this</span>.parts.vegetarian) {',
+      '    <span class="k">throw</span> <span class="k">new</span> Error(<span class="s">"conflicting toppings"</span>)',
+      '  }',
+      '  <span class="k">return</span> <span class="k">new</span> Burger(<span class="k">this</span>.parts <span class="k">as</span> <span class="t">Required</span>&lt;<span class="t">Burger</span>&gt;)',
+      '}',
+    ],
+    state: { layers: ALL_LAYERS, ribbon: false, presetA: false, presetB: false, caption: "the build step owns whole-object validation" }
+  },
+  {
+    title: "directors reuse recipes",
+    narration: `Common combinations live in a <b>Director</b> (or static "preset" methods). The Builder is the engine; the Director is the recipe book. Same engine produces a <span class="pill">BigKing</span> or a <span class="pill">Cheapeats</span> by calling different sequences.`,
+    code: [
+      '<span class="k">class</span> <span class="t">BurgerDirector</span> {',
+      '  bigKing(b: <span class="t">BurgerBuilder</span>) {',
+      '    <span class="k">return</span> b.bun().patties(<span class="n">2</span>).cheese().bacon().lettuce().build()',
+      '  }',
+      '  cheapeats(b: <span class="t">BurgerBuilder</span>) {',
+      '    <span class="k">return</span> b.bun().patties(<span class="n">1</span>).build()',
+      '  }',
+      '}',
+      '',
+      '<span class="k">const</span> a = <span class="k">new</span> BurgerDirector().bigKing(<span class="k">new</span> BurgerBuilder())',
+      '<span class="k">const</span> b = <span class="k">new</span> BurgerDirector().cheapeats(<span class="k">new</span> BurgerBuilder())',
+    ],
+    state: { layers: ALL_LAYERS, ribbon: false, presetA: true, presetB: true, caption: "Director = canned recipes; same Builder underneath" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Builder turns a chaotic constructor into a readable sequence of steps with optional validation and pluggable presets. Pays off when the constructed object has many optional or interacting fields, when invariants need a final check, or when you want to build the same shape with multiple recipes. Costs: an extra class and one more vocabulary to learn; overkill for 2–3 required args. Common alternative in modern languages: <b>named parameters with defaults</b> (Python, Kotlin, C#) — when available, often better than a hand-rolled Builder. Close cousin of <b>[[factory-method-pattern]]</b> (also produces an object, but factory method decides <i>which</i> class in one shot; Builder constructs <i>one</i> class through many steps) and <b>[[abstract-factory-pattern]]</b> (Abstract Factory makes a family of finished products; Builder constructs <i>one</i> product over time).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - many optional / interacting fields (queries, HTTP requests, documents)</span>',
+      '<span class="c">//   - immutable products that need whole-object validation</span>',
+      '<span class="c">//   - SQL / regex / config DSLs ("fluent" APIs)</span>',
+      '<span class="c">//   - test data factories with sensible defaults</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - 2–3 required args (just write a constructor)</span>',
+      '<span class="c">//   - language has named params + defaults — use them</span>',
+      '<span class="c">//   - you need to pick a *class*, not assemble one (use [[factory-method-pattern]])</span>',
+    ],
+    state: { layers: ALL_LAYERS, ribbon: false, presetA: true, presetB: false, caption: "use it when many optional parts + an invariant deserve a recipe" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_LAYERS.forEach(id => {
+    const on = s.state.layers.includes(id);
+    $(id).classList.toggle('on', on);
+    $(id).classList.toggle('idle', !on);
+  });
+  $('ribbon').classList.toggle('on', s.state.ribbon);
+  $('preset-name').classList.toggle('on', s.state.presetA);
+  $('preset-cheap').style.opacity = s.state.presetB ? 1 : 0;
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IAM — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --user:   #ffa657;
+    --role:   #d2a8ff;
+    --policy: #7ee787;
+    --res:    #a5d6ff;
+    --warn:   #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .node { transition: opacity .35s, filter .35s; }
+  .node.dim { opacity: 0.25; }
+  .node.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .node-label { font: 700 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .node-sub   { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.8; }
+  .req { stroke: var(--pick); stroke-width: 2.5; fill: none; marker-end: url(#mk); opacity: 0; transition: opacity .35s; stroke-dasharray: 6 5; }
+  .req.on { opacity: 1; animation: dash 1.2s linear infinite; }
+  .req.blocked { stroke: var(--warn); animation: none; opacity: 1; }
+  @keyframes dash { to { stroke-dashoffset: -22; } }
+  .verdict { font: 700 14px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .verdict.on { opacity: 1; }
+  .verdict.allow { fill: var(--policy); }
+  .verdict.deny { fill: var(--warn); }
+  .caption { fill: var(--muted); font: 600 10.5px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>IAM — Principals, Policies, Resources <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 540 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <!-- Principal (left) -->
+        <g class="node" id="user" style="color: var(--user)">
+          <circle cx="80" cy="120" r="36" fill="var(--user)"/>
+          <text class="node-label" x="80" y="118">User</text>
+          <text class="node-sub" x="80" y="134">long-lived key</text>
+        </g>
+
+        <g class="node" id="role" style="color: var(--role)">
+          <rect x="44" y="210" width="72" height="62" rx="10" fill="var(--role)"/>
+          <text class="node-label" x="80" y="234">Role</text>
+          <text class="node-sub" x="80" y="250">no creds</text>
+          <text class="node-sub" x="80" y="262">assumed</text>
+        </g>
+
+        <!-- Policy diamond (middle) — the gate -->
+        <g class="node" id="policy" style="color: var(--policy)">
+          <polygon points="270,80 350,180 270,280 190,180" fill="var(--policy)"/>
+          <text class="node-label" x="270" y="170">Policy</text>
+          <text class="node-sub" x="270" y="186">Allow / Deny</text>
+          <text class="node-sub" x="270" y="200">on Action+Resource</text>
+        </g>
+
+        <!-- MFA badge (sits on user) -->
+        <g class="node" id="mfa" style="color: var(--accent); opacity: 0">
+          <circle cx="110" cy="92" r="13" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+          <text x="110" y="96" text-anchor="middle" font="700 10px ui-monospace" fill="#0d1117">2FA</text>
+        </g>
+
+        <!-- Resources (right) -->
+        <g class="node" id="s3" style="color: var(--res)">
+          <rect x="430" y="60" width="90" height="46" rx="8" fill="var(--res)"/>
+          <text class="node-label" x="475" y="82">S3 bucket</text>
+          <text class="node-sub" x="475" y="96">photos/</text>
+        </g>
+        <g class="node" id="db-res" style="color: var(--res)">
+          <rect x="430" y="156" width="90" height="46" rx="8" fill="var(--res)"/>
+          <text class="node-label" x="475" y="178">DynamoDB</text>
+          <text class="node-sub" x="475" y="192">orders</text>
+        </g>
+        <g class="node" id="ec2-res" style="color: var(--res)">
+          <rect x="430" y="252" width="90" height="46" rx="8" fill="var(--res)"/>
+          <text class="node-label" x="475" y="274">EC2</text>
+          <text class="node-sub" x="475" y="288">i-abc123</text>
+        </g>
+
+        <!-- Request arrows -->
+        <path id="req-user-s3"   class="req" d="M 116 120 L 190 180"/>
+        <path id="req-policy-s3" class="req" d="M 350 180 Q 400 130 430 83"/>
+        <path id="req-user-db"   class="req" d="M 116 120 L 190 180"/>
+        <path id="req-policy-db" class="req blocked" d="M 350 180 L 430 180"/>
+        <path id="req-role-ec2"  class="req" d="M 116 240 L 190 200"/>
+        <path id="req-policy-ec2" class="req" d="M 350 180 Q 400 230 430 275"/>
+
+        <!-- Verdict text -->
+        <text id="verdict" class="verdict" x="390" y="42"></text>
+
+        <text id="caption" class="caption" x="270" y="336"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Detail</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL_NODES = ['user','role','policy','mfa','s3','db-res','ec2-res'];
+const ALL_REQS  = ['req-user-s3','req-policy-s3','req-user-db','req-policy-db','req-role-ec2','req-policy-ec2'];
+
+const steps = [
+  {
+    title: "principal → policy → resource",
+    narration: `Every AWS call is the same shape: a <b>principal</b> asks to do an <b>action</b> on a <b>resource</b>. <span class="pill">IAM</span> stands in between and answers <i>allow</i> or <i>deny</i> based on the policies attached to either side.`,
+    code: [
+      '<span class="c">// the only IAM question:</span>',
+      '',
+      '  who   = principal     (user, role, service)',
+      '  what  = action        ("s3:GetObject")',
+      '  where = resource ARN  ("arn:aws:s3:::my-bucket/*")',
+      '',
+      '<span class="c">// IAM\'s job: evaluate every attached policy and answer</span>',
+      '<span class="c">// → Allow | Deny | (default) implicit Deny</span>',
+    ],
+    state: { dim: ['mfa','db-res','ec2-res','role'], glow: ['user','policy','s3'], reqs: [], verdict: '', caption: "every API call: who/what/where" }
+  },
+  {
+    title: "User — long-lived identity",
+    narration: `A <b>User</b> is a human (or app) with long-lived credentials — a password for the console, an <b>access key</b> for the CLI/SDK. Convenient. Also <i>the</i> credential most often leaked. AWS's stance: avoid IAM users for apps.`,
+    code: [
+      '<span class="c">// create a user, attach an access key:</span>',
+      'aws iam create-user --user-name alice',
+      'aws iam create-access-key --user-name alice',
+      '',
+      '<span class="c">// these creds live on alice\'s laptop until rotated.</span>',
+      '<span class="c">// long-lived → bigger blast radius if leaked.</span>',
+      '',
+      '<span class="c">// rule of thumb: humans only. apps use roles.</span>',
+    ],
+    state: { dim: ['mfa','role','db-res','ec2-res','policy','s3'], glow: ['user'], reqs: [], verdict: '', caption: "User = long-lived credentials" }
+  },
+  {
+    title: "Policy — the gate",
+    narration: `A <b>policy</b> is a JSON doc: <i>which actions on which resources</i> are allowed (or denied), under what conditions. Attach to a user, a group, a role, or to the resource itself. Same JSON shape in all four places.`,
+    code: [
+      '{',
+      '  <span class="s">"Version"</span>: <span class="s">"2012-10-17"</span>,',
+      '  <span class="s">"Statement"</span>: [{',
+      '    <span class="s">"Effect"</span>:   <span class="s">"Allow"</span>,',
+      '    <span class="s">"Action"</span>:   [<span class="s">"s3:GetObject"</span>, <span class="s">"s3:PutObject"</span>],',
+      '    <span class="s">"Resource"</span>: <span class="s">"arn:aws:s3:::my-bucket/photos/*"</span>,',
+      '    <span class="s">"Condition"</span>: {',
+      '      <span class="s">"Bool"</span>: { <span class="s">"aws:MultiFactorAuthPresent"</span>: <span class="s">"true"</span> }',
+      '    }',
+      '  }]',
+      '}',
+    ],
+    state: { dim: ['mfa','role','db-res','ec2-res'], glow: ['policy'], reqs: ['req-user-s3','req-policy-s3'], verdict: 'ALLOW', verdictKind: 'allow', caption: "policy decides: Allow / Deny / implicit Deny" }
+  },
+  {
+    title: "deny — explicit beats allow",
+    narration: `If no policy says Allow, the answer is Deny (the <i>implicit deny</i>). If any policy says Deny, the answer is Deny — and an <b>explicit Deny</b> beats <i>every</i> Allow. There's no way to override it.`,
+    code: [
+      '<span class="c">// evaluation order:</span>',
+      '',
+      '  1. is there an explicit  Deny  anywhere?  → DENY',
+      '  2. is there an explicit  Allow anywhere?  → ALLOW',
+      '  3. otherwise                              → DENY (implicit)',
+      '',
+      '<span class="c">// "explicit Deny" is the kill switch:</span>',
+      '<span class="c">//   org-level SCP, permission boundary,</span>',
+      '<span class="c">//   identity policy, resource policy — any one of them</span>',
+      '<span class="c">//   says Deny → it\'s over. no override.</span>',
+    ],
+    state: { dim: ['mfa','role','s3','ec2-res'], glow: ['policy','db-res'], reqs: ['req-user-db','req-policy-db'], verdict: 'DENY', verdictKind: 'deny', caption: "explicit Deny is final" }
+  },
+  {
+    title: "Role — assumed, not owned",
+    narration: `A <b>Role</b> has policies but <i>no</i> credentials. A trusted entity <b>assumes</b> it via <span class="pill">STS</span> and gets back <b>temporary keys</b> (15min–12hr). EC2 instances, Lambda functions, cross-account access — all are roles being assumed.`,
+    code: [
+      '<span class="c">// EC2 assumes a role via instance profile — automatically.</span>',
+      'aws iam create-role --role-name app-role \\',
+      '  --assume-role-policy-document file://trust.json',
+      '',
+      '<span class="c">// trust.json says "EC2 may assume me":</span>',
+      '{',
+      '  <span class="s">"Statement"</span>: [{',
+      '    <span class="s">"Effect"</span>: <span class="s">"Allow"</span>,',
+      '    <span class="s">"Principal"</span>: { <span class="s">"Service"</span>: <span class="s">"ec2.amazonaws.com"</span> },',
+      '    <span class="s">"Action"</span>: <span class="s">"sts:AssumeRole"</span>',
+      '  }]',
+      '}',
+      '<span class="c">// → SDK on the EC2 instance silently gets temp creds, rotated.</span>',
+    ],
+    state: { dim: ['user','mfa','s3','db-res'], glow: ['role','policy','ec2-res'], reqs: ['req-role-ec2','req-policy-ec2'], verdict: 'ALLOW', verdictKind: 'allow', caption: "Role + STS = short-lived creds, no rotation work" }
+  },
+  {
+    title: "MFA — the second factor",
+    narration: `Adding <b>MFA</b> doesn't change what the user <i>can</i> do — it changes <i>how</i> they prove they are who they say. Best combined with a policy <span class="pill">Condition</span> that requires <span class="pill">aws:MultiFactorAuthPresent</span> for sensitive actions.`,
+    code: [
+      '<span class="c">// MFA: virtual (Authenticator app), hardware, FIDO2 key.</span>',
+      'aws iam enable-mfa-device --user-name alice ...',
+      '',
+      '<span class="c">// then gate dangerous actions on MFA being present:</span>',
+      '{',
+      '  <span class="s">"Effect"</span>: <span class="s">"Allow"</span>,',
+      '  <span class="s">"Action"</span>: <span class="s">"iam:*"</span>,',
+      '  <span class="s">"Resource"</span>: <span class="s">"*"</span>,',
+      '  <span class="s">"Condition"</span>: { <span class="s">"Bool"</span>: { <span class="s">"aws:MultiFactorAuthPresent"</span>: <span class="s">"true"</span> } }',
+      '}',
+      '',
+      '<span class="c">// authn (who you are) ≠ authz (what you can do). MFA hardens authn.</span>',
+    ],
+    state: { dim: ['role','ec2-res','db-res'], glow: ['user','mfa','policy','s3'], reqs: ['req-user-s3','req-policy-s3'], verdict: 'ALLOW', verdictKind: 'allow', caption: "MFA hardens authentication, not authorization" }
+  },
+  {
+    title: "the rules to remember",
+    narration: `Four things to internalize: <b>users</b> for humans, <b>roles</b> for everything else; <b>least privilege</b> as the default policy; <b>explicit Deny</b> wins; <b>MFA</b> on anything privileged. Most IAM exam questions resolve cleanly with these four.`,
+    code: [
+      '<span class="c">// the four rules:</span>',
+      '',
+      '  1. humans → users.    everything else → roles.',
+      '  2. least privilege.   start with nothing, add what\'s needed.',
+      '  3. explicit Deny wins. no Allow ever overrides it.',
+      '  4. MFA on privileged identities — always.',
+      '',
+      '<span class="c">// vocabulary that gets mixed up:</span>',
+      '<span class="c">//   authentication = who you are (login, MFA, key)</span>',
+      '<span class="c">//   authorization  = what you can do (policy result)</span>',
+      '<span class="c">//   permission     = the granted action+resource pair</span>',
+    ],
+    state: { dim: [], glow: [], reqs: [], verdict: '', caption: "user / role / least-priv / deny-wins / MFA" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_NODES.forEach(n => {
+    const el = $(n);
+    el.classList.toggle('dim', s.state.dim.includes(n));
+    el.classList.toggle('glow', s.state.glow.includes(n));
+  });
+  // MFA badge: only visible when glowed
+  $('mfa').style.opacity = s.state.glow.includes('mfa') ? 1 : 0;
+
+  ALL_REQS.forEach(r => {
+    const el = $(r);
+    el.classList.toggle('on', s.state.reqs.includes(r));
+  });
+
+  const v = $('verdict');
+  v.textContent = s.state.verdict || '';
+  v.classList.toggle('on', !!s.state.verdict);
+  v.classList.toggle('allow', s.state.verdictKind === 'allow');
+  v.classList.toggle('deny',  s.state.verdictKind === 'deny');
+
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

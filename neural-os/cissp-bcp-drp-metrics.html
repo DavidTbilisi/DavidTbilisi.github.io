@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-05">
+<head>
+<meta charset="utf-8">
+<title>CISSP BCP/DRP Metrics — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166; --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+    --l1: #7ee787; --l2: #79c0ff; --l3: #f78166; --l4: #ffa657; --l5: #d2a8ff;
+    --right: #7ee787; --wrong: #f85149;
+    --rpo: #ffa657;   /* RPO orange — backward, data loss */
+    --rto: #79c0ff;   /* RTO blue — forward, restoration */
+    --disrupt: #f85149;
+    --hot: #f78166;
+    --warm: #ffa657;
+    --cold: #79c0ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .bloom-pill { display: inline-block; padding: 2px 9px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-right: 6px; }
+  .bloom-pill.l1 { background: rgba(126,231,135,0.16); color: var(--l1); }
+  .bloom-pill.l2 { background: rgba(121,192,255,0.16); color: var(--l2); }
+  .bloom-pill.l3 { background: rgba(247,129,102,0.16); color: var(--l3); }
+  .bloom-pill.l4 { background: rgba(255,166,87,0.16); color: var(--l4); }
+  .bloom-pill.l5 { background: rgba(210,168,255,0.18); color: var(--l5); }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .narration .wikilink { color: var(--l5); text-decoration: underline; text-decoration-color: rgba(210,168,255,0.4); cursor: pointer; }
+  .narration .wikilink:after { content: " ↗"; font-size: 10px; opacity: 0.6; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; } .s { color: #a5d6ff; } .t { color: #7ee787; } .n { color: #d2a8ff; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+  .choice { background: var(--bg); color: var(--text); border: 1px solid var(--line); padding: 7px 13px; border-radius: 7px; cursor: pointer; font: inherit; font-size: 13px; transition: all .15s; }
+  .choice:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .choice:disabled { cursor: not-allowed; opacity: 0.7; }
+  .choice.picked.correct { background: rgba(126,231,135,0.15); border-color: var(--right); color: var(--right); }
+  .choice.picked.wrong { background: rgba(248,81,73,0.15); border-color: var(--wrong); color: var(--wrong); }
+  .choice.correct:not(.picked) { border-style: dashed; border-color: var(--right); color: var(--right); }
+  .feedback { font-size: 13px; line-height: 1.55; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; display: none; }
+  .feedback.show { display: block; }
+  .feedback.right { background: rgba(126,231,135,0.10); color: var(--right); border-left: 3px solid var(--right); }
+  .feedback.wrong { background: rgba(248,81,73,0.10); color: var(--wrong); border-left: 3px solid var(--wrong); }
+  .ask { font-size: 13px; color: var(--muted); margin: 6px 0; font-style: italic; }
+  /* Timeline visuals */
+  .timeline-base { stroke: var(--muted); stroke-width: 2; fill: none; opacity: 0.45; }
+  .arrow { stroke-width: 3; fill: none; transition: opacity .35s, stroke-width .35s; opacity: 0; }
+  .arrow.show { opacity: 1; }
+  .arrow.show.active { stroke-width: 4; animation: dash 0.9s linear infinite; stroke-dasharray: 6 5; }
+  @keyframes dash { to { stroke-dashoffset: -22; } }
+  .arrow-rpo { stroke: var(--rpo); marker-end: url(#arrR); }
+  .arrow-rto { stroke: var(--rto); marker-end: url(#arrT); }
+  .marker { transition: opacity .35s; }
+  .marker.fade { opacity: 0.25; }
+  .marker.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .disrupt-circle { fill: var(--disrupt); stroke: var(--text); stroke-width: 2; }
+  .disrupt-label { font: 700 12px sans-serif; text-anchor: middle; fill: var(--bg); }
+  .backup-circle { fill: var(--panel); stroke: var(--rpo); stroke-width: 2; }
+  .backup-label { font: 600 10px sans-serif; text-anchor: middle; fill: var(--rpo); }
+  .restore-circle { fill: var(--panel); stroke: var(--rto); stroke-width: 2; }
+  .restore-label { font: 600 10px sans-serif; text-anchor: middle; fill: var(--rto); }
+  .arrow-label { font: 700 13px ui-monospace, monospace; text-anchor: middle; }
+  .beacon { transition: opacity .35s, filter .35s; }
+  .beacon.dim { opacity: 0.25; }
+  .beacon.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .beacon-circle { stroke-width: 2; }
+  .beacon-name { font: 700 13px sans-serif; text-anchor: middle; }
+  .beacon-time { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: var(--muted); }
+  .axis-label { font: 600 10px ui-monospace, monospace; fill: var(--muted); }
+  .bia-base { transition: opacity .35s; }
+  .bia-rect { fill: rgba(126,231,135,0.10); stroke: var(--l1); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .bia-text { font: 700 12px sans-serif; text-anchor: middle; fill: var(--l1); }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--l1) 0%, var(--l2) 25%, var(--l3) 50%, var(--l4) 75%, var(--l5) 100%); transition: width .35s ease; width: 0; }
+  button.nav-btn { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button.nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button.nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>CISSP BCP/DRP — RPO ↔ RTO Timeline <small>— a visual walkthrough</small></h1>
+    <div class="step-count">
+      <span id="pill" class="bloom-pill l1">Recognize</span>
+      Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span>
+    </div>
+  </header>
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <p class="ask" id="ask"></p>
+      <div class="choices" id="choices"></div>
+      <div class="feedback" id="feedback"></div>
+      <svg id="stage" viewBox="0 0 600 380" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rpo)"/>
+          </marker>
+          <marker id="arrT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rto)"/>
+          </marker>
+        </defs>
+
+        <!-- BIA foundation rectangle (the bedrock) -->
+        <g id="bia" class="bia-base" style="opacity: 0">
+          <rect class="bia-rect" x="40" y="252" width="520" height="40" rx="6"/>
+          <text class="bia-text" x="300" y="277">BIA — Business Impact Analysis (everything stands on this)</text>
+        </g>
+
+        <!-- Timeline base axis -->
+        <line class="timeline-base" x1="40" y1="170" x2="560" y2="170"/>
+        <text class="axis-label" x="40"  y="195">← past</text>
+        <text class="axis-label" x="540" y="195">future →</text>
+
+        <!-- Backup marker (left of disruption) -->
+        <g id="backup" class="marker">
+          <circle class="backup-circle" cx="120" cy="170" r="22"/>
+          <text class="backup-label" x="120" y="167">last</text>
+          <text class="backup-label" x="120" y="180">backup</text>
+        </g>
+
+        <!-- Disruption anchor -->
+        <g id="disrupt" class="marker">
+          <circle class="disrupt-circle" cx="300" cy="170" r="28"/>
+          <text class="disrupt-label" x="300" y="167">DIS-</text>
+          <text class="disrupt-label" x="300" y="180">RUPTION</text>
+        </g>
+
+        <!-- Restore marker (right of disruption) -->
+        <g id="restore" class="marker">
+          <circle class="restore-circle" cx="480" cy="170" r="22"/>
+          <text class="restore-label" x="480" y="167">service</text>
+          <text class="restore-label" x="480" y="180">restored</text>
+        </g>
+
+        <!-- RPO arrow (backup → disruption, but conceptually FROM disruption looking BACKWARD) -->
+        <path id="arr-rpo" class="arrow arrow-rpo" d="M 268 140 Q 200 100, 144 140"/>
+        <text id="lbl-rpo" class="arrow-label" x="200" y="92" fill="var(--rpo)" style="opacity: 0">RPO ← backward (data loss)</text>
+
+        <!-- RTO arrow (disruption → restore) -->
+        <path id="arr-rto" class="arrow arrow-rto" d="M 332 140 Q 400 100, 456 140"/>
+        <text id="lbl-rto" class="arrow-label" x="400" y="92" fill="var(--rto)" style="opacity: 0">RTO → forward (downtime)</text>
+
+        <!-- 3 beacons (Hot/Warm/Cold) -->
+        <g id="beacon-hot" class="beacon" style="color: var(--hot)">
+          <circle class="beacon-circle" cx="380" cy="240" r="11" fill="var(--hot)" fill-opacity="0.4" stroke="var(--hot)"/>
+          <text class="beacon-name" x="380" y="265" fill="var(--hot)">Hot</text>
+          <text class="beacon-time" x="380" y="280">minutes</text>
+        </g>
+        <g id="beacon-warm" class="beacon" style="color: var(--warm)">
+          <circle class="beacon-circle" cx="450" cy="240" r="9" fill="var(--warm)" fill-opacity="0.3" stroke="var(--warm)"/>
+          <text class="beacon-name" x="450" y="265" fill="var(--warm)">Warm</text>
+          <text class="beacon-time" x="450" y="280">hrs–days</text>
+        </g>
+        <g id="beacon-cold" class="beacon" style="color: var(--cold)">
+          <circle class="beacon-circle" cx="520" cy="240" r="7" fill="var(--cold)" fill-opacity="0.25" stroke="var(--cold)"/>
+          <text class="beacon-name" x="520" y="265" fill="var(--cold)">Cold</text>
+          <text class="beacon-time" x="520" y="280">days–wks</text>
+        </g>
+
+        <!-- Caption -->
+        <text id="caption" class="caption" x="300" y="355"></text>
+      </svg>
+    </section>
+    <section class="panel">
+      <p class="label">Notes</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+  <nav>
+    <button class="nav-btn" id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button class="nav-btn" id="next">Next →</button>
+  </nav>
+  <div class="hint">← / → arrow keys to navigate · Apply &amp; Analyze require a choice before Next unlocks</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ALL_BEACONS = ['beacon-hot','beacon-warm','beacon-cold'];
+
+const steps = [
+  {
+    layer: "recognize",
+    title: "the disruption anchor",
+    narration: `The big red circle in the middle is the <b>disruption event</b> — a server crash, a flood, a ransomware lockout, anything that stops business. Two metrics anchor here, pointing in <i>opposite directions</i>: one backward into the past (data already lost), one forward into the future (time to restore).`,
+    code: [
+      '<span class="c">// the anchor:</span>',
+      '<span class="t">disruption</span>  the moment things break',
+      '',
+      '<span class="c">// two metrics will radiate from it:</span>',
+      '<span class="c">// ← BACKWARD: how much data did we lose?</span>',
+      '<span class="c">// → FORWARD:  how long are we down?</span>',
+    ],
+    s: { rpoShow: false, rtoShow: false, rpoLabel: false, rtoLabel: false, biaShow: false, beacons: ['dim','dim','dim'], marker: ['marker','marker','marker'], caption: "disruption is the anchor — everything radiates from here" }
+  },
+  {
+    layer: "understand",
+    title: "RPO — backward (data loss)",
+    narration: `<b>RPO = Recovery Point Objective.</b> The orange arrow looks <b>backward</b> from the disruption to the <i>last good backup</i>. The gap between them is <b>data loss</b>. "How much data can we afford to lose?" If your last backup was 5 minutes before the disruption, RPO = 5 minutes. Letter map: <b>R-P-O</b> → P = Point (in time, in the past).`,
+    code: [
+      '<span class="c">// RPO = Recovery Point Objective</span>',
+      '',
+      '<span class="t">RPO</span>  ←  backward from disruption',
+      '       = max acceptable data loss',
+      '       = how far back is your last good backup?',
+      '',
+      '<span class="c">// drives:</span>',
+      '<span class="c">//   backup frequency</span>',
+      '<span class="c">//   synchronous vs async replication</span>',
+      '<span class="c">//   storage + bandwidth cost</span>',
+      '',
+      '<span class="c">// letter map: R-P-O → P = Point (past)</span>',
+    ],
+    s: { rpoShow: true, rtoShow: false, rpoLabel: true, rtoLabel: false, biaShow: false, beacons: ['dim','dim','dim'], marker: ['marker','marker','fade'], caption: "RPO arrow points ← (backward); the gap to last backup is the data loss tolerated" }
+  },
+  {
+    layer: "understand",
+    title: "RTO — forward (downtime)",
+    narration: `<b>RTO = Recovery Time Objective.</b> The blue arrow looks <b>forward</b> from the disruption to <i>service restored</i>. The gap is <b>downtime</b>. "How long can we afford to be down?" Online checkout: RTO = 15 min. Internal wiki: RTO = 5 days. Letter map: <b>R-T-O</b> → T = Time (forward, to recover).`,
+    code: [
+      '<span class="c">// RTO = Recovery Time Objective</span>',
+      '',
+      '<span class="t">RTO</span>  →  forward from disruption',
+      '       = max acceptable downtime',
+      '       = how long until service is restored?',
+      '',
+      '<span class="c">// drives:</span>',
+      '<span class="c">//   choice of recovery site (Hot/Warm/Cold)</span>',
+      '<span class="c">//   automation level in recovery</span>',
+      '<span class="c">//   redundancy investment</span>',
+      '',
+      '<span class="c">// letter map: R-T-O → T = Time (forward)</span>',
+    ],
+    s: { rpoShow: true, rtoShow: true, rpoLabel: true, rtoLabel: true, biaShow: false, beacons: ['dim','dim','dim'], marker: ['fade','marker','marker'], caption: "RTO arrow points → (forward); the gap to restoration is the downtime tolerated" }
+  },
+  {
+    layer: "apply",
+    title: "RTO vs RPO — which is which?",
+    ask: "Stem: \"The maximum amount of data, measured in time, that the organization can afford to lose during a disruption.\" Which metric?",
+    choices: [
+      { label: "RTO — Recovery Time Objective",  correct: false, why: "RTO measures DOWNTIME (forward from disruption), not data loss. The stem says 'data...lose' → that's backward-pointing." },
+      { label: "RPO — Recovery Point Objective", correct: true,  why: "Right. 'Data the org can afford to lose' = backward-pointing measure = RPO. Letter map: R-P-O → Point (in the past, the last good data point)." },
+      { label: "SLA — Service Level Agreement",  correct: false, why: "SLA is a contract about availability commitments; it doesn't measure data loss specifically. SLA might *reference* RPO and RTO." },
+      { label: "MTD — Maximum Tolerable Downtime", correct: false, why: "MTD is the absolute ceiling on downtime — beyond which the business may not survive. It's a time metric (forward-pointing), not a data-loss metric." },
+    ],
+    narration: `<span class="pill">apply</span> — Direction-from-disruption is the load-bearing distinction. Read the stem, decide direction, then name the metric.`,
+    code: [
+      '<span class="c">// the stem:</span>',
+      '<span class="s">"max amount of DATA, measured in time, that</span>',
+      '<span class="s"> the org can afford to LOSE during a disruption"</span>',
+      '',
+      '<span class="c">// scan: data + lose + during disruption</span>',
+      '<span class="c">// → backward-pointing</span>',
+      '<span class="c">// → RP_ — the P is Point (past data point)</span>',
+    ],
+    s: { rpoShow: true, rtoShow: true, rpoLabel: true, rtoLabel: true, biaShow: false, beacons: ['dim','dim','dim'], marker: ['marker','marker','marker'], caption: "lose data = backward arrow = RPO" }
+  },
+  {
+    layer: "apply",
+    title: "match RTO to a recovery site",
+    ask: "Your BIA says checkout system RTO = 15 minutes. You have budget. Which recovery site fits?",
+    choices: [
+      { label: "Cold — basic infrastructure only, ship hardware after", correct: false, why: "Cold sites take DAYS to weeks to bring online. 15-minute RTO is impossible with Cold. The cost-conscious choice would be Cold; the RTO-driven choice is not." },
+      { label: "Warm — partial setup, restore from backup",             correct: false, why: "Warm sites take hours to days. Even the fastest Warm site doesn't usually meet a 15-minute RTO. The mismatch is the same as Cold, just smaller." },
+      { label: "Hot — fully equipped, mirrored, automatic failover",     correct: true,  why: "Right. Hot sites recover in minutes (often automated failover). RTO of 15 minutes maps to Hot. The mnemonic 'Hurry · Wait · Camp' aligns Hot=Hurry=ready-now." },
+      { label: "No site — just rely on the SLA",                        correct: false, why: "SLA is contractual penalty for missed targets, not actual recovery infrastructure. A vendor with 99.9% SLA still has ~8.76 hours of allowed annual downtime. Not a substitute for a recovery site." },
+    ],
+    narration: `<span class="pill">apply</span> — Three beacons on the forward road, brightness increasing: Cold faint, Warm middle, Hot blazing. RTO picks which beacon you need to reach.`,
+    code: [
+      '<span class="c">// scenario:</span>',
+      'RTO     = <span class="n">15</span> minutes',
+      'budget  = <span class="s">"available"</span>',
+      '',
+      '<span class="c">// 3-site recovery times:</span>',
+      'Hot   minutes              <span class="c">// "Hurry"</span>',
+      'Warm  hours-to-days        <span class="c">// "Wait"</span>',
+      'Cold  days-to-weeks        <span class="c">// "Camp"</span>',
+      '',
+      '<span class="c">// 15 min ≤ ? → pick the smallest site that fits</span>',
+    ],
+    s: { rpoShow: false, rtoShow: true, rpoLabel: false, rtoLabel: true, biaShow: false, beacons: ['glow','dim','dim'], marker: ['fade','marker','marker'], caption: "Hot beacon — ready now, automatic failover" }
+  },
+  {
+    layer: "analyze",
+    title: "the most common error",
+    ask: "Two teams disagree about restoring from a recent backup. One says \"that's RPO work.\" The other says \"no, that's RTO work.\" Which team is right, and what's the deeper error the other team is making?",
+    choices: [
+      { label: "Backup-restore work is RPO — the other team confused direction",   correct: false, why: "Backup *frequency* is driven by RPO (how often you back up = how much data you can afford to lose). But the *act of restoring during recovery* is RTO work (it consumes downtime). Direction confusion is real, but not in this direction." },
+      { label: "Backup-restore work is RTO — the other team confused 'backup' (RPO-driven planning) with 'restore' (RTO-driven execution)", correct: true,  why: "Right. RPO = how OFTEN you back up (data loss tolerance). RTO = how FAST you restore (downtime tolerance). The other team conflated the planning frequency with the execution speed. Both metrics touch backups, but at different stages." },
+      { label: "Both are SLA work, not RPO or RTO",                                correct: false, why: "SLA is contractual; backups and restores happen regardless of contract. SLA aligns vendor accountability with RPO/RTO but doesn't replace them." },
+      { label: "Backup-restore is BCP work, not DRP",                              correct: false, why: "BCP is broad (keep the business running). Backup/restore is the IT-restoration subset → DRP work. DRP ⊂ BCP." },
+    ],
+    narration: `<span class="pill">analyze</span> — Both teams have half the answer. Pick the trap that surfaces the deeper distinction between <i>planning frequency</i> (RPO) and <i>execution speed</i> (RTO).`,
+    code: [
+      '<span class="c">// the trap:</span>',
+      '<span class="c">// "backups" sounds like one thing,</span>',
+      '<span class="c">// but it spans BOTH metrics:</span>',
+      '',
+      'backup FREQUENCY   ← RPO drives this  <span class="c">(how often)</span>',
+      'backup RESTORE     ← RTO drives this  <span class="c">(how fast)</span>',
+      '',
+      '<span class="c">// teams that conflate them under-resource</span>',
+      '<span class="c">// one or the other. Common in startups —</span>',
+      '<span class="c">// "we have backups" answers neither precisely.</span>',
+    ],
+    s: { rpoShow: true, rtoShow: true, rpoLabel: true, rtoLabel: true, biaShow: false, beacons: ['dim','dim','dim'], marker: ['marker','marker','marker'], caption: "frequency vs speed = RPO vs RTO; one word ≠ one metric" }
+  },
+  {
+    layer: "synthesize",
+    title: "the unlock & where it travels",
+    narration: `<b>The unlock</b>: <b>BIA is the foundation</b> — every other metric (RTO, RPO, site choice, SLA) derives from BIA. The dotted green bedrock under the timeline is the load-bearing observation. <b>DRP ⊂ BCP</b>: the IT-restore plan is the subset of the broader business-continuity plan. Cross-domain: this aligns with <span class="wikilink" data-link="cissp-control-types-and-functions">Control Functions §Recovery</span> — Recovery is one of the 7 functions, but only meaningful if DRP backs it. And <span class="wikilink" data-link="cissp-risk-treatment-quadrant">disruption-risks feed BIA</span>, which feeds everything else. <span class="wikilink" data-link="composability-index">composability-index</span> entry: the act-vs-prove pattern shows up here too — a DR plan that's never tested is aspiration, not control. Mnemonic: <span class="pill">RPO ← backward, RTO → forward, BIA underneath</span>. Checksum: <b>T-forward, P-backward; H·W·C = 3 sites (Hurry·Wait·Camp); DRP ⊂ BCP</b>.`,
+    code: [
+      '<span class="c">// MNEMONIC</span>',
+      '<span class="t">RPO</span> ← backward (P = Point in the past)',
+      '<span class="t">RTO</span> → forward  (T = Time to restore)',
+      '<span class="t">BIA</span>   underneath, the bedrock',
+      '<span class="t">H·W·C</span> 3 sites (Hurry · Wait · Camp)',
+      '',
+      '<span class="c">// CHECKSUM</span>',
+      '<span class="c">// T-forward, P-backward (letter→direction)</span>',
+      '<span class="c">// DRP ⊂ BCP (containment, not peer)</span>',
+      '<span class="c">// BIA precedes RTO/RPO/SLA/site (not derived)</span>',
+      '',
+      '<span class="c">// CROSS-DOMAIN</span>',
+      '<span class="c">// Recovery (control function) needs DRP to be real</span>',
+      '<span class="c">// Untested DR plan = act-vs-prove failure</span>',
+    ],
+    s: { rpoShow: true, rtoShow: true, rpoLabel: true, rtoLabel: true, biaShow: true, beacons: ['glow','glow','glow'], marker: ['marker','marker','marker'], caption: "BIA is the bedrock; everything else stands on it" }
+  },
+];
+
+const BLOOM_LABELS = { recognize: "Recognize", understand: "Understand", apply: "Apply", analyze: "Analyze", synthesize: "Synthesize" };
+const BLOOM_PILL   = { recognize: "l1",         understand: "l2",         apply: "l3",   analyze: "l4",   synthesize: "l5" };
+
+let idx = 0;
+let answered = new Array(steps.length).fill(false);
+$('total').textContent = steps.length;
+
+function renderChoices(s) {
+  const ch = $('choices'); const fb = $('feedback'); const ask = $('ask');
+  ch.innerHTML = ''; fb.classList.remove('show', 'right', 'wrong'); fb.innerHTML = '';
+  if (!s.choices) { ask.textContent = ''; return; }
+  ask.textContent = s.ask || '';
+  s.choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice' + (answered[idx] && c.correct ? ' correct' : '');
+    btn.textContent = c.label; btn.disabled = answered[idx];
+    btn.addEventListener('click', () => pick(i));
+    ch.appendChild(btn);
+  });
+  if (answered[idx]) {
+    const picked = s._picked; const c = s.choices[picked];
+    fb.classList.add('show', c.correct ? 'right' : 'wrong');
+    fb.innerHTML = `<b>${c.correct ? '✓ ' + c.label : '✗ ' + c.label}</b> — ${c.why}`;
+    Array.from(ch.children).forEach((btn, i) => {
+      if (i === picked) btn.classList.add('picked', s.choices[i].correct ? 'correct' : 'wrong');
+    });
+  }
+}
+function pick(i) {
+  const s = steps[idx]; answered[idx] = true; s._picked = i;
+  renderChoices(s); updateNav();
+}
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1; $('title').textContent = s.title;
+  const pill = $('pill'); pill.className = 'bloom-pill ' + BLOOM_PILL[s.layer]; pill.textContent = BLOOM_LABELS[s.layer];
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+  $('arr-rpo').classList.toggle('show', s.s.rpoShow);
+  $('arr-rpo').classList.toggle('active', s.s.rpoShow && (steps[idx].layer === 'understand' || steps[idx].layer === 'apply' || steps[idx].layer === 'analyze'));
+  $('arr-rto').classList.toggle('show', s.s.rtoShow);
+  $('arr-rto').classList.toggle('active', s.s.rtoShow && (steps[idx].layer === 'understand' || steps[idx].layer === 'apply' || steps[idx].layer === 'analyze'));
+  $('lbl-rpo').style.opacity = s.s.rpoLabel ? 1 : 0;
+  $('lbl-rto').style.opacity = s.s.rtoLabel ? 1 : 0;
+  $('bia').style.opacity = s.s.biaShow ? 1 : 0;
+  ['backup','disrupt','restore'].forEach((id, i) => {
+    $(id).classList.remove('fade');
+    if (s.s.marker[i] === 'fade') $(id).classList.add('fade');
+  });
+  ALL_BEACONS.forEach((id, i) => {
+    $(id).classList.remove('dim', 'glow');
+    if (s.s.beacons[i] === 'dim')  $(id).classList.add('dim');
+    if (s.s.beacons[i] === 'glow') $(id).classList.add('glow');
+  });
+  $('caption').textContent = s.s.caption || '';
+  renderChoices(s); updateNav();
+}
+function updateNav() {
+  $('prev').disabled = idx === 0;
+  const s = steps[idx];
+  const gated = (s.layer === 'apply' || s.layer === 'analyze') && s.choices && !answered[idx];
+  $('next').disabled = idx === steps.length - 1 || gated;
+}
+function go(d) { const n = Math.max(0, Math.min(steps.length - 1, idx + d)); if (n === idx) return; idx = n; render(); }
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); if (!$('next').disabled) go(1); }
+});
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('.wikilink'); if (!link) return;
+  window.open('obsidian://open?vault=Neural-OS-Research&file=' + encodeURIComponent(link.dataset.link), '_blank');
+});
+render();
+</script>
+</body>
+</html>

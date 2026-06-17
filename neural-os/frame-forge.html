@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-04">
+<head>
+<meta charset="utf-8">
+<title>FRAME FORGE — Visual Walkthrough</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  :root {
+    --frame-c: #79c0ff;
+    --forge-c: #f78166;
+    --dist-c:  #d2a8ff;
+  }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+
+  /* ============================================================
+   * SVG: 8-step pipeline — FRAME (blue) → FORGE (orange) → Distill (purple)
+   * Reframe arc: dashed arrow from Evaluate back to Represent.
+   * ============================================================ */
+  const svg = `
+    <svg viewBox="0 0 660 185">
+      ${Explain.svgDefs()}
+
+      ${Explain.glyph('node', { x: 38,  y:115, r:24, label:'Fr', sub:'Frame',     id:'n-frame', color:'var(--frame-c)' })}
+      ${Explain.glyph('node', { x:118,  y:115, r:24, label:'In', sub:'Inventory', id:'n-inv',   color:'var(--frame-c)' })}
+      ${Explain.glyph('node', { x:198,  y:115, r:24, label:'Re', sub:'Represent', id:'n-rep',   color:'var(--frame-c)' })}
+
+      ${Explain.glyph('node', { x:300,  y:115, r:24, label:'Pr', sub:'Probe',     id:'n-probe', color:'var(--forge-c)' })}
+      ${Explain.glyph('node', { x:383,  y:115, r:24, label:'Ge', sub:'Generate',  id:'n-gen',   color:'var(--forge-c)' })}
+      ${Explain.glyph('node', { x:463,  y:115, r:24, label:'Ev', sub:'Evaluate',  id:'n-eval',  color:'var(--forge-c)' })}
+      ${Explain.glyph('node', { x:548,  y:115, r:24, label:'Fo', sub:'Formalize', id:'n-form',  color:'var(--forge-c)' })}
+      ${Explain.glyph('node', { x:628,  y:115, r:24, label:'Di', sub:'Distill',   id:'n-dist',  color:'var(--dist-c)'  })}
+
+      ${Explain.glyph('arrow', { from:[ 62, 115], to:[ 94, 115], id:'e1' })}
+      ${Explain.glyph('arrow', { from:[142, 115], to:[174, 115], id:'e2' })}
+      ${Explain.glyph('arrow', { from:[222, 115], to:[276, 115], id:'e3' })}
+      ${Explain.glyph('arrow', { from:[324, 115], to:[359, 115], id:'e4' })}
+      ${Explain.glyph('arrow', { from:[407, 115], to:[439, 115], id:'e5' })}
+      ${Explain.glyph('arrow', { from:[487, 115], to:[524, 115], id:'e6' })}
+      ${Explain.glyph('arrow', { from:[572, 115], to:[604, 115], id:'e7' })}
+
+      ${Explain.glyph('arrow', { from:[463, 91], to:[198, 91],
+                                  id:'e-reframe', label:'reframe', dashed:true, curve:-0.5 })}
+
+      ${Explain.glyph('caption', { x:118, y:52, label:'— FRAME —' })}
+      ${Explain.glyph('caption', { x:463, y:52, label:'— FORGE —' })}
+    </svg>`;
+
+  /* ============================================================
+   * Code: psl-style Python showing the Dijkstra worked example
+   * through all 8 FRAME FORGE steps.
+   * ============================================================ */
+  const code = `<pre>
+<span class="ln"><span class="k">from</span> psl <span class="k">import</span> <span class="t">Problem</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="c"># 1. Frame</span></span>
+<span class="ln">p = <span class="t">Problem</span>(</span>
+<span class="ln">  given   = <span class="s">"G=(V,E), weights w≥0, source s"</span>,</span>
+<span class="ln">  unknown = <span class="s">"shortest distance d[v] for all v"</span>,</span>
+<span class="ln">  success = <span class="s">"d[v] == true shortest path"</span>)</span>
+<span class="ln"></span>
+<span class="ln"><span class="c"># 2–3. Inventory → Represent</span></span>
+<span class="ln">p.inventory()          <span class="c"># facts: w≥0, sparse, directed</span></span>
+<span class="ln">p.represent(<span class="s">'graph'</span>)  <span class="c"># adj-list + min-priority queue</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="c"># 4. Probe — cheap experiments</span></span>
+<span class="ln">p.probe([<span class="s">'n=1'</span>, <span class="s">'n=2'</span>, <span class="s">'cycle'</span>])</span>
+<span class="ln"><span class="c"># → settled nodes stay settled (key observation)</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="c"># 5–6. Generate + Evaluate</span></span>
+<span class="ln">moves = p.generate_moves()</span>
+<span class="ln"><span class="c"># [relax-edge, backward-from-goal,</span></span>
+<span class="ln"><span class="c">#  search-invariant: settled-set]</span></span>
+<span class="ln">best = p.evaluate(moves,</span>
+<span class="ln">  criterion=<span class="s">'uncertainty_reduction'</span>)</span>
+<span class="ln"></span>
+<span class="ln"><span class="c"># 7–8. Formalize + Distill</span></span>
+<span class="ln">p.formalize(best)   <span class="c"># → Dijkstra's algorithm</span></span>
+<span class="ln">rule = p.distill()</span>
+<span class="ln"><span class="c"># "greedy expansion: works when relaxation is monotone"</span></span>
+<span class="ln">p.encode_spear(rule) <span class="c"># handoff → SPEAR encoder</span></span>
+</pre>`;
+
+  /* ============================================================
+   * U — See (CAST): visual taxonomy, walked across Bloom layers.
+   * 7 steps: R · U · U · U · A · An · S
+   * ============================================================ */
+  const uSee = [
+    {
+      layer: 'recognize',
+      title: 'The mental model',
+      narration:
+        'A surgeon does not cut first — they diagnose, read the anatomy, consider alternatives, then act. ' +
+        '<b>FRAME FORGE</b> encodes that discipline for <span class="pill">search problems</span>: situations where you face a gap and do not know the path. ' +
+        'Two phases — <b>FRAME</b> (set the problem up correctly) and <b>FORGE</b> (work the solution) — with eight named steps. ' +
+        'A built-in <b>reframe arc</b> sends you back to Represent when effort accumulates without insight.',
+      codeLines: [1],
+      onEnter: (e) => {
+        ['n-frame','n-inv','n-rep','n-probe','n-gen','n-eval','n-form','n-dist']
+          .forEach(id => e.glow(id));
+      },
+    },
+    {
+      layer: 'understand',
+      title: 'FRAME phase — set up the problem',
+      narration:
+        'FRAME is archaeology before excavation. ' +
+        '<b>Frame</b> writes down: what is given, what is unknown, what counts as a solution, what operations are allowed. ' +
+        '<b>Inventory</b> extracts all visible facts — quantities, symmetries, invariants, edge conditions. ' +
+        '<b>Represent</b> picks a model: is this a graph, algebra, search, proof, or optimization problem? ' +
+        '<i>Rule: if any of the three is unclear, clarify first — do not solve.</i>',
+      codeLines: [3,4,5,6,7,9,10,11],
+      onEnter: (e) => {
+        e.glow('n-frame'); e.glow('n-inv'); e.glow('n-rep');
+        e.activate('e1'); e.activate('e2');
+      },
+    },
+    {
+      layer: 'understand',
+      title: 'FORGE phase — the attack loop',
+      narration:
+        'The FORGE phase is an iterative tightening loop. ' +
+        '<b>Probe</b> runs cheap experiments before committing: smallest case, extreme case, hand simulation. ' +
+        '<b>Generate</b> produces candidate moves: forward from givens, backward from goal, case-split, find invariant, reduce to known problem. ' +
+        '<b>Evaluate</b> keeps only moves that <span class="pill">reduce uncertainty</span> — expose structure, eliminate cases, or compress the search space.',
+      codeLines: [13,14,15,17,18,19,20,21,22],
+      onEnter: (e) => {
+        e.glow('n-probe'); e.glow('n-gen'); e.glow('n-eval');
+        e.activate('e3'); e.activate('e4'); e.activate('e5');
+      },
+    },
+    {
+      layer: 'understand',
+      title: 'Formalize, Distill, and the reframe arc',
+      narration:
+        '<b>Formalize</b> turns a working line of attack into an explicit solution — derivation, proof, algorithm, or decision rule. ' +
+        '<b>Distill</b> asks: why did this work? what representation was key? what encoder receives this output (NEDF / CAST / SPEAR)? ' +
+        'The <b>dashed reframe arc</b> from Evaluate back to Represent is the safety valve: ' +
+        'when Evaluate finds no move reduces uncertainty, <i>change the model</i> — not the effort.',
+      codeLines: [24,25,26,27,28],
+      onEnter: (e) => {
+        e.glow('n-form'); e.glow('n-dist');
+        e.activate('e6'); e.activate('e7'); e.activate('e-reframe');
+      },
+    },
+    {
+      layer: 'apply',
+      title: 'Predict the output of Probe',
+      narration:
+        'You are working a graph-connectivity problem. You have Framed it and Inventoried the constraints. ' +
+        'Step 4 is <span class="pill">Probe</span>. You test on a 2-node graph and a 5-node disconnected graph. ' +
+        'What does Probe produce?',
+      codeLines: [13,14,15],
+      choices: [
+        {
+          label: 'The algorithm to use',
+          correct: false,
+          reason: 'Probe does not prescribe algorithms — it generates observations from cheap tests. You are building data, not committing to a path.',
+        },
+        {
+          label: 'Observed patterns + failed intuitions',
+          correct: true,
+          reason: 'Correct. Probe\'s output is what you learned: "DFS misses disconnected components," "the naive loop crashes on empty input." These observations fuel Generate.',
+        },
+        {
+          label: 'A proof the problem is solvable',
+          correct: false,
+          reason: 'Proofs live at Formalize. Probe is the lightest tool — cheap experiments, not formal verification.',
+        },
+      ],
+      onEnter: (e) => { e.glow('n-probe'); e.activate('e3'); e.activate('e4'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Activity vs. progress',
+      narration:
+        'A student spends 90 minutes generating and testing 15 candidate moves. At the end, the search space is the same size. ' +
+        'The diagnostic check fires: <span class="pill">"What changed in my understanding?"</span> Answer: nothing clear. ' +
+        'The decision rules say: "if you keep looping, your representation is probably wrong." ' +
+        'What is the correct next move?',
+      codeLines: [21,22],
+      choices: [
+        {
+          label: 'Generate 15 more moves',
+          correct: false,
+          reason: 'More moves from a wrong representation produce noise, not signal. Quantity is not the bottleneck — the model is.',
+        },
+        {
+          label: 'Reframe — change the representation',
+          correct: true,
+          reason: 'Correct. When Evaluate returns zero uncertainty reduction repeatedly, the representation is wrong. The reframe arc exists exactly for this — back to Represent, not deeper into the same dead path.',
+        },
+        {
+          label: 'Skip to Formalize — close enough',
+          correct: false,
+          reason: '"Formalizing too late" is a named failure mode, but Formalizing with nothing to formalize is the dual trap. You cannot write a valid solution from an unsolved search problem.',
+        },
+      ],
+      onEnter: (e) => { e.glow('n-eval'); e.activate('e-reframe'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Where FRAME FORGE connects',
+      narration:
+        'FRAME FORGE is the search-problem engine inside <span class="wikilink" data-wiki="problem-solving/problem-solving-os">[[problem-solving-os]]</span> — ' +
+        'it runs when <span class="wikilink" data-wiki="problem-solving/problem-type-classifier">[[problem-type-classifier]]</span> classifies a problem as type S (Search). ' +
+        'After Distill, output routes to <span class="wikilink" data-wiki="encoders/nedf-overview">[[nedf-overview]]</span> (single concept), ' +
+        '<span class="wikilink" data-wiki="encoders/cast-overview">[[cast-overview]]</span> (relational structure), or ' +
+        '<span class="wikilink" data-wiki="encoders/spear-overview">[[spear-overview]]</span> (repeatable procedure). ' +
+        'The "what changed?" diagnostic is the wiki\'s primary guard against the OK-plateau equivalent in problem-solving.',
+      codeLines: [28],
+      onEnter: (e) => { e.glow('n-dist'); },
+    },
+  ];
+
+  /* ============================================================
+   * D — Name (NEDF): identifier card.
+   * 3 steps: R · U · An
+   * ============================================================ */
+  const dName = [
+    {
+      layer: 'recognize',
+      title: 'The identifier card',
+      narration:
+        '<b>FRAME FORGE</b> = 8-step search-problem pipeline ' +
+        '(Frame · Inventory · Represent · Probe · Generate · Evaluate · Formalize · Distill). ' +
+        'Sibling tools by problem type: if the path is known but not taken → execution problem; ' +
+        'if the goal is unclear → clarity problem. ' +
+        'Run <span class="pill">problem-type-classifier</span> first to confirm you have a search problem before entering.',
+      codeLines: [1,4,5,6,7],
+      onEnter: (e) => {
+        ['n-frame','n-inv','n-rep','n-probe','n-gen','n-eval','n-form','n-dist']
+          .forEach(id => e.glow(id));
+      },
+    },
+    {
+      layer: 'understand',
+      title: 'Distinguisher vs. Pólya / McKinsey',
+      narration:
+        'At least 11 traditions share the same skeleton (Pólya 1945 · McKinsey 7-step · DMAIC · CRISP-DM · …). ' +
+        'FRAME FORGE\'s specific contributions: ' +
+        '<b>(a)</b> explicit FRAME/FORGE phase split names the upstream-setup vs. downstream-attack divide; ' +
+        '<b>(b)</b> four fast sub-pipelines skip ahead when problem type is confirmed; ' +
+        '<b>(c)</b> Evaluate\'s criterion is explicit — <span class="pill">uncertainty reduction</span>, not just "analyze."',
+      codeLines: [21,22],
+      onEnter: (e) => { e.glow('n-frame'); e.glow('n-probe'); e.glow('n-eval'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Is this a FRAME FORGE situation?',
+      narration:
+        'Your code compiles but does not run. You know the next move: add logging, check the error, narrow the scope. ' +
+        'Is this a FRAME FORGE situation?',
+      codeLines: [1],
+      choices: [
+        {
+          label: 'Yes — run FRAME FORGE on the bug',
+          correct: false,
+          reason: 'If you already know the next move, it is an execution problem (type E from the classifier). FRAME FORGE is for when the path is genuinely unknown.',
+        },
+        {
+          label: 'No — this is an execution problem',
+          correct: true,
+          reason: 'Correct. A clear next move = execution problem. Save FRAME FORGE for genuine search. Running it when you know the answer wastes the Frame step on a problem that is already framed.',
+        },
+        {
+          label: 'Maybe — skip to Generate (step 5) directly',
+          correct: false,
+          reason: 'Entering mid-pipeline without Frame inherits unverified assumptions. This is failure mode #1: solving before framing, even when you think you know the setup.',
+        },
+      ],
+      onEnter: (e) => { e.glow('n-frame'); },
+    },
+  ];
+
+  /* ============================================================
+   * F — Do (SPEAR): action playbook.
+   * 2 steps: A · An
+   * ============================================================ */
+  const fDo = [
+    {
+      layer: 'apply',
+      title: 'Select the sub-pipeline',
+      narration:
+        'Problem: <i>"Prove there is no largest prime."</i> ' +
+        'You have identified this as a proof task. ' +
+        'Which FRAME FORGE entry point fits?',
+      codeLines: [3,4,5,6,7],
+      choices: [
+        {
+          label: 'Main 8-step pipeline',
+          correct: false,
+          reason: 'The 8-step pipeline works, but Pipeline B is the fast track for proof problems. When the type is confirmed, sub-pipelines cut the exploration overhead.',
+        },
+        {
+          label: 'Pipeline B: Proof Problem',
+          correct: true,
+          reason: 'Correct. Pipeline B: State claim precisely → identify counterexample shape → search for invariant (assume P is largest; then P!+1 is either prime or has a larger factor — contradiction) → choose proof style → write.',
+        },
+        {
+          label: 'Pipeline D: Stuck Recovery',
+          correct: false,
+          reason: 'Pipeline D is for high-effort / low-insight situations. You are not stuck — you have a clearly typed proof task. Using Stuck Recovery on a clear problem adds overhead without benefit.',
+        },
+      ],
+      onEnter: (e) => { e.glow('n-probe'); e.glow('n-gen'); e.glow('n-eval'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Mid-pipeline type mismatch',
+      narration:
+        'You select Pipeline C (Design/Algorithm) for a problem you believe is about building a sorting algorithm. ' +
+        'Halfway through, you realize the problem actually requires <i>proving</i> a lower bound — no algorithm you design can beat O(n log n). ' +
+        'What went wrong and what is the correct response?',
+      codeLines: [9,11],
+      choices: [
+        {
+          label: 'Reframe at Represent — switch to Pipeline B',
+          correct: true,
+          reason: 'Correct. You committed to the wrong sub-pipeline because you misclassified at Represent. The reframe arc applies at sub-pipeline level too: stop, re-Represent, switch to Pipeline B for the proof sub-goal.',
+        },
+        {
+          label: 'Continue Pipeline C — it covers enough',
+          correct: false,
+          reason: 'Pipeline C has no step for proving a lower bound. Continuing produces an algorithm without a correctness argument — a correctness gap that will surface later.',
+        },
+        {
+          label: 'Run both pipelines simultaneously',
+          correct: false,
+          reason: 'Pipelines are sequential, not parallel. The proof cannot precede the design, and splitting attention breaks the dependency chain.',
+        },
+      ],
+      onEnter: (e) => { e.glow('n-rep'); e.activate('e-reframe'); },
+    },
+  ];
+
+  /* ============================================================
+   * B — Watch (HEART): failure modes to monitor.
+   * 2 steps: U · An
+   * ============================================================ */
+  const bWatch = [
+    {
+      layer: 'understand',
+      title: 'The two dominant failure modes',
+      narration:
+        'FRAME FORGE fails in two stereotyped ways. ' +
+        '<b>(1) Frame-skipping</b> — the solver jumps to Generate without writing down givens, unknowns, and constraints. ' +
+        'Domain expertise makes this tempting. Symptom: 20 minutes in you realize you solved the wrong problem. ' +
+        '<b>(2) Activity confusion</b> — 10 moves tested, none reduce uncertainty, but effort feels like progress. ' +
+        'Diagnostic: <span class="pill">"What changed in my understanding in the last 10 minutes?"</span> ' +
+        'A blank answer is not a rest signal — it is a reframe signal.',
+      codeLines: [3,4,5,6,7,17,18,19,20],
+      onEnter: (e) => { e.glow('n-frame'); e.glow('n-eval'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Diagnose the stalled solver',
+      narration:
+        'A developer has worked 3 hours on an algorithm. They say they are stuck. ' +
+        'When asked what changed in their understanding in the last hour, they cannot answer. ' +
+        'They have tried "everything." What is the most likely root cause?',
+      codeLines: [21,22],
+      choices: [
+        {
+          label: 'They need a break — attention is depleted',
+          correct: false,
+          reason: 'A break may help, but the specific diagnostic — cannot name what changed — points to activity confusion, not attention failure. The representation needs changing, not the rest level.',
+        },
+        {
+          label: 'Activity confusion — trigger Pipeline D (Stuck Recovery)',
+          correct: true,
+          reason: 'Correct. The signature is precise: effort high, insight low, cannot name what changed. Pipeline D: stop the current path, write what is actually known, identify the exact ambiguity, shrink the problem, change representation.',
+        },
+        {
+          label: 'They need more candidate moves',
+          correct: false,
+          reason: 'More moves from the wrong model generate more noise. The problem is the representation, not the quantity of candidates. Generating more of the same is the failure mode, not the fix.',
+        },
+      ],
+      onEnter: (e) => { e.glow('n-eval'); e.activate('e-reframe'); },
+    },
+  ];
+
+  /* ============================================================
+   * L — Predict (ORACLE): predict-from-input drills.
+   * 2 steps: A · An
+   * ============================================================ */
+  const lPredict = [
+    {
+      layer: 'apply',
+      title: 'Predict the sub-pipeline',
+      narration:
+        'Input: <i>"Given a graph G, design an algorithm that finds the minimum spanning tree."</i> ' +
+        'You must <i>build a method</i>, not just explain one. ' +
+        'Which FRAME FORGE sub-pipeline fits?',
+      codeLines: [9,10,11],
+      choices: [
+        {
+          label: 'Pipeline A: Unknown Structure',
+          correct: false,
+          reason: 'Pipeline A is for when you do not even know what kind of problem it is. The structure here is clear: a build task with defined input, output, and goal.',
+        },
+        {
+          label: 'Pipeline C: Design or Algorithm Problem',
+          correct: true,
+          reason: 'Correct. Pipeline C: define target behavior → I/O/constraints → build toy version → propose naive method → find failure points → add structure (Kruskal/Prim) → test edge cases → extract procedure.',
+        },
+        {
+          label: 'Pipeline B: Proof Problem',
+          correct: false,
+          reason: 'Pipeline B is for "show X must or cannot happen." A design task needs a construction, not a proof. If you later need to prove correctness, switch Pipeline B for that sub-goal only.',
+        },
+      ],
+      onEnter: (e) => { e.glow('n-probe'); e.glow('n-gen'); e.glow('n-eval'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Predict the failure mode',
+      narration:
+        'A team runs FRAME FORGE. They spend time at Generate (step 5), select the best candidate, and jump directly to Formalize (step 7). ' +
+        'Their solution passes all sample tests but fails on large sparse inputs and empty inputs. ' +
+        'Which step did they skip and what does that predict?',
+      codeLines: [13,14,15],
+      choices: [
+        {
+          label: 'Skipped Probe — missed edge cases early',
+          correct: true,
+          reason: 'Correct. Probe is the cheap-experiment step that surfaces edge cases before commitment. Skipping it is "formalizing too late" + "testing only friendly examples" — both named failure modes.',
+        },
+        {
+          label: 'Skipped Distill — no reusable principle',
+          correct: false,
+          reason: 'Skipping Distill harms future problems, not the current one. Edge-case failures on the current solution indicate a Probe gap, not a Distill gap.',
+        },
+        {
+          label: 'Skipped Evaluate — picked a wrong move',
+          correct: false,
+          reason: 'A wrong Evaluate choice would likely produce incorrect output on all cases, not just edge cases. Edge-case-only failures are the Probe failure signature.',
+        },
+      ],
+      onEnter: (e) => { e.glow('n-probe'); e.activate('e3'); },
+    },
+  ];
+
+  /* ============================================================
+   * R — Act (GRACE): in-the-moment protocol.
+   * 2 steps: A · S
+   * ============================================================ */
+  const rAct = [
+    {
+      layer: 'apply',
+      title: 'Protocol: search problem arrives',
+      narration:
+        'A search problem lands on your desk. You have domain expertise. ' +
+        'The temptation is to jump straight to familiar moves from past experience. ' +
+        'What is the correct first action?',
+      codeLines: [3,4,5,6,7],
+      choices: [
+        {
+          label: 'Start with Probe — build intuition first',
+          correct: false,
+          reason: 'Probing without Frame means you do not know what you are probing for. You risk finding patterns irrelevant to the actual goal. Frame anchors every downstream step.',
+        },
+        {
+          label: 'Write the Frame — givens, unknowns, success criteria',
+          correct: true,
+          reason: 'Correct. Frame is always first. Writing it forces discovery of unclear goals, hidden constraints, or ambiguous success conditions before any work is wasted. Experts skip this most — that is why it is the most important rule.',
+        },
+        {
+          label: 'Use domain expertise to jump to Generate',
+          correct: false,
+          reason: 'Expertise helps at Generate, but cannot substitute for Frame. Experts most often commit this error — solving a familiar version of the problem rather than the actual one in front of them.',
+        },
+      ],
+      onEnter: (e) => {
+        e.glow('n-frame'); e.activate('e1'); e.activate('e2'); e.activate('e3');
+      },
+    },
+    {
+      layer: 'synthesize',
+      title: 'The live reflex',
+      narration:
+        'When a problem feels unknown, stop before generating moves. Write the Frame in one paragraph first. ' +
+        'If the goal is still fuzzy, run <span class="wikilink" data-wiki="problem-solving/problem-type-classifier">[[problem-type-classifier]]</span> to confirm it is a search problem. ' +
+        'After Distill, encode the principle via <span class="wikilink" data-wiki="encoders/nedf-overview">[[nedf-overview]]</span>, <span class="wikilink" data-wiki="encoders/cast-overview">[[cast-overview]]</span>, or <span class="wikilink" data-wiki="encoders/spear-overview">[[spear-overview]]</span> — based on what was distilled. ' +
+        'For the full problem-solving operating loop, see <span class="wikilink" data-wiki="problem-solving/arc-framework">[[arc-framework]]</span>.',
+      codeLines: [28],
+      onEnter: (e) => { e.glow('n-frame'); e.glow('n-dist'); },
+    },
+  ];
+
+  /* ============================================================
+   * BRIDGE: cross-domain analogies — candidates for curation.
+   * Keep / edit / reorder / delete the ones that do not resonate.
+   * 3 steps: S · S · S
+   * ============================================================ */
+  const bridge = [
+    {
+      layer: 'synthesize',
+      title: 'FRAME FORGE ≈ clinical diagnosis',
+      narration:
+        '<b>FRAME FORGE</b> and <b>clinical diagnosis</b> share one mechanism: ' +
+        '<i>resist the urge to treat before the representation is locked.</i> ' +
+        'Term-by-term: <span class="pill">Frame</span> ≈ chief complaint + history; ' +
+        '<span class="pill">Inventory</span> ≈ vitals + labs; ' +
+        '<span class="pill">Represent</span> ≈ differential diagnosis list; ' +
+        '<span class="pill">Probe</span> ≈ targeted diagnostic tests that discriminate between hypotheses; ' +
+        '<span class="pill">Evaluate</span> ≈ Bayesian update — which test moved the probability most?; ' +
+        '<span class="pill">Reframe arc</span> ≈ "broaden the differential" when tests eliminate all working hypotheses. ' +
+        'Both fail the same way: premature closure — treating before the differential is narrowed. ' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [],
+      onEnter: (e) => { e.glow('n-frame'); e.glow('n-inv'); e.glow('n-rep'); e.glow('n-probe'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'FRAME FORGE ≈ compiler optimization pass',
+      narration:
+        '<b>FRAME FORGE</b> and a <b>compiler optimization pass</b> share: ' +
+        '<i>build a structural model, probe for cheap transformations, evaluate by measurable reduction, emit the formal result.</i> ' +
+        'Term-by-term: <span class="pill">Represent</span> ≈ IR construction (control-flow + data-flow graph); ' +
+        '<span class="pill">Probe</span> ≈ peephole trials on basic blocks; ' +
+        '<span class="pill">Generate</span> ≈ candidate rewrite rules (constant folding, CSE); ' +
+        '<span class="pill">Evaluate</span> ≈ cost model — does this reduce instruction count or register pressure?; ' +
+        '<span class="pill">Distill</span> ≈ extracted rewrite rule registered for future passes. ' +
+        'The reframe arc ≈ fallback to a less-aggressive optimization tier when aliasing assumptions break mid-pass. ' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [9,11,17,21,22,26,27],
+      onEnter: (e) => { e.glow('n-rep'); e.glow('n-probe'); e.glow('n-eval'); e.glow('n-dist'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'FRAME FORGE ≈ military intelligence cycle',
+      narration:
+        '<b>FRAME FORGE</b> and the <b>intelligence cycle</b> share: ' +
+        '<i>structure uncertainty-reduction as a named multi-phase loop with an explicit reframe when collection fails to support any hypothesis.</i> ' +
+        'Term-by-term: <span class="pill">Frame</span> ≈ Direction (what do we need to know?); ' +
+        '<span class="pill">Inventory</span> ≈ Collection planning; ' +
+        '<span class="pill">Represent</span> ≈ Processing (structured picture from raw signals); ' +
+        '<span class="pill">Probe</span> ≈ limited test-collection run; ' +
+        '<span class="pill">Evaluate</span> ≈ Analysis — rate hypotheses by inconsistency with evidence (ACH discipline); ' +
+        '<span class="pill">Formalize</span> ≈ Dissemination (the finished intelligence product); ' +
+        '<span class="pill">Reframe arc</span> ≈ Task revisit when intelligence does not support any hypothesis. ' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [21,22],
+      onEnter: (e) => { e.glow('n-frame'); e.glow('n-eval'); e.glow('n-form'); },
+    },
+  ];
+
+  /* ============================================================
+   * Init
+   * ============================================================ */
+  Explain.init({
+    title:    'FRAME FORGE',
+    subtitle: 'a visual walkthrough',
+    created:  '2026-06-04',
+    svg,
+    code,
+    matrix: {
+      'u-see':     { name: 'U — See',     framework: 'CAST',         steps: uSee     },
+      'd-name':    { name: 'D — Name',    framework: 'NEDF',         steps: dName    },
+      'f-do':      { name: 'F — Do',      framework: 'SPEAR',        steps: fDo      },
+      'b-watch':   { name: 'B — Watch',   framework: 'HEART',        steps: bWatch   },
+      'l-predict': { name: 'L — Predict', framework: 'ORACLE',       steps: lPredict },
+      'r-act':     { name: 'R — Act',     framework: 'GRACE',        steps: rAct     },
+      'bridge':    { name: 'BRIDGE',      framework: 'cross-domain', steps: bridge   },
+    },
+  });
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

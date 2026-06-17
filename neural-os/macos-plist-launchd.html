@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-03">
+<head>
+<meta charset="utf-8">
+<title>macOS plist &amp; launchd — Visual Walkthrough</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  :root {
+    --user-la: var(--l1);   /* ~/Library/LaunchAgents  — your user, GUI session */
+    --sys-la:  var(--accent); /* /Library/LaunchAgents — any user, GUI session */
+    --sys-ld:  var(--warn);  /* /Library/LaunchDaemons — root, no user needed   */
+    --ctl:     var(--l2);
+    --daemon:  var(--accent);
+    --child:   var(--l3);
+  }
+  /* Topic-specific tweaks only — chrome is owned by explain-viz.css */
+  .path-label { font: 600 9.5px ui-monospace, monospace; fill: var(--muted); text-anchor: middle; }
+  .lifecycle-caption { font: 600 10px ui-monospace, monospace; fill: var(--muted); text-anchor: middle; }
+  .pid1-tag { font: 700 9px ui-monospace, monospace; fill: var(--accent); text-anchor: middle; }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+const svg = `
+  <svg viewBox="0 0 820 460">
+    ${Explain.svgDefs()}
+
+    <!-- Top tier: the three plist locations -->
+    <text class="path-label" x="140" y="22">~/Library/LaunchAgents/</text>
+    <text class="path-label" x="410" y="22">/Library/LaunchAgents/</text>
+    <text class="path-label" x="680" y="22">/Library/LaunchDaemons/</text>
+
+    ${Explain.glyph('document', { x: 140, y: 78, id: 'plist-user',
+                                  label: 'sync.plist', sub: 'user · GUI',
+                                  color: 'var(--user-la)' })}
+    ${Explain.glyph('document', { x: 410, y: 78, id: 'plist-sysla',
+                                  label: 'backup.plist', sub: 'any user · GUI',
+                                  color: 'var(--sys-la)' })}
+    ${Explain.glyph('document', { x: 680, y: 78, id: 'plist-sysld',
+                                  label: 'sshd.plist', sub: 'root · no GUI',
+                                  color: 'var(--sys-ld)' })}
+
+    <!-- Bottom tier: lifecycle row -->
+    ${Explain.glyph('user',   { x: 90,  y: 280, id: 'you',
+                                label: 'you', color: 'var(--muted)' })}
+    ${Explain.glyph('gear',   { x: 250, y: 280, id: 'launchctl',
+                                label: 'launchctl', sub: 'CLI',
+                                color: 'var(--ctl)' })}
+    ${Explain.glyph('server', { x: 450, y: 280, id: 'launchd',
+                                label: 'launchd', sub: 'job table',
+                                status: 'ok', color: 'var(--daemon)' })}
+    <text class="pid1-tag" x="450" y="222">PID 1</text>
+
+    ${Explain.glyph('gear',   { x: 680, y: 280, id: 'child',
+                                label: 'your script', sub: 'forked',
+                                color: 'var(--child)' })}
+
+    <!-- Lifecycle arrows -->
+    ${Explain.glyph('arrow',  { from: [115, 280], to: [225, 280], id: 'e-user-ctl',
+                                label: 'load', color: 'var(--muted)' })}
+    ${Explain.glyph('arrow',  { from: [275, 280], to: [415, 280], id: 'e-ctl-d',
+                                label: 'register', color: 'var(--muted)' })}
+    ${Explain.glyph('arrow',  { from: [485, 280], to: [655, 280], id: 'e-d-child',
+                                label: 'fork @ schedule', color: 'var(--muted)' })}
+
+    <!-- Plist → launchctl (only the active plist edge will animate) -->
+    ${Explain.glyph('arrow',  { from: [140, 132], to: [240, 250], id: 'e-plist-ctl',
+                                curve: -0.3, color: 'var(--muted)' })}
+
+    <text id="caption" class="lifecycle-caption" x="410" y="440"></text>
+  </svg>`;
+
+const code = '<pre id="code-pre"></pre>';
+
+Explain.init({
+  title: 'macOS plist & launchd',
+  subtitle: 'how a typed dictionary on disk becomes a running process',
+  created: '2026-06-03',
+  svg, code,
+  steps: [
+    /* 1 — RECOGNIZE ─────────────────────────────────────────────────── */
+    {
+      layer: 'recognize',
+      title: 'three places, one file format',
+      narration: `Think of a plist as a <b>sticky note pinned to a corkboard</b>. The note says <i>what to run, when, and as whom</i>. macOS has three corkboards — <span class="pill">~/Library/LaunchAgents</span> (you, in your GUI session), <span class="pill">/Library/LaunchAgents</span> (any user who logs in), and <span class="pill">/Library/LaunchDaemons</span> (the system, no user required). A daemon walks the corkboards on boot and again on demand. Every plist on every board is a contract: do this thing, on this trigger, until I tell you otherwise.`,
+      codeLines: [],
+      onEnter: (e) => e.glow(['plist-user', 'plist-sysla', 'plist-sysld'])
+                       .dim(['you','launchctl','launchd','child','e-user-ctl','e-ctl-d','e-d-child','e-plist-ctl']),
+    },
+
+    /* 2 — UNDERSTAND ────────────────────────────────────────────────── */
+    {
+      layer: 'understand',
+      title: 'a plist is a typed dictionary',
+      narration: `Open one — a plist is a <b>property list</b>: a tree of <span class="pill">dict</span>, <span class="pill">array</span>, <span class="pill">string</span>, <span class="pill">integer</span>, <span class="pill">bool</span>, <span class="pill">date</span>, <span class="pill">data</span> nodes. macOS serializes it as XML or binary — same data, two encodings. Think of it like a <i>JSON file with stricter types and a fixed schema per consumer</i>. launchd is one consumer; <span class="pill">Info.plist</span> in app bundles is another; user-defaults under <span class="pill">~/Library/Preferences/</span> is a third.`,
+      codeLines: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      onEnter: (e) => e.glow('plist-user').dim(['plist-sysla','plist-sysld'])
+                       .undim(['you','launchctl','launchd','child']).dim(['e-user-ctl','e-ctl-d','e-d-child','e-plist-ctl']),
+    },
+
+    /* 3 — UNDERSTAND ────────────────────────────────────────────────── */
+    {
+      layer: 'understand',
+      title: 'the path picks the privilege',
+      narration: `A delivery slot tells you where the mail goes. Same here — <b>the directory the plist sits in determines who runs it and when</b>. <span class="pill">~/Library/LaunchAgents</span> needs your login session and runs as <i>you</i>. <span class="pill">/Library/LaunchAgents</span> needs <i>any</i> GUI login and runs as that user. <span class="pill">/Library/LaunchDaemons</span> runs as <b>root</b> at boot — no user session required. Pick the smallest scope that works; root-by-default is a privilege smell.`,
+      codeLines: [17, 18, 19, 20, 21, 22, 23, 24],
+      onEnter: (e) => e.glow(['plist-user','plist-sysla','plist-sysld'])
+                       .dim(['you','launchctl','launchd','child','e-user-ctl','e-ctl-d','e-d-child','e-plist-ctl']),
+    },
+
+    /* 4 — UNDERSTAND ────────────────────────────────────────────────── */
+    {
+      layer: 'understand',
+      title: 'launchctl talks, launchd does',
+      narration: `An air-traffic controller doesn't fly planes — they tell the tower which planes to clear. <b>launchctl</b> is the controller you type at. <b>launchd</b> is the tower — <span class="pill">PID 1</span>, started by the kernel before anything else. <span class="pill">launchctl load</span> hands the plist to launchd, which parks the contract in its job table. When a trigger fires — interval, calendar, file watch, user login — launchd <b>forks the process</b> with the arguments and environment specified in the plist, then watches the exit code.`,
+      codeLines: [26, 27, 28, 29, 30, 31, 32, 33],
+      onEnter: (e) => e.dim(['plist-sysla','plist-sysld'])
+                       .glow(['plist-user','you','launchctl','launchd','child'])
+                       .activate(['e-user-ctl','e-ctl-d','e-d-child','e-plist-ctl']),
+    },
+
+    /* 5 — APPLY (with active-recall choices) ───────────────────────── */
+    {
+      layer: 'apply',
+      title: 'predict the missing key',
+      narration: `You're writing a plist that runs <span class="pill">git-sync.sh</span> every 15 minutes. You've set <span class="pill">Label</span>, <span class="pill">ProgramArguments</span>, <span class="pill">WorkingDirectory</span> — but which <b>scheduling</b> key actually fires the script on a 900-second cadence? Pick before you peek at the docs — choosing the wrong scheduler is the #1 launchd authoring mistake.`,
+      codeLines: [35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+      choices: [
+        { label: 'StartInterval',
+          correct: true,
+          reason: 'right — StartInterval takes an integer seconds value and fires the job every N seconds from when launchd registered it.' },
+        { label: 'RunAtLoad',
+          correct: false,
+          reason: 'wrong — RunAtLoad is a bool that only controls whether to fire once when the plist is loaded. It does not repeat.' },
+        { label: 'KeepAlive',
+          correct: false,
+          reason: 'wrong — KeepAlive keeps a process resident (restarts it when it exits). It is not a scheduler; pairing it with a one-shot script causes a respawn loop.' },
+        { label: 'StartCalendarInterval',
+          correct: false,
+          reason: 'partially right but wrong tool — it fires at specific wall-clock times (e.g. every Tuesday at 03:15). For a fixed interval, StartInterval is simpler and survives clock changes better.' },
+      ],
+      onEnter: (e) => e.glow(['plist-user','launchctl','launchd','child'])
+                       .dim(['plist-sysla','plist-sysld'])
+                       .activate(['e-plist-ctl','e-user-ctl','e-ctl-d','e-d-child']),
+    },
+
+    /* 6 — ANALYZE (with active-recall choices) ─────────────────────── */
+    {
+      layer: 'analyze',
+      title: 'launchd vs cron — pick under pressure',
+      narration: `Same job description, three substrates. Your sync script must fire every 15 min, <i>survive a reboot</i>, and run only while you're logged in (no need for root). The code panel puts cron, launchd, and Windows Task Scheduler side by side across ten axes. You're on macOS so Task Scheduler isn't a real choice — it's there to show the <b>same architectural shape exists on Windows</b>, and that cron is the outlier. Pick the macOS tool that wins.`,
+      codeLines: [49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73],
+      choices: [
+        { label: 'cron (crontab -e)',
+          correct: false,
+          reason: 'wrong — Apple deprecated cron on macOS; it still runs, but is not guaranteed to survive future OS upgrades. It also has weaker integration with the GUI session and no native log capture.' },
+        { label: 'launchd LaunchAgent',
+          correct: true,
+          reason: 'right — supported, restarts after reboot, runs in your user session, captures stdout/stderr to paths you specify, and gives you StartInterval / KeepAlive / WatchPaths as composable triggers.' },
+        { label: 'launchd LaunchDaemon',
+          correct: false,
+          reason: 'wrong scope — works mechanically, but runs as root and outside your GUI session. Use this only when you genuinely need root (e.g. a system-level daemon). For a per-user sync, that is unnecessary privilege.' },
+      ],
+      onEnter: (e) => e.glow(['plist-user','you','launchctl','launchd','child'])
+                       .dim(['plist-sysla','plist-sysld'])
+                       .activate(['e-user-ctl','e-ctl-d','e-d-child','e-plist-ctl']),
+    },
+
+    /* 7 — SYNTHESIZE ────────────────────────────────────────────────── */
+    {
+      layer: 'synthesize',
+      title: 'launchd is the OS-level scheduler pattern',
+      narration: `launchd is one instance of a shape that repeats across this wiki: <b>a daemon that emits on a schedule and adapts to state</b>. <span class="wikilink" data-wiki="meter-overview">[[meter-overview]]</span> is the same shape at the cognitive measurement layer — <i>Measure · Emit · Track · Evaluate · Report</i>, a periodic loop with an event schema. <span class="wikilink" data-wiki="pulse-overview">[[pulse-overview]]</span> is the same shape for governance — it reads <i>Energy + Stress</i> and modulates other layers, the way launchd's <span class="pill">KeepAlive</span> + <span class="pill">ThrottleInterval</span> modulate respawn behavior. Once you see it as a pattern, plists stop being macOS trivia and start being one instance of a portable idea: <i>contracts on a corkboard, watched by a faithful daemon</i>.`,
+      codeLines: [75,76,77,78,79,80,81,82,83],
+      onEnter: (e) => e.glow(['plist-user','plist-sysla','plist-sysld','you','launchctl','launchd','child'])
+                       .activate(['e-user-ctl','e-ctl-d','e-d-child','e-plist-ctl']),
+    },
+  ],
+});
+
+/* ── Code panel: a single XML plist + commentary, line-numbered so codeLines targets it. ── */
+document.getElementById('code-pre').innerHTML = [
+  '<span class="c">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>',                                  //  1
+  '<span class="c">&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "..."&gt;</span>',             //  2
+  '<span class="k">&lt;plist</span> version=<span class="s">"1.0"</span><span class="k">&gt;</span>',     //  3
+  '<span class="k">&lt;dict&gt;</span>                                  <span class="c">// the top-level type is a dict</span>',     //  4
+  '  <span class="k">&lt;key&gt;</span>Label<span class="k">&lt;/key&gt;</span>',                          //  5
+  '  <span class="k">&lt;string&gt;</span>com.davidchincharashvili.sync<span class="k">&lt;/string&gt;</span>', //  6
+  '  <span class="k">&lt;key&gt;</span>ProgramArguments<span class="k">&lt;/key&gt;</span>',               //  7
+  '  <span class="k">&lt;array&gt;</span>                            <span class="c">// argv — first element is the binary</span>', //  8
+  '    <span class="k">&lt;string&gt;</span>/bin/bash<span class="k">&lt;/string&gt;</span>',              //  9
+  '    <span class="k">&lt;string&gt;</span>/Users/.../tools/git-sync.sh<span class="k">&lt;/string&gt;</span>', // 10
+  '  <span class="k">&lt;/array&gt;</span>',                                                              // 11
+  '  <span class="k">&lt;key&gt;</span>RunAtLoad<span class="k">&lt;/key&gt;</span> <span class="k">&lt;true/&gt;</span> <span class="c">// bool — fire once at load</span>', // 12
+  '  <span class="k">&lt;key&gt;</span>StartInterval<span class="k">&lt;/key&gt;</span> <span class="k">&lt;integer&gt;</span><span class="n">900</span><span class="k">&lt;/integer&gt;</span> <span class="c">// every 900s</span>', // 13
+  '<span class="k">&lt;/dict&gt;</span>',                                                                  // 14
+  '<span class="k">&lt;/plist&gt;</span>',                                                                // 15
+  '',                                                                                                     // 16
+  '<span class="c">// === Where it lives determines who runs it ===</span>',                              // 17
+  '<span class="c">// ~/Library/LaunchAgents/        — runs as YOU, only when GUI logged in</span>',     // 18
+  '<span class="c">// /Library/LaunchAgents/         — runs as the logged-in user (any user)</span>',    // 19
+  '<span class="c">// /Library/LaunchDaemons/        — runs as ROOT, at boot, no GUI needed</span>',     // 20
+  '',                                                                                                     // 21
+  '<span class="c">// → privilege smell: don\'t use LaunchDaemons when LaunchAgent would do.</span>',   // 22
+  '<span class="c">// → user agents die at logout; daemons survive forever (until disabled).</span>',    // 23
+  '<span class="c">// → only LaunchDaemons can bind privileged ports, modify /etc, etc.</span>',         // 24
+  '',                                                                                                     // 25
+  '<span class="c">// === Lifecycle: launchctl ↔ launchd ===</span>',                                    // 26
+  '<span class="t">$ launchctl load   </span>~/Library/LaunchAgents/com.you.sync.plist',                 // 27
+  '<span class="c">// → launchd reads the plist into its in-memory job table</span>',                   // 28
+  '<span class="c">// → if RunAtLoad=true: fires immediately</span>',                                    // 29
+  '<span class="c">// → otherwise waits for the trigger (interval, calendar, watch path, login)</span>', // 30
+  '<span class="t">$ launchctl list   </span>| grep sync   <span class="c">// PID + last exit code</span>',     // 31
+  '<span class="t">$ launchctl unload </span>~/Library/LaunchAgents/com.you.sync.plist',                  // 32
+  '<span class="c">// → removes from job table; running instance is sent SIGTERM</span>',               // 33
+  '',                                                                                                     // 34
+  '<span class="c">// === Scheduling keys (pick exactly one trigger family) ===</span>',                 // 35
+  '<span class="c">//  StartInterval         &lt;integer&gt;   seconds between fires</span>',           // 36
+  '<span class="c">//  StartCalendarInterval &lt;dict&gt;      cron-like wall-clock spec</span>',      // 37
+  '<span class="c">//  WatchPaths            &lt;array&gt;     fire when these paths change</span>',  // 38
+  '<span class="c">//  QueueDirectories      &lt;array&gt;     fire when dir becomes non-empty</span>', // 39
+  '<span class="c">//  KeepAlive             &lt;bool/dict&gt; respawn (not a scheduler!)</span>',     // 40
+  '<span class="c">//  RunAtLoad             &lt;bool&gt;      fire once when loaded</span>',          // 41
+  '',                                                                                                     // 42
+  '<span class="c">// Composition: StartInterval + RunAtLoad = fire now, then every N seconds.</span>',  // 43
+  '<span class="c">// Mistake to avoid: StartInterval + KeepAlive on a one-shot script →</span>',       // 44
+  '<span class="c">//   KeepAlive will keep restarting it, defeating the interval.</span>',              // 45
+  '<span class="c">// Rule of thumb: short jobs use StartInterval; long-lived daemons use KeepAlive.</span>', // 46
+  '<span class="c">// You almost never want both for the same plist.</span>',                            // 47
+  '',                                                                                                     // 48
+  '<span class="c">// === Three schedulers, side by side — pick under pressure ===</span>',              // 49
+  '<span class="c">//</span>',                                                                            // 50
+  '<span class="c">//  axis                | cron (Unix)                 | launchd (macOS)              | Task Scheduler (Windows)</span>',  // 51
+  '<span class="c">//  ------------------- | --------------------------- | ---------------------------- | ----------------------------------</span>', // 52
+  '<span class="c">//  era / support       | 1970s Unix; deprecated      | Apple\'s official since 2005  | Win NT4 (1996); modernized in Vista</span>', // 53
+  '<span class="c">//  schedule syntax     | "*/15 * * * *" mini-lang    | StartInterval / Cal keys     | XML schema + GUI; schtasks.exe CLI</span>', // 54
+  '<span class="c">//  trigger types       | time only                   | time + WatchPaths + queue    | time + Event Log + logon + idle</span>',  // 55
+  '<span class="c">//                       |                             | + login + IPC                | + workstation lock + power events</span>', // 56
+  '<span class="c">//  granularity         | minute                      | second                       | minute</span>',                          // 57
+  '<span class="c">//  process supervision | fire-and-forget             | KeepAlive + ThrottleInterval | restart on failure + retry count</span>', // 58
+  '<span class="c">//  logging             | MAILTO emails               | StandardOutPath/ErrorPath    | Event Log + per-task History tab</span>', // 59
+  '<span class="c">//  storage shape       | one shared crontab          | one plist per job            | one XML per task in \\System32\\Tasks</span>', // 60
+  '<span class="c">//  privilege model     | user vs /etc/crontab        | LaunchAgent vs LaunchDaemon  | per-user vs SYSTEM / NETWORK SERVICE</span>', // 61
+  '<span class="c">//  sleep / power       | can\'t wake the machine      | PowerNap wake support        | "Wake the computer to run" toggle</span>',   // 62
+  '<span class="c">//  missed runs         | lost if machine was off     | RunAtLoad re-fires on boot   | "Run ASAP after missed start" toggle</span>', // 63
+  '<span class="c">//</span>',                                                                            // 64
+  '<span class="c">// Under the hood: cron is a SCHEDULER. launchd AND Task Scheduler are PROCESS</span>', // 65
+  '<span class="c">// SUPERVISORS that happen to schedule — that\'s why both have respawn/retry,</span>', // 66
+  '<span class="c">// per-task logs, wake-from-sleep, and one-file-per-job storage. cron has</span>',   // 67
+  '<span class="c">// none of those because supervising a process across its lifetime is a</span>',     // 68
+  '<span class="c">// strictly larger job than firing it.</span>',                                       // 69
+  '<span class="c">//</span>',                                                                            // 70
+  '<span class="c">// Why one-file-per-job matters: an installer drops one plist (macOS) or one</span>', // 71
+  '<span class="c">// XML (Windows) into the system folder to add a job; uninstall is `rm`. cron</span>', // 72
+  '<span class="c">// forces editing a shared crontab — no atomic install, no app ownership.</span>',   // 73
+  '',                                                                                                     // 74
+  '<span class="c">// === Where this pattern shows up elsewhere ===</span>',                             // 75
+  '<span class="c">// METER  — Measure·Emit·Track·Evaluate·Report on a cadence (cognitive layer)</span>', // 76
+  '<span class="c">// PULSE  — state-aware modulation, reads Energy + Stress (governance)</span>',       // 77
+  '<span class="c">// systemd — Linux\'s analogue (.service units + .timer units, declarative)</span>', // 78
+  '<span class="c">// Kubernetes — CronJob + Deployment + livenessProbe = same shape, distributed</span>', // 79
+  '',                                                                                                     // 80
+  '<span class="c">// The pattern: declarative contract → daemon registry → triggered fork →</span>',    // 81
+  '<span class="c">// supervised lifecycle. Three OSes, one architecture. The plist is just</span>',     // 82
+  '<span class="c">// macOS\'s dialect.</span>',                                                          // 83
+].map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

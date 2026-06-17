@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Abstract Factory Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --mac: #79c0ff; --win: #ffa657; --lin: #7ee787;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .kit { transition: opacity .45s, transform .45s; transform-origin: center; transform-box: fill-box; }
+  .kit-box { stroke-width: 3; fill-opacity: 0.18; transition: stroke-width .35s; }
+  .kit.active .kit-box { stroke-width: 5; filter: drop-shadow(0 0 14px currentColor); }
+  .kit-label { font: 700 14px sans-serif; text-anchor: middle; fill: currentColor; }
+  .widget { font: 600 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; }
+  .widget-bg { stroke: none; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .mix-warn { fill: var(--warn); font: 700 12px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .mix-warn.on { opacity: 1; }
+  .mix-arrow { stroke: var(--warn); stroke-width: 2; opacity: 0; transition: opacity .35s; }
+  .mix-arrow.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Abstract Factory Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <g id="kit-win" class="kit" style="color: var(--win); opacity: 0">
+          <rect class="kit-box" x="30" y="50" width="140" height="240" rx="14" fill="var(--win)" stroke="var(--win)"/>
+          <text class="kit-label" x="100" y="78">Windows kit</text>
+          <rect class="widget-bg" x="50" y="100" width="100" height="32" rx="2" fill="var(--win)" opacity="0.9"/>
+          <text class="widget" x="100" y="120">[OK ▭]</text>
+          <rect class="widget-bg" x="50" y="148" width="100" height="32" rx="2" fill="var(--win)" opacity="0.9"/>
+          <text class="widget" x="100" y="168">☑ checkbox</text>
+          <rect class="widget-bg" x="50" y="196" width="100" height="32" rx="2" fill="var(--win)" opacity="0.9"/>
+          <text class="widget" x="100" y="216">▼ dropdown</text>
+          <rect class="widget-bg" x="50" y="244" width="100" height="32" rx="2" fill="var(--win)" opacity="0.9"/>
+          <text class="widget" x="100" y="264">▭ field</text>
+        </g>
+
+        <g id="kit-mac" class="kit" style="color: var(--mac); opacity: 0">
+          <rect class="kit-box" x="190" y="50" width="140" height="240" rx="14" fill="var(--mac)" stroke="var(--mac)"/>
+          <text class="kit-label" x="260" y="78">macOS kit</text>
+          <rect class="widget-bg" x="210" y="100" width="100" height="32" rx="16" fill="var(--mac)" opacity="0.9"/>
+          <text class="widget" x="260" y="120">( OK ⏵ )</text>
+          <rect class="widget-bg" x="210" y="148" width="100" height="32" rx="16" fill="var(--mac)" opacity="0.9"/>
+          <text class="widget" x="260" y="168">◉ checkbox</text>
+          <rect class="widget-bg" x="210" y="196" width="100" height="32" rx="16" fill="var(--mac)" opacity="0.9"/>
+          <text class="widget" x="260" y="216">⇣ dropdown</text>
+          <rect class="widget-bg" x="210" y="244" width="100" height="32" rx="16" fill="var(--mac)" opacity="0.9"/>
+          <text class="widget" x="260" y="264">⏊ field</text>
+        </g>
+
+        <g id="kit-lin" class="kit" style="color: var(--lin); opacity: 0">
+          <rect class="kit-box" x="350" y="50" width="140" height="240" rx="14" fill="var(--lin)" stroke="var(--lin)"/>
+          <text class="kit-label" x="420" y="78">Linux kit</text>
+          <rect class="widget-bg" x="370" y="100" width="100" height="32" rx="6" fill="var(--lin)" opacity="0.9"/>
+          <text class="widget" x="420" y="120">{ OK }</text>
+          <rect class="widget-bg" x="370" y="148" width="100" height="32" rx="6" fill="var(--lin)" opacity="0.9"/>
+          <text class="widget" x="420" y="168">[x] checkbox</text>
+          <rect class="widget-bg" x="370" y="196" width="100" height="32" rx="6" fill="var(--lin)" opacity="0.9"/>
+          <text class="widget" x="420" y="216">v dropdown</text>
+          <rect class="widget-bg" x="370" y="244" width="100" height="32" rx="6" fill="var(--lin)" opacity="0.9"/>
+          <text class="widget" x="420" y="264">_ field</text>
+        </g>
+
+        <g id="mix" style="opacity: 0">
+          <rect class="widget-bg" x="200" y="100" width="100" height="32" rx="16" fill="var(--mac)" opacity="0.9"/>
+          <text class="widget" x="250" y="120">( OK ⏵ )</text>
+          <rect class="widget-bg" x="200" y="148" width="100" height="32" rx="2" fill="var(--win)" opacity="0.9"/>
+          <text class="widget" x="250" y="168">☑ checkbox</text>
+          <rect class="widget-bg" x="200" y="196" width="100" height="32" rx="6" fill="var(--lin)" opacity="0.9"/>
+          <text class="widget" x="250" y="216">v dropdown</text>
+          <rect class="widget-bg" x="200" y="244" width="100" height="32" rx="2" fill="var(--win)" opacity="0.9"/>
+          <text class="widget" x="250" y="264">▭ field</text>
+        </g>
+
+        <text id="mix-warn" class="mix-warn" x="260" y="30">mixed families — visual + behavioral mismatch</text>
+
+        <text id="caption" class="caption" x="260" y="324"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const KITS = ['kit-win','kit-mac','kit-lin'];
+const steps = [
+  {
+    title: "the family problem",
+    narration: `On Windows you want a Windows button, Windows checkbox, Windows dropdown. On Mac, all-Mac. Each <i>kind</i> of widget already has a [[factory-method-pattern]] — but the new constraint is that they must all <b>come from the same family</b>. A Mac button next to a Windows checkbox is wrong, even if both work.`,
+    code: [
+      '<span class="c">// per-widget factory methods — easy to pick the wrong combo</span>',
+      'btn   = buttonFactory(<span class="s">"mac"</span>)',
+      'check = checkboxFactory(<span class="s">"win"</span>)   <span class="c">// 😱 mixed family</span>',
+      'drop  = dropdownFactory(<span class="s">"lin"</span>)  <span class="c">// 😱😱</span>',
+      '<span class="c">// the type system can\'t catch this — they\'re all "Button" / "Checkbox".</span>',
+    ],
+    state: { kits: [], active: '', mix: true, mixWarn: true, caption: "each widget can be picked independently — risk of mismatch" }
+  },
+  {
+    title: "one factory, one whole family",
+    narration: `An <b>Abstract Factory</b> is an interface that promises to make <i>every</i> product in the family. Implementations make all of them from the same theme. Picking a factory = picking a theme.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">UIFactory</span> {',
+      '  createButton():   <span class="t">Button</span>',
+      '  createCheckbox(): <span class="t">Checkbox</span>',
+      '  createDropdown(): <span class="t">Dropdown</span>',
+      '  createField():    <span class="t">Field</span>',
+      '}',
+      '',
+      '<span class="c">// one interface, four products in lockstep.</span>',
+    ],
+    state: { kits: ['kit-win','kit-mac','kit-lin'], active: '', mix: false, mixWarn: false, caption: "abstract factory = the family contract" }
+  },
+  {
+    title: "concrete factories implement the lot",
+    narration: `<b>WindowsUIFactory</b> implements <i>every</i> create-method to return Windows widgets. <b>MacUIFactory</b> returns Mac ones. The factory <i>is</i> the theme. There's no way to ask it for a "Mac button from the Windows factory" — it can't happen.`,
+    code: [
+      '<span class="k">class</span> <span class="t">WindowsUIFactory</span> <span class="k">implements</span> <span class="t">UIFactory</span> {',
+      '  createButton()   { <span class="k">return</span> <span class="k">new</span> WinButton() }',
+      '  createCheckbox() { <span class="k">return</span> <span class="k">new</span> WinCheckbox() }',
+      '  createDropdown() { <span class="k">return</span> <span class="k">new</span> WinDropdown() }',
+      '  createField()    { <span class="k">return</span> <span class="k">new</span> WinField() }',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">MacUIFactory</span> <span class="k">implements</span> <span class="t">UIFactory</span> { <span class="c">/* all Mac, all the time */</span> }',
+    ],
+    state: { kits: KITS, active: 'kit-win', mix: false, mixWarn: false, caption: "concrete factory = one theme's whole kit" }
+  },
+  {
+    title: "client only sees abstractions",
+    narration: `The client takes a <span class="pill">UIFactory</span> as a parameter and never names a concrete class. Every widget it builds is family-consistent because they all came out of the same factory.`,
+    code: [
+      '<span class="k">class</span> <span class="t">SettingsPanel</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> ui: <span class="t">UIFactory</span>) {}',
+      '',
+      '  render() {',
+      '    <span class="k">const</span> save   = <span class="k">this</span>.ui.createButton()',
+      '    <span class="k">const</span> notify = <span class="k">this</span>.ui.createCheckbox()',
+      '    <span class="k">const</span> theme  = <span class="k">this</span>.ui.createDropdown()',
+      '    <span class="k">return</span> [save, notify, theme]   <span class="c">// guaranteed same family</span>',
+      '  }',
+      '}',
+    ],
+    state: { kits: KITS, active: 'kit-mac', mix: false, mixWarn: false, caption: "ask the same factory for every part — family safety by construction" }
+  },
+  {
+    title: "swap the whole theme in one line",
+    narration: `Pick the factory once at the boundary. The entire UI follows. Changing themes — including A/B tests and per-tenant white-labeling — becomes a single substitution.`,
+    code: [
+      '<span class="k">function</span> uiFor(os: <span class="t">string</span>): <span class="t">UIFactory</span> {',
+      '  <span class="k">switch</span> (os) {',
+      '    <span class="k">case</span> <span class="s">"win"</span>: <span class="k">return</span> <span class="k">new</span> WindowsUIFactory()',
+      '    <span class="k">case</span> <span class="s">"mac"</span>: <span class="k">return</span> <span class="k">new</span> MacUIFactory()',
+      '    <span class="k">case</span> <span class="s">"lin"</span>: <span class="k">return</span> <span class="k">new</span> LinuxUIFactory()',
+      '  }',
+      '}',
+      '',
+      '<span class="k">const</span> panel = <span class="k">new</span> SettingsPanel(uiFor(process.platform))',
+      '<span class="c">// every widget downstream is platform-consistent.</span>',
+    ],
+    state: { kits: KITS, active: 'kit-lin', mix: false, mixWarn: false, caption: "one factory swap → entire family swaps" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Abstract Factory enforces that a set of products is consistent. Pays off when there's a real <i>family</i> contract: cross-platform UIs, multi-cloud kits (AWS-S3 + AWS-SQS + AWS-Lambda vs the GCP triple), per-region SDKs, themed UI libraries. Costs: adding a <i>new kind of product</i> to the family forces every concrete factory to grow a new method — painful when factories are many. Direct sister of <b>[[factory-method-pattern]]</b>: Factory Method makes one product (variation via subclass); Abstract Factory makes a related set (variation via swappable kit). Often implemented internally <i>with</i> factory methods — one Factory Method per product type. Also pairs with <b>[[bridge-pattern]]</b> when the family is what the bridge's Abstraction holds.`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - cross-platform UI kits (Win/Mac/Linux widgets)</span>',
+      '<span class="c">//   - cloud SDK families (AWS vs GCP vs Azure equivalents)</span>',
+      '<span class="c">//   - per-region implementations of a service family</span>',
+      '<span class="c">//   - theme-able / white-label UI libraries</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - only one product to vary (use [[factory-method-pattern]])</span>',
+      '<span class="c">//   - the product list grows often (every new method = N factories to patch)</span>',
+      '<span class="c">//   - one-off composition with no family constraint (just construct directly)</span>',
+    ],
+    state: { kits: KITS, active: '', mix: false, mixWarn: false, caption: "use it when a *set* of products must travel together" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  KITS.forEach(id => {
+    $(id).style.opacity = s.state.kits.includes(id) ? 1 : 0;
+    $(id).classList.toggle('active', s.state.active === id);
+  });
+  $('mix').style.opacity = s.state.mix ? 1 : 0;
+  $('mix-warn').classList.toggle('on', s.state.mixWarn);
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

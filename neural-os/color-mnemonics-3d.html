@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color as a Mnemonic System — 3D Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --hue: #f778ba; --val: #a5d6ff; --sat: #7ee787;
+    --hl: rgba(247, 129, 102, 0.16);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .anchor { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+  .anchor b { color: var(--accent); font-weight: 600; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; flex: 1; min-height: 460px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; position: relative; }
+  .label { margin: 0 0 4px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .sub { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+
+  /* ---- 3D color cylinder ---- */
+  .scene { flex: 1; min-height: 340px; perspective: 950px; display: flex; align-items: center; justify-content: center;
+    cursor: grab; touch-action: none; position: relative; }
+  .scene:active { cursor: grabbing; }
+  .cyl { position: relative; width: 0; height: 0; transform-style: preserve-3d;
+    transform: rotateX(-16deg) rotateY(0deg); }
+  .cyl .ring { position: absolute; transform-style: preserve-3d; }
+  .cyl .panel-slat { position: absolute; left: 0; top: 0; border-radius: 2px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+    transition: filter .5s ease; }
+  .cyl.flat .panel-slat { filter: saturate(0.12) brightness(0.96); }
+  .axis-tag { position: absolute; font: 600 11px ui-monospace, Menlo, monospace; padding: 2px 7px;
+    border-radius: 5px; background: #0d1117cc; border: 1px solid var(--line); pointer-events: none; }
+  .axis-tag.hue { color: var(--hue); top: 12px; left: 12px; }
+  .axis-tag.val { color: var(--val); top: 50%; right: 12px; transform: translateY(-50%); }
+  .axis-tag.sat { color: var(--sat); bottom: 12px; left: 12px; }
+  .axis-tag.pulse { animation: tagpulse .5s ease 3; }
+  @keyframes tagpulse { 50% { box-shadow: 0 0 12px currentColor; border-color: currentColor; } }
+
+  .moves { display: flex; gap: 8px; margin-top: 14px; }
+  .moves button { flex: 1; }
+
+  /* ---- harmony wheel ---- */
+  .wheel-wrap { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 300px; }
+  svg.wheel { width: 320px; height: 320px; max-width: 100%; }
+  .marker { stroke: #0d1117; stroke-width: 2.5; filter: drop-shadow(0 0 6px currentColor); }
+  .chord { stroke: var(--text); stroke-width: 2; opacity: 0.85; fill: none; }
+  .spoke { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+  .deg-label { fill: var(--text); font: 700 11px ui-monospace, monospace; text-anchor: middle; }
+
+  .patterns { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; }
+  .patterns button { flex: 1 1 auto; min-width: 0; padding: 7px 6px; font-size: 13px; }
+  .patterns button.on { border-color: var(--accent); color: var(--accent); background: var(--hl); }
+
+  .hue-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .hue-row input[type=range] { flex: 1; accent-color: var(--pick); }
+  .hue-row code { color: var(--pick); font: 600 13px ui-monospace, monospace; min-width: 48px; text-align: right; }
+
+  .swatches { display: flex; gap: 8px; margin-bottom: 10px; min-height: 54px; }
+  .swatch { flex: 1; border-radius: 7px; border: 1px solid var(--line); display: flex; align-items: flex-end;
+    justify-content: center; padding-bottom: 4px; font: 600 10px ui-monospace, monospace; color: #0d1117e0; }
+  .narr { font-size: 13px; line-height: 1.5; color: var(--text); margin: 0; min-height: 38px; }
+  .narr b { color: var(--accent); }
+
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 12px;
+    border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+
+  .legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .legend h3 { margin: 0 0 4px; font-size: 13px; }
+  .legend .hue3 { color: var(--hue); } .legend .val3 { color: var(--val); } .legend .sat3 { color: var(--sat); }
+  .legend p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .legend code { color: var(--text); font-size: 12px; }
+  footer { color: var(--muted); font-size: 11px; margin-top: 14px; text-align: center; }
+  footer code { color: var(--accent); }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } .legend { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Color as a Mnemonic System <small>— a 3D walkthrough</small></h1>
+  </header>
+  <p class="anchor">
+    Drag the drum to orbit it. The mnemonic is spatial:
+    <b>spin for identity · slide for lightness · pull for intensity</b> &nbsp;|&nbsp;
+    on the wheel: <b>contrast → 180° · harmony → ±30° · variety → 120°</b>
+  </p>
+
+  <main>
+    <!-- LEFT: the 3D HSV cylinder -->
+    <section class="panel">
+      <p class="label">The Color Cylinder · drag to orbit</p>
+      <p class="sub">Every color is one point in this 3D solid. Three moves reach any of them.</p>
+      <div class="scene" id="scene">
+        <div class="cyl" id="cyl"></div>
+        <span class="axis-tag hue" id="tag-hue">⟳ Hue — spin the dial</span>
+        <span class="axis-tag val" id="tag-val">↕ Value — slide up/down</span>
+        <span class="axis-tag sat" id="tag-sat">⊙ Saturation — pull from core</span>
+      </div>
+      <div class="moves">
+        <button id="m-spin">⟳ Spin (Hue)</button>
+        <button id="m-slide">↕ Slide (Value)</button>
+        <button id="m-pull">⊙ Pull (Saturation)</button>
+      </div>
+    </section>
+
+    <!-- RIGHT: the harmony wheel -->
+    <section class="panel">
+      <p class="label">The Harmony Wheel · geometry = palette</p>
+      <p class="sub">Pick one base hue, then a shape. Related colors become angle calculations.</p>
+      <div class="hue-row">
+        <span style="color:var(--muted);font-size:12px">Base hue</span>
+        <input type="range" id="hue" min="0" max="359" value="20">
+        <code id="hue-val">20°</code>
+      </div>
+      <div class="wheel-wrap">
+        <svg class="wheel" id="wheel" viewBox="0 0 320 320" aria-label="hue harmony wheel"></svg>
+      </div>
+      <div class="patterns" id="patterns"></div>
+      <div class="swatches" id="swatches"></div>
+      <p class="narr" id="narr"></p>
+    </section>
+  </main>
+
+  <div class="legend">
+    <div>
+      <h3 class="hue3">⟳ Hue — 0°–360°</h3>
+      <p>The <code>spin</code> move. Identity of the color family: red → yellow → green → blue → violet → back. On the wheel it is the only thing the harmony shapes touch.</p>
+    </div>
+    <div>
+      <h3 class="val3">↕ Value — 0%→100%</h3>
+      <p>The <code>slide</code> move (a dimmer switch). Black at the floor, white at the cap. A flat palette = everything stuck on one ring; add a dark anchor + light highlight.</p>
+    </div>
+    <div>
+      <h3 class="sat3">⊙ Saturation — core→rim</h3>
+      <p>The <code>pull</code> move. Gray axis in the center, pure hue at the rim. Muddy → pull outward; garish → push in or lift value.</p>
+    </div>
+  </div>
+
+  <footer>
+    Source: <code>wiki/learning-systems/color-theory-mental-model.md</code> · HSV cylinder + five harmony patterns. Self-contained — pure CSS 3D + SVG, no libraries.
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   PART 1 — build the 3D HSV cylinder out of colored slats
+   ============================================================ */
+const HUES = 24;        // slats around the ring  (Hue axis)
+const LEVELS = 9;       // stacked rings          (Value axis)
+const R = 150;          // cylinder radius (px)
+const PH = 30;          // slat height (px)
+const PW = Math.round((2 * Math.PI * R) / HUES) + 4; // slat width with slight overlap
+
+const cyl = document.getElementById('cyl');
+let slatHTML = '';
+for (let lvl = 0; lvl < LEVELS; lvl++) {
+  // Value axis: map ring level -> HSL lightness 18%..82% (floor=dark, cap=light)
+  const light = 18 + (lvl / (LEVELS - 1)) * 64;
+  const y = (lvl - (LEVELS - 1) / 2) * PH;      // vertical offset, centered
+  let ring = '';
+  for (let k = 0; k < HUES; k++) {
+    const hue = (k / HUES) * 360;               // Hue axis around the ring
+    const angle = (k / HUES) * 360;
+    // saturation kept at 100% on the surface -> the rim of the cylinder
+    ring += `<div class="panel-slat" style="
+      width:${PW}px;height:${PH - 2}px;margin-left:${-PW / 2}px;margin-top:${-(PH - 2) / 2}px;
+      background:hsl(${hue} 100% ${light}%);
+      transform:rotateY(${angle}deg) translateZ(${R}px);"></div>`;
+  }
+  slatHTML += `<div class="ring" style="transform:translateY(${y}px)">${ring}</div>`;
+}
+cyl.innerHTML = slatHTML;
+
+/* ---- orbit: drag to rotate, gentle idle auto-spin ---- */
+let rotX = -16, rotY = 0, spin = 0.18, dragging = false, lastX = 0, lastY = 0;
+const scene = document.getElementById('scene');
+function applyCyl() { cyl.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`; }
+scene.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; scene.setPointerCapture(e.pointerId); });
+scene.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  rotY += (e.clientX - lastX) * 0.45;
+  rotX = Math.max(-82, Math.min(12, rotX - (e.clientY - lastY) * 0.3));
+  lastX = e.clientX; lastY = e.clientY; applyCyl();
+});
+scene.addEventListener('pointerup', () => dragging = false);
+(function loop() { if (!dragging) { rotY += spin; applyCyl(); } requestAnimationFrame(loop); })();
+
+/* ---- the three embodied moves ---- */
+function pulseTag(id) { const t = document.getElementById(id); t.classList.remove('pulse'); void t.offsetWidth; t.classList.add('pulse'); }
+document.getElementById('m-spin').onclick = () => { spin = 2.6; pulseTag('tag-hue'); setTimeout(() => spin = 0.18, 1300); };
+document.getElementById('m-slide').onclick = () => { pulseTag('tag-val'); rotX = -55; applyCyl(); setTimeout(() => { rotX = -16; applyCyl(); }, 900); };
+document.getElementById('m-pull').onclick = () => { pulseTag('tag-sat'); cyl.classList.add('flat'); setTimeout(() => cyl.classList.remove('flat'), 1400); };
+
+/* ============================================================
+   PART 2 — the harmony wheel (exact SVG geometry)
+   ============================================================ */
+const CX = 160, CY = 160, R_OUT = 132, R_IN = 92, R_MARK = 112;
+const wheel = document.getElementById('wheel');
+
+// screen position of a hue: 0° at top, increasing clockwise
+function huePos(h, r) {
+  const a = (h - 90) * Math.PI / 180;
+  return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+}
+
+// paint the donut ring once, as 72 colored wedges
+(function paintRing() {
+  let s = '';
+  const step = 360 / 72;
+  for (let i = 0; i < 72; i++) {
+    const h = i * step;
+    const [x1, y1] = huePos(h - step / 2, R_OUT), [x2, y2] = huePos(h + step / 2, R_OUT);
+    const [x3, y3] = huePos(h + step / 2, R_IN), [x4, y4] = huePos(h - step / 2, R_IN);
+    s += `<path d="M${x1} ${y1} A${R_OUT} ${R_OUT} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${R_IN} ${R_IN} 0 0 0 ${x4} ${y4} Z"
+            fill="hsl(${h} 85% 55%)"></path>`;
+  }
+  wheel.insertAdjacentHTML('afterbegin', `<g>${s}</g>`);
+})();
+
+/* ---- the five harmony patterns from the wiki ---- */
+const PATTERNS = {
+  complementary: { label: 'Complementary', effect: 'maximum contrast, tension', degs: '0° + 180°' },
+  analogous:     { label: 'Analogous',     effect: 'natural harmony, low contrast', degs: '0° ±30°' },
+  triadic:       { label: 'Triadic',       effect: 'balanced variety', degs: '0° + 120° + 240°' },
+  split:         { label: 'Split-comp.',   effect: 'softer contrast than complement', degs: '0° + 150° + 210°' },
+  mono:          { label: 'Monochromatic', effect: 'pure unity', degs: 'one hue, vary S+V' },
+};
+let current = 'complementary';
+
+/* ------------------------------------------------------------
+   TODO(human): compute the hue angles for a harmony pattern.
+
+   Given a base hue and a pattern key, return the array of hue
+   angles (in degrees) that make up the palette — all measured
+   RELATIVE TO `base`. You do NOT need to wrap into 0–360; the
+   caller normalises with ((h % 360) + 360) % 360.
+
+   Use the wheel geometry from color-theory-mental-model.md:
+     contrast → 180°   harmony → ±30°   variety → 120°
+   Pattern keys: 'complementary' 'analogous' 'triadic' 'split' 'mono'
+   (see the PATTERNS table above for each shape's degrees.)
+   ------------------------------------------------------------ */
+function harmonyHues(base, pattern) {
+  return [base]; // placeholder — replace with the geometry for each pattern
+}
+
+const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+wheel.appendChild(overlay);
+
+function norm(h) { return ((h % 360) + 360) % 360; }
+
+function render() {
+  const base = +document.getElementById('hue').value;
+  const hues = harmonyHues(base, current).map(norm);
+  // spokes + connecting chord
+  let g = '';
+  const pts = hues.map(h => huePos(h, R_MARK));
+  pts.forEach(([x, y]) => { g += `<line class="spoke" x1="${CX}" y1="${CY}" x2="${x}" y2="${y}"/>`; });
+  if (pts.length > 1) {
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ');
+    g += `<path class="chord" d="${d}${pts.length > 2 ? ' Z' : ''}"/>`;
+  }
+  // markers + degree labels
+  hues.forEach((h, i) => {
+    const [x, y] = huePos(h, R_MARK);
+    g += `<circle class="marker" cx="${x}" cy="${y}" r="13" fill="hsl(${h} 85% 55%)" style="color:hsl(${h} 85% 55%)"/>`;
+    const [lx, ly] = huePos(h, R_MARK - 30);
+    g += `<text class="deg-label" x="${lx}" y="${ly + 4}">${Math.round(h)}°</text>`;
+  });
+  overlay.innerHTML = g;
+
+  // swatch strip
+  document.getElementById('swatches').innerHTML = hues.map(h =>
+    `<div class="swatch" style="background:hsl(${h} 85% 55%)">${Math.round(h)}°</div>`).join('');
+
+  // narration
+  const p = PATTERNS[current];
+  document.getElementById('narr').innerHTML =
+    `<b>${p.label}</b> (${p.degs}) — ${p.effect}. ${hues.length} hue${hues.length > 1 ? 's' : ''} placed.`;
+}
+
+/* ---- controls ---- */
+const patBox = document.getElementById('patterns');
+patBox.innerHTML = Object.entries(PATTERNS)
+  .map(([k, v]) => `<button data-k="${k}">${v.label}</button>`).join('');
+patBox.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  current = b.dataset.k;
+  [...patBox.children].forEach(c => c.classList.toggle('on', c === b));
+  render();
+});
+patBox.firstElementChild.classList.add('on');
+
+const hueSlider = document.getElementById('hue');
+hueSlider.addEventListener('input', () => {
+  document.getElementById('hue-val').textContent = hueSlider.value + '°';
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

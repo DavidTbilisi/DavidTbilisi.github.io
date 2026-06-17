@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mediator Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --c1: #ffa657; --c2: #7ee787; --c3: #d2a8ff; --c4: #f7b3c4; --med: #79c0ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .comp { transition: opacity .35s, filter .35s; }
+  .comp.dim { opacity: 0.25; }
+  .comp.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .comp-label { font: 700 12px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .edge { stroke: var(--warn); stroke-width: 1.5; fill: none; opacity: 0.55; transition: opacity .3s; }
+  .edge.off { opacity: 0; }
+  .hub-edge { stroke: var(--med); stroke-width: 2; fill: none; opacity: 0; transition: opacity .3s; stroke-dasharray: 4 3; }
+  .hub-edge.on { opacity: 1; animation: dash 0.8s linear infinite; }
+  .hub-edge.fire { opacity: 1; stroke: var(--pick); }
+  @keyframes dash { to { stroke-dashoffset: -14; } }
+  .mediator-box { fill: var(--panel); stroke: var(--med); stroke-width: 2; transition: opacity .35s; }
+  .mediator-label { fill: var(--text); font: 700 14px sans-serif; text-anchor: middle; }
+  .mediator-sub { fill: var(--muted); font: 11px ui-monospace, monospace; text-anchor: middle; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Mediator Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <line class="edge" id="e-12" x1="120" y1="80"  x2="400" y2="80"/>
+        <line class="edge" id="e-13" x1="120" y1="80"  x2="120" y2="280"/>
+        <line class="edge" id="e-14" x1="120" y1="80"  x2="400" y2="280"/>
+        <line class="edge" id="e-23" x1="400" y1="80"  x2="120" y2="280"/>
+        <line class="edge" id="e-24" x1="400" y1="80"  x2="400" y2="280"/>
+        <line class="edge" id="e-34" x1="120" y1="280" x2="400" y2="280"/>
+
+        <path id="h-1" class="hub-edge" d="M 150 100 L 240 170" marker-end="url(#arrow)"/>
+        <path id="h-2" class="hub-edge" d="M 370 100 L 280 170" marker-end="url(#arrow)"/>
+        <path id="h-3" class="hub-edge" d="M 150 260 L 240 195" marker-end="url(#arrow)"/>
+        <path id="h-4" class="hub-edge" d="M 370 260 L 280 195" marker-end="url(#arrow)"/>
+
+        <g id="mediator" style="opacity: 0">
+          <rect class="mediator-box" x="200" y="150" width="120" height="60" rx="8"/>
+          <text class="mediator-label" x="260" y="178">DialogMediator</text>
+          <text class="mediator-sub" x="260" y="198">routes</text>
+        </g>
+
+        <g id="comp-1" class="comp" style="color: var(--c1)">
+          <rect x="60" y="50" width="120" height="60" rx="8" fill="var(--c1)" opacity="0.9"/>
+          <text class="comp-label" x="120" y="78">LoginBtn</text>
+          <text class="comp-label" x="120" y="94" style="font: 500 10px ui-monospace, monospace; opacity: 0.8;">onClick</text>
+        </g>
+        <g id="comp-2" class="comp" style="color: var(--c2)">
+          <rect x="340" y="50" width="120" height="60" rx="8" fill="var(--c2)" opacity="0.9"/>
+          <text class="comp-label" x="400" y="78">EmailField</text>
+          <text class="comp-label" x="400" y="94" style="font: 500 10px ui-monospace, monospace; opacity: 0.8;">onChange</text>
+        </g>
+        <g id="comp-3" class="comp" style="color: var(--c3)">
+          <rect x="60" y="250" width="120" height="60" rx="8" fill="var(--c3)" opacity="0.9"/>
+          <text class="comp-label" x="120" y="278">PwField</text>
+          <text class="comp-label" x="120" y="294" style="font: 500 10px ui-monospace, monospace; opacity: 0.8;">onChange</text>
+        </g>
+        <g id="comp-4" class="comp" style="color: var(--c4)">
+          <rect x="340" y="250" width="120" height="60" rx="8" fill="var(--c4)" opacity="0.9"/>
+          <text class="comp-label" x="400" y="278">ErrorLabel</text>
+          <text class="comp-label" x="400" y="294" style="font: 500 10px ui-monospace, monospace; opacity: 0.8;">show / hide</text>
+        </g>
+
+        <text id="caption" class="caption" x="260" y="350"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL_EDGES = ['e-12','e-13','e-14','e-23','e-24','e-34'];
+const ALL_HUB   = ['h-1','h-2','h-3','h-4'];
+const steps = [
+  {
+    title: "the N×N tangle",
+    narration: `Four widgets. Each must react to the others — when the email field changes, the button enables; when login fails, the error label shows. <b>Six edges</b> for four nodes — and that's already O(N²). Add one widget and the graph explodes.`,
+    code: [
+      '<span class="k">class</span> <span class="t">EmailField</span> {',
+      '  onChange(v) {',
+      '    loginBtn.setEnabled(v &amp;&amp; pwField.value)   <span class="c">// reach into another</span>',
+      '    errorLabel.hide()                            <span class="c">// and another</span>',
+      '  }',
+      '}',
+      '<span class="c">// PwField does the same. LoginBtn does the same.</span>',
+      '<span class="c">// each widget knows 3 others by name.</span>',
+    ],
+    state: { edges: true, hubOn: false, hubFire: [], medOn: false, dim: [], glow: [], caption: "every widget knows every other widget" }
+  },
+  {
+    title: "introduce the Mediator",
+    narration: `Put a <b>Mediator</b> in the middle. Each widget knows only the mediator. The mediator owns the coordination rules. N edges instead of N², and the rules live in one place.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">Mediator</span> {',
+      '  notify(sender: <span class="t">Component</span>, event: <span class="t">string</span>): <span class="t">void</span>',
+      '}',
+      '',
+      '<span class="k">abstract</span> <span class="k">class</span> <span class="t">Component</span> {',
+      '  <span class="k">constructor</span>(<span class="k">protected</span> mediator: <span class="t">Mediator</span>) {}',
+      '}',
+    ],
+    state: { edges: false, hubOn: true, hubFire: [], medOn: true, dim: [], glow: [], caption: "hub replaces mesh" }
+  },
+  {
+    title: "components only notify the hub",
+    narration: `Each widget calls <span class="pill">mediator.notify(self, "changed")</span>. They never reference each other. The mediator decides what happens next — they don't need to know.`,
+    code: [
+      '<span class="k">class</span> <span class="t">EmailField</span> <span class="k">extends</span> <span class="t">Component</span> {',
+      '  value = <span class="s">""</span>',
+      '  setValue(v: <span class="t">string</span>) {',
+      '    <span class="k">this</span>.value = v',
+      '    <span class="k">this</span>.mediator.notify(<span class="k">this</span>, <span class="s">"changed"</span>)  <span class="c">// that\'s the whole API</span>',
+      '  }',
+      '}',
+    ],
+    state: { edges: false, hubOn: true, hubFire: ['h-2'], medOn: true, dim: ['comp-1','comp-3','comp-4'], glow: ['comp-2'], caption: "EmailField talks only to the mediator" }
+  },
+  {
+    title: "the hub routes",
+    narration: `The mediator's <span class="pill">notify()</span> is one switch on the source. All the coordination logic — enabling the button, clearing the error — lives here, in plain prose code, in one place.`,
+    code: [
+      '<span class="k">class</span> <span class="t">DialogMediator</span> <span class="k">implements</span> <span class="t">Mediator</span> {',
+      '  <span class="k">constructor</span>(',
+      '    <span class="k">public</span> email: <span class="t">EmailField</span>, <span class="k">public</span> pw: <span class="t">PwField</span>,',
+      '    <span class="k">public</span> btn: <span class="t">LoginBtn</span>,    <span class="k">public</span> err: <span class="t">ErrorLabel</span>) {}',
+      '',
+      '  notify(sender: <span class="t">Component</span>, ev: <span class="t">string</span>) {',
+      '    <span class="k">if</span> (sender === <span class="k">this</span>.email || sender === <span class="k">this</span>.pw) {',
+      '      <span class="k">this</span>.btn.setEnabled(!!<span class="k">this</span>.email.value &amp;&amp; !!<span class="k">this</span>.pw.value)',
+      '      <span class="k">this</span>.err.hide()',
+      '    }',
+      '    <span class="k">if</span> (sender === <span class="k">this</span>.btn &amp;&amp; ev === <span class="s">"failed"</span>) <span class="k">this</span>.err.show()',
+      '  }',
+      '}',
+    ],
+    state: { edges: false, hubOn: true, hubFire: ['h-2','h-1','h-4'], medOn: true, dim: [], glow: ['comp-1','comp-2','comp-4'], caption: "rules live in one switch, not scattered across widgets" }
+  },
+  {
+    title: "adding a fifth widget",
+    narration: `Drop a new <b>RememberMeCheckbox</b> into the dialog. Without the mediator, you'd touch 4 existing widgets. With it: pass the mediator in, add one branch to <span class="pill">notify()</span>. Linear cost instead of quadratic.`,
+    code: [
+      '<span class="k">class</span> <span class="t">RememberMe</span> <span class="k">extends</span> <span class="t">Component</span> {',
+      '  checked = <span class="k">false</span>',
+      '  toggle() {',
+      '    <span class="k">this</span>.checked = !<span class="k">this</span>.checked',
+      '    <span class="k">this</span>.mediator.notify(<span class="k">this</span>, <span class="s">"toggled"</span>)',
+      '  }',
+      '}',
+      '',
+      '<span class="c">// in DialogMediator.notify:</span>',
+      '<span class="k">if</span> (sender === <span class="k">this</span>.remember) cookieStore.set(<span class="s">"persist"</span>, sender.checked)',
+    ],
+    state: { edges: false, hubOn: true, hubFire: [], medOn: true, dim: [], glow: ['comp-1','comp-2','comp-3','comp-4'], caption: "one widget added → one branch added; existing widgets untouched" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Mediator turns a graph into a star. Pays off when coordination is real and the widgets must stay ignorant of each other — UI dialogs, chat rooms, ATC traffic, flight booking, game pawns. The cost: the mediator can grow into a <b>god object</b> that knows everything. When that happens, split it. Close cousin of <b>[[observer-pattern]]</b> (one-to-many push) and <b>[[facade-pattern]]</b> (also "hide a tangle behind one door," but Facade simplifies a *subsystem* for outsiders; Mediator coordinates *peers* who can't see each other).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - UI dialog with rich inter-widget rules</span>',
+      '<span class="c">//   - chat room: clients post → mediator broadcasts</span>',
+      '<span class="c">//   - air-traffic / matchmaking / order routing</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - 2-3 components with trivial cross-talk (just call directly)</span>',
+      '<span class="c">//   - mediator already &gt; 500 lines (split before it owns everything)</span>',
+    ],
+    state: { edges: false, hubOn: true, hubFire: [], medOn: true, dim: [], glow: ['comp-1','comp-2','comp-3','comp-4'], caption: "use it when coordination is real and shouldn't leak" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_EDGES.forEach(id => $(id).classList.toggle('off', !s.state.edges));
+  ALL_HUB.forEach(id => {
+    $(id).classList.toggle('on', s.state.hubOn);
+    $(id).classList.toggle('fire', s.state.hubFire.includes(id));
+  });
+  $('mediator').style.opacity = s.state.medOn ? 1 : 0;
+  ['comp-1','comp-2','comp-3','comp-4'].forEach(id => {
+    const el = $(id);
+    el.classList.toggle('dim', s.state.dim.includes(id));
+    el.classList.toggle('glow', s.state.glow.includes(id));
+  });
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

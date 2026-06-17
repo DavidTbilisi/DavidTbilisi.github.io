@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Factory Method Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --creator: #79c0ff; --product: #7ee787; --win: #ffa657; --mac: #d2a8ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .box { transition: opacity .35s, filter .35s; }
+  .box.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .box.dim { opacity: 0.3; }
+  .b-label { font: 700 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .b-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.78; }
+  .edge { stroke: var(--muted); stroke-width: 1.5; fill: none; opacity: 0.55; transition: opacity .3s, stroke .3s; }
+  .edge.live { stroke: var(--pick); opacity: 1; animation: dash 0.8s linear infinite; stroke-dasharray: 5 4; }
+  .edge.hidden { opacity: 0; }
+  @keyframes dash { to { stroke-dashoffset: -18; } }
+  .factory-method-tag { fill: var(--pick); font: 700 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .factory-method-tag.on { opacity: 1; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Factory Method Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <g id="abs-creator" class="box" style="color: var(--creator)">
+          <rect x="40" y="50" width="180" height="60" rx="8" fill="var(--creator)" opacity="0.9"/>
+          <text class="b-label" x="130" y="76">Dialog (Creator)</text>
+          <text class="b-sub" x="130" y="92">render() { ... btn = createBtn() }</text>
+        </g>
+        <text id="fm-tag" class="factory-method-tag" x="130" y="38">↓ factory method ↓</text>
+
+        <g id="abs-product" class="box" style="color: var(--product)">
+          <rect x="300" y="50" width="180" height="60" rx="8" fill="var(--product)" opacity="0.9"/>
+          <text class="b-label" x="390" y="76">Button (Product)</text>
+          <text class="b-sub" x="390" y="92">render() / click()</text>
+        </g>
+
+        <g id="win-creator" class="box" style="color: var(--win)">
+          <rect x="20"  y="180" width="120" height="56" rx="8" fill="var(--win)" opacity="0.9"/>
+          <text class="b-label" x="80" y="208">WindowsDialog</text>
+          <text class="b-sub" x="80" y="222">overrides createBtn()</text>
+        </g>
+        <g id="mac-creator" class="box" style="color: var(--mac)">
+          <rect x="160" y="180" width="120" height="56" rx="8" fill="var(--mac)" opacity="0.9"/>
+          <text class="b-label" x="220" y="208">MacDialog</text>
+          <text class="b-sub" x="220" y="222">overrides createBtn()</text>
+        </g>
+
+        <g id="win-product" class="box" style="color: var(--win)">
+          <rect x="320" y="180" width="80" height="56" rx="8" fill="var(--win)" opacity="0.9"/>
+          <text class="b-label" x="360" y="208">WinBtn</text>
+        </g>
+        <g id="mac-product" class="box" style="color: var(--mac)">
+          <rect x="410" y="180" width="80" height="56" rx="8" fill="var(--mac)" opacity="0.9"/>
+          <text class="b-label" x="450" y="208">MacBtn</text>
+        </g>
+
+        <path class="edge" id="e-wc-ac"  d="M 80 180 L 80 110"  marker-end=""/>
+        <path class="edge" id="e-mc-ac"  d="M 220 180 L 220 110" marker-end=""/>
+        <path class="edge" id="e-wp-ap"  d="M 360 180 L 360 110" marker-end=""/>
+        <path class="edge" id="e-mp-ap"  d="M 450 180 L 450 110" marker-end=""/>
+
+        <path class="edge" id="e-wc-wp"  d="M 140 208 L 318 208"  marker-end="url(#arr)"/>
+        <path class="edge" id="e-mc-mp"  d="M 280 208 L 408 208"  marker-end="url(#arr)"/>
+
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <text id="caption" class="caption" x="260" y="320"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const steps = [
+  {
+    title: "the hardcoded constructor",
+    narration: `Your <span class="pill">Dialog.render()</span> builds a button. It says <span class="pill">new WindowsButton()</span> directly. Now you want a Mac version — but Dialog's code is hardcoded to one concrete class. Subclass it and the new class still inherits the hardcoded line.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Dialog</span> {',
+      '  render() {',
+      '    <span class="k">const</span> ok = <span class="k">new</span> WindowsButton()        <span class="c">// ← hardcoded</span>',
+      '    ok.onClick = () =&gt; <span class="k">this</span>.close()',
+      '    <span class="k">return</span> [ok]',
+      '  }',
+      '}',
+      '<span class="c">// MacDialog extends Dialog → still creates WindowsButton. dead end.</span>',
+    ],
+    state: { fmTag: false, dim: ['win-creator','mac-creator','win-product','mac-product','abs-product'], glow: ['abs-creator'], live: [], caption: "the constructor name is baked into the Creator" }
+  },
+  {
+    title: "extract the constructor into a method",
+    narration: `Pull the <span class="pill">new ...</span> call into a method on the Creator: <span class="pill">createButton()</span>. Now <span class="pill">render()</span> calls <i>that method</i>, not the constructor. The class can be overridden without rewriting <span class="pill">render()</span>.`,
+    code: [
+      '<span class="k">abstract</span> <span class="k">class</span> <span class="t">Dialog</span> {',
+      '  render() {',
+      '    <span class="k">const</span> ok = <span class="k">this</span>.createButton()      <span class="c">// ← the factory method</span>',
+      '    ok.onClick = () =&gt; <span class="k">this</span>.close()',
+      '    <span class="k">return</span> [ok]',
+      '  }',
+      '',
+      '  <span class="k">protected abstract</span> createButton(): <span class="t">Button</span>',
+      '}',
+    ],
+    state: { fmTag: true, dim: ['win-creator','mac-creator','win-product','mac-product'], glow: ['abs-creator','abs-product'], live: [], caption: "creator declares a hole; the concrete subclass fills it" }
+  },
+  {
+    title: "subclasses choose the concrete product",
+    narration: `<b>WindowsDialog</b> overrides <span class="pill">createButton()</span> to return a <span class="pill">WinBtn</span>. <b>MacDialog</b> returns a <span class="pill">MacBtn</span>. The base <span class="pill">render()</span> still works — it doesn't know which kind it got, only that it's a <span class="pill">Button</span>.`,
+    code: [
+      '<span class="k">class</span> <span class="t">WindowsDialog</span> <span class="k">extends</span> <span class="t">Dialog</span> {',
+      '  <span class="k">protected</span> createButton(): <span class="t">Button</span> {',
+      '    <span class="k">return</span> <span class="k">new</span> WinBtn()',
+      '  }',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">MacDialog</span> <span class="k">extends</span> <span class="t">Dialog</span> {',
+      '  <span class="k">protected</span> createButton(): <span class="t">Button</span> {',
+      '    <span class="k">return</span> <span class="k">new</span> MacBtn()',
+      '  }',
+      '}',
+    ],
+    state: { fmTag: true, dim: [], glow: ['win-creator','win-product','mac-creator','mac-product'], live: ['e-wc-wp','e-mc-mp'], caption: "subclass = the single decision of which class to construct" }
+  },
+  {
+    title: "client picks the creator",
+    narration: `The client chooses <b>which Dialog</b> based on platform — once, at the boundary. From then on it calls <span class="pill">dialog.render()</span> and the right button comes out. The product hierarchy travels with the creator hierarchy.`,
+    code: [
+      '<span class="k">function</span> makeDialog(os: <span class="t">string</span>): <span class="t">Dialog</span> {',
+      '  <span class="k">if</span> (os === <span class="s">"win"</span>) <span class="k">return</span> <span class="k">new</span> WindowsDialog()',
+      '  <span class="k">if</span> (os === <span class="s">"mac"</span>) <span class="k">return</span> <span class="k">new</span> MacDialog()',
+      '  <span class="k">throw</span> <span class="k">new</span> Error(<span class="s">"unsupported"</span>)',
+      '}',
+      '',
+      '<span class="k">const</span> dlg = makeDialog(process.platform)',
+      'dlg.render()    <span class="c">// gets the platform-correct button automatically</span>',
+    ],
+    state: { fmTag: true, dim: ['mac-creator','mac-product'], glow: ['win-creator','win-product'], live: ['e-wc-wp'], caption: "pick the Creator once; product follows" }
+  },
+  {
+    title: "parallel hierarchies",
+    narration: `As long as Creator and Product hierarchies stay in lockstep, you can extend either side. Add a <b>LinuxDialog</b> + <b>LinuxBtn</b> — no existing code changes. The factory method <i>is</i> the join between the two hierarchies.`,
+    code: [
+      '<span class="k">class</span> <span class="t">LinuxDialog</span> <span class="k">extends</span> <span class="t">Dialog</span> {',
+      '  <span class="k">protected</span> createButton(): <span class="t">Button</span> {',
+      '    <span class="k">return</span> <span class="k">new</span> LinuxBtn()',
+      '  }',
+      '}',
+      '',
+      '<span class="c">// makeDialog() learns one new branch.</span>',
+      '<span class="c">// Dialog.render(), WindowsDialog, MacDialog — all unchanged.</span>',
+    ],
+    state: { fmTag: true, dim: [], glow: ['abs-creator','abs-product'], live: ['e-wc-wp','e-mc-mp'], caption: "Creator and Product hierarchies grow together" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Factory Method lets a base class create objects whose <i>type</i> the base doesn't know. Pays off when (a) the algorithm in the base class is real and shared, and (b) subclasses legitimately differ on <i>which</i> class they instantiate. Costs: yet another subclass per variation, and the Creator-Product pairing must stay disciplined. Close cousin of <b>[[abstract-factory-pattern]]</b>: Factory Method makes <i>one</i> product per call; Abstract Factory makes a <i>family</i> of related products. Also relates to <b>[[template-method-pattern]]</b> — Factory Method is essentially a Template Method hook whose return value is the product.`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - framework code that builds something it doesn\'t own (Dialog, Document)</span>',
+      '<span class="c">//   - library extension points: "subclass and tell us which X you make"</span>',
+      '<span class="c">//   - cross-platform UI / driver hierarchies</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - the variation isn\'t product type — use [[strategy-pattern]] or DI</span>',
+      '<span class="c">//   - you need a *set* of related products → use [[abstract-factory-pattern]]</span>',
+      '<span class="c">//   - the construction logic is non-trivial (params, validation) → use [[builder-pattern]]</span>',
+      '<span class="c">//   - the choice is a runtime config, not a subclass decision → just pass a function</span>',
+    ],
+    state: { fmTag: true, dim: [], glow: ['abs-creator','abs-product'], live: [], caption: "use it when the algorithm is fixed but the constructed class isn't" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  $('fm-tag').classList.toggle('on', s.state.fmTag);
+  ['abs-creator','abs-product','win-creator','win-product','mac-creator','mac-product'].forEach(id => {
+    $(id).classList.toggle('glow', s.state.glow.includes(id));
+    $(id).classList.toggle('dim', s.state.dim.includes(id));
+  });
+  ['e-wc-ac','e-mc-ac','e-wp-ap','e-mp-ap','e-wc-wp','e-mc-mp'].forEach(id => $(id).classList.toggle('live', s.state.live.includes(id)));
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

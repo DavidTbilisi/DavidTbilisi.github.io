@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Prototype Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --proto: #79c0ff; --clone: #7ee787; --reg: #ffa657; --shared: #f85149;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .obj { transition: opacity .35s, filter .35s, transform .45s cubic-bezier(.4,1.4,.4,1); transform-origin: center; transform-box: fill-box; }
+  .obj.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .b-label { font: 700 12px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .b-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.78; }
+  .clone-arrow { stroke: var(--clone); stroke-width: 2; fill: none; marker-end: url(#arrCl); opacity: 0; transition: opacity .35s; stroke-dasharray: 4 3; }
+  .clone-arrow.on { opacity: 1; animation: dash 0.8s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -14; } }
+  .shared-line { stroke: var(--shared); stroke-width: 2; opacity: 0; transition: opacity .35s; }
+  .shared-line.on { opacity: 1; }
+  .registry-box { fill: var(--panel); stroke: var(--reg); stroke-width: 2; stroke-dasharray: 5 3; opacity: 0; transition: opacity .35s; }
+  .registry-label { fill: var(--reg); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .on { opacity: 1 !important; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .ribbon { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .ribbon.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Prototype Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrCl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--clone)"/>
+          </marker>
+        </defs>
+
+        <text id="ribbon" class="ribbon" x="260" y="38">new Enemy(...) → load model → load anim → build mesh → 800ms</text>
+
+        <g id="proto" class="obj" style="color: var(--proto)">
+          <rect x="40" y="120" width="140" height="100" rx="10" fill="var(--proto)" opacity="0.9"/>
+          <text class="b-label" x="110" y="148">Goblin (proto)</text>
+          <text class="b-sub" x="110" y="166">model: troll.obj</text>
+          <text class="b-sub" x="110" y="180">hp: 25</text>
+          <text class="b-sub" x="110" y="194">moves: [run,bite]</text>
+          <text class="b-sub" x="110" y="210">spawnedFully ✓</text>
+        </g>
+
+        <g id="clone-1" class="obj" style="color: var(--clone); opacity: 0">
+          <rect x="240" y="80" width="110" height="60" rx="8" fill="var(--clone)" opacity="0.9"/>
+          <text class="b-label" x="295" y="104">Goblin #1</text>
+          <text class="b-sub" x="295" y="120">hp: 25 · x=12</text>
+        </g>
+        <g id="clone-2" class="obj" style="color: var(--clone); opacity: 0">
+          <rect x="370" y="80" width="110" height="60" rx="8" fill="var(--clone)" opacity="0.9"/>
+          <text class="b-label" x="425" y="104">Goblin #2</text>
+          <text class="b-sub" x="425" y="120">hp: 25 · x=44</text>
+        </g>
+        <g id="clone-3" class="obj" style="color: var(--clone); opacity: 0">
+          <rect x="240" y="170" width="110" height="60" rx="8" fill="var(--clone)" opacity="0.9"/>
+          <text class="b-label" x="295" y="194">Goblin #3</text>
+          <text class="b-sub" x="295" y="210">hp: 25 · x=78</text>
+        </g>
+        <g id="clone-4" class="obj" style="color: var(--clone); opacity: 0">
+          <rect x="370" y="170" width="110" height="60" rx="8" fill="var(--clone)" opacity="0.9"/>
+          <text class="b-label" x="425" y="194">Goblin #4</text>
+          <text class="b-sub" x="425" y="210">hp: 25 · x=120</text>
+        </g>
+
+        <path id="ca-1" class="clone-arrow" d="M 180 160 Q 210 100, 240 100"/>
+        <path id="ca-2" class="clone-arrow" d="M 180 160 Q 250 90, 370 100"/>
+        <path id="ca-3" class="clone-arrow" d="M 180 180 Q 210 230, 240 200"/>
+        <path id="ca-4" class="clone-arrow" d="M 180 180 Q 250 240, 370 200"/>
+
+        <line id="shared-1" class="shared-line" x1="180" y1="180" x2="240" y2="200" stroke-dasharray="3 2"/>
+        <line id="shared-2" class="shared-line" x1="180" y1="180" x2="370" y2="200" stroke-dasharray="3 2"/>
+
+        <g id="registry">
+          <rect class="registry-box" id="reg-box" x="30" y="250" width="460" height="84" rx="6"/>
+          <text class="registry-label" id="reg-label" x="60" y="270" text-anchor="start">prototypes:</text>
+          <text class="registry-label" id="reg-1" x="120" y="294" text-anchor="start">"goblin"   → Goblin proto</text>
+          <text class="registry-label" id="reg-2" x="120" y="312" text-anchor="start">"orc"      → Orc proto</text>
+          <text class="registry-label" id="reg-3" x="320" y="294" text-anchor="start">"dragon"   → Dragon proto</text>
+          <text class="registry-label" id="reg-4" x="320" y="312" text-anchor="start">"chest"    → Chest proto</text>
+        </g>
+
+        <text id="caption" class="caption" x="260" y="350"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const CLONES = ['clone-1','clone-2','clone-3','clone-4'];
+const ARROWS = ['ca-1','ca-2','ca-3','ca-4'];
+const steps = [
+  {
+    title: "constructing is expensive",
+    narration: `Some objects cost a lot to build from a class. A game <b>Enemy</b> needs a model loaded from disk, animations attached, a physics body wired up. <span class="pill">new Enemy()</span> takes hundreds of milliseconds. Spawning 50 of them via the constructor stalls the frame.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Enemy</span> {',
+      '  <span class="k">constructor</span>(spec: <span class="t">EnemySpec</span>) {',
+      '    <span class="k">this</span>.model = loadMesh(spec.modelPath)        <span class="c">// disk + decode</span>',
+      '    <span class="k">this</span>.anims = loadAnimations(spec.anims)      <span class="c">// more I/O</span>',
+      '    <span class="k">this</span>.body  = physics.build(<span class="k">this</span>.model)         <span class="c">// CPU</span>',
+      '    <span class="c">// ... ~800ms per Enemy</span>',
+      '  }',
+      '}',
+      '',
+      '<span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i &lt; <span class="n">50</span>; i++) <span class="k">new</span> Enemy(spec)  <span class="c">// 40 seconds of jank</span>',
+    ],
+    state: { glow: ['proto'], clones: [], arrows: [], reg: false, shared: false, ribbon: true, caption: "building from class = every time pays the construction cost" }
+  },
+  {
+    title: "the object clones itself",
+    narration: `The <b>Prototype</b> says: build the expensive thing <i>once</i>, then ask it to <span class="pill">clone()</span> itself. The clone already has the model, anims, and body — copied, not rebuilt.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">Cloneable</span>&lt;T&gt; {',
+      '  clone(): <span class="t">T</span>',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">Enemy</span> <span class="k">implements</span> <span class="t">Cloneable</span>&lt;<span class="t">Enemy</span>&gt; {',
+      '  clone(): <span class="t">Enemy</span> {',
+      '    <span class="k">return</span> Object.assign(Object.create(Enemy.prototype), <span class="k">this</span>)',
+      '  }',
+      '}',
+      '',
+      '<span class="c">// pay 800ms once.</span>',
+      '<span class="k">const</span> proto = <span class="k">new</span> Enemy(spec)',
+      '<span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i &lt; <span class="n">50</span>; i++) instances.push(proto.clone())   <span class="c">// fast</span>',
+    ],
+    state: { glow: ['proto'], clones: CLONES, arrows: ARROWS, reg: false, shared: false, ribbon: false, caption: "clone() copies a built object instead of re-running construction" }
+  },
+  {
+    title: "shallow vs deep",
+    narration: `<b>Shallow clone</b>: copies fields, but <i>references</i> (mesh, animation list) point to the same memory. Edit one clone → all clones change. <b>Deep clone</b>: copies recursively. Pick based on what's safe to share — meshes typically yes, mutable state no.`,
+    code: [
+      '<span class="c">// shallow: fast, references shared (use for immutable parts)</span>',
+      'clone(): <span class="t">Enemy</span> {',
+      '  <span class="k">return</span> Object.assign(Object.create(Enemy.prototype), <span class="k">this</span>)',
+      '}',
+      '',
+      '<span class="c">// deep: slower, every nested object copied</span>',
+      'clone(): <span class="t">Enemy</span> {',
+      '  <span class="k">return</span> structuredClone(<span class="k">this</span>)   <span class="c">// browsers/Node now ship this</span>',
+      '}',
+      '',
+      '<span class="c">// hybrid: deep-copy mutables (position, hp), share immutables (mesh)</span>',
+    ],
+    state: { glow: ['proto','clone-3','clone-4'], clones: CLONES, arrows: [], reg: false, shared: true, ribbon: false, caption: "shallow = share; deep = independent. choose per field." }
+  },
+  {
+    title: "prototype registry",
+    narration: `Hold a <b>map</b> of named prototypes: <span class="pill">"goblin"</span>, <span class="pill">"orc"</span>, <span class="pill">"dragon"</span>. Spawning becomes <span class="pill">registry.get("goblin").clone()</span>. Adding a new enemy type = registering one prototype, not writing a new class.`,
+    code: [
+      '<span class="k">class</span> <span class="t">PrototypeRegistry</span>&lt;T <span class="k">extends</span> <span class="t">Cloneable</span>&lt;T&gt;&gt; {',
+      '  <span class="k">private</span> protos = <span class="k">new</span> Map&lt;<span class="t">string</span>, T&gt;()',
+      '  register(name: <span class="t">string</span>, proto: T) { <span class="k">this</span>.protos.set(name, proto) }',
+      '  spawn(name: <span class="t">string</span>): T          { <span class="k">return</span> <span class="k">this</span>.protos.get(name)!.clone() }',
+      '}',
+      '',
+      'enemies.register(<span class="s">"goblin"</span>, <span class="k">new</span> Enemy(goblinSpec))',
+      'enemies.register(<span class="s">"orc"</span>,    <span class="k">new</span> Enemy(orcSpec))',
+      'enemies.spawn(<span class="s">"goblin"</span>)   <span class="c">// fresh goblin, no construction work</span>',
+    ],
+    state: { glow: ['proto'], clones: CLONES, arrows: ARROWS, reg: true, shared: false, ribbon: false, caption: "registry of templates; spawn = clone by name" }
+  },
+  {
+    title: "no subclass needed for variants",
+    narration: `Want a <i>fire</i> goblin? Don't subclass — clone the goblin prototype and tweak its fields. Variants are data, not new classes. Designers can edit prototypes at runtime; no recompile.`,
+    code: [
+      '<span class="k">const</span> goblin = enemies.spawn(<span class="s">"goblin"</span>)',
+      '<span class="k">const</span> fireGoblin = goblin.clone()',
+      'fireGoblin.element = <span class="s">"fire"</span>',
+      'fireGoblin.hp     *= <span class="n">1.5</span>',
+      'fireGoblin.tint    = <span class="s">"#ff6633"</span>',
+      '',
+      'enemies.register(<span class="s">"fire-goblin"</span>, fireGoblin)   <span class="c">// new variant, zero subclasses</span>',
+    ],
+    state: { glow: ['proto','clone-1','clone-2'], clones: CLONES, arrows: ARROWS, reg: true, shared: false, ribbon: false, caption: "variant = clone + tweak; no class hierarchy needed" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Prototype trades "expensive to construct" for "cheap to clone." Pays off when construction is slow (mesh / network / parsing), when configurations vary along many small axes, or when you want to ship templates as data rather than code. Costs: clone discipline (shallow vs deep is a footgun), circular references break naive cloning, and serializable state assumptions can leak. In JS the pattern is half-built into the language (<span class="pill">Object.create</span>, <span class="pill">structuredClone</span>); in Java/C# you write it explicitly. Sister of <b>[[memento-pattern]]</b> (both depend on faithful copy of state; Memento captures for restore, Prototype captures for spawn) and <b>[[flyweight-pattern]]</b> (Flyweight <i>shares</i> intrinsic state across instances; Prototype <i>copies</i> intrinsic state into each new instance).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - game entities loaded once, spawned many times</span>',
+      '<span class="c">//   - HTTP request templates with per-call tweaks</span>',
+      '<span class="c">//   - designer-editable templates ("data-driven configs")</span>',
+      '<span class="c">//   - object pools that need pre-warmed instances</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - construction is already cheap (just call the constructor)</span>',
+      '<span class="c">//   - graph with cycles (clone bookkeeping gets ugly)</span>',
+      '<span class="c">//   - immutable + shareable → use [[flyweight-pattern]] instead</span>',
+      '<span class="c">//   - state must stay encapsulated → use [[memento-pattern]] for the snapshot</span>',
+    ],
+    state: { glow: ['proto'], clones: CLONES, arrows: [], reg: true, shared: false, ribbon: false, caption: "use it when copying an existing object beats running its constructor" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  CLONES.forEach(id => $(id).style.opacity = s.state.clones.includes(id) ? 1 : 0);
+  ARROWS.forEach(id => $(id).classList.toggle('on', s.state.arrows.includes(id)));
+  ['proto','clone-1','clone-2','clone-3','clone-4'].forEach(id => $(id).classList.toggle('glow', s.state.glow.includes(id)));
+  $('reg-box').classList.toggle('on', s.state.reg);
+  ['reg-label','reg-1','reg-2','reg-3','reg-4'].forEach(id => $(id).classList.toggle('on', s.state.reg));
+  ['shared-1','shared-2'].forEach(id => $(id).classList.toggle('on', s.state.shared));
+  $('ribbon').classList.toggle('on', s.state.ribbon);
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

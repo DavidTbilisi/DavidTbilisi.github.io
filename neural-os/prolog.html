@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-10">
+<head>
+<meta charset="utf-8">
+<title>Prolog — Visual Walkthrough</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  /* topic-specific: preserve Prolog indentation in the code panel */
+  .code .ln { white-space: pre; }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+  // ---- the program under the lens (shown in the Code panel) ----
+  const code = [
+    '<span class="t">parent</span>(tom, bob).',
+    '<span class="t">parent</span>(bob, ann).',
+    '<span class="t">parent</span>(bob, pat).',
+    ' ',
+    '<span class="t">grandparent</span>(<span class="n">X</span>, <span class="n">Z</span>) <span class="k">:-</span>',
+    '    <span class="t">parent</span>(<span class="n">X</span>, <span class="n">Y</span>),',
+    '    <span class="t">parent</span>(<span class="n">Y</span>, <span class="n">Z</span>).',
+    ' ',
+    '<span class="k">?-</span> <span class="t">grandparent</span>(tom, <span class="n">Who</span>).',
+  ].map(l => `<span class="ln">${l}</span>`).join('\n');
+
+  // ---- the SLD-resolution tree (the Visualization panel) ----
+  const svg = `
+    <svg viewBox="0 0 660 450">
+      ${Explain.svgDefs()}
+      ${Explain.glyph('box',   { x: 330, y: 55,  w: 230, id: 'g0', label: 'goal',     sub: 'grandparent(tom, Who)' })}
+      ${Explain.glyph('box',   { x: 330, y: 155, w: 300, id: 'g1', label: 'subgoals', sub: 'parent(tom,Y) , parent(Y,Who)' })}
+      ${Explain.glyph('box',   { x: 215, y: 260, w: 180, id: 'g2', label: 'subgoal',  sub: 'parent(bob, Who)' })}
+      ${Explain.glyph('box',   { x: 130, y: 365, w: 130, id: 'g3', label: 'success',  sub: 'Who = ann', color: 'var(--l1)' })}
+      ${Explain.glyph('box',   { x: 330, y: 365, w: 130, id: 'g4', label: 'success',  sub: 'Who = pat', color: 'var(--l1)' })}
+      ${Explain.glyph('arrow', { from: [330, 83],  to: [330, 127], id: 'e01', label: 'unify rule head' })}
+      ${Explain.glyph('arrow', { from: [305, 183], to: [245, 232], id: 'e12', label: 'Y = bob', curve: -0.3 })}
+      ${Explain.glyph('arrow', { from: [190, 288], to: [150, 337], id: 'e23', label: 'ann' })}
+      ${Explain.glyph('arrow', { from: [240, 288], to: [315, 337], id: 'e24', label: 'pat', dashed: true })}
+      ${Explain.glyph('caption', { x: 330, y: 435, label: 'SLD resolution: each level reduces the goal until ∎ (empty goal) = success' })}
+    </svg>`;
+
+  Explain.init({
+    title: 'Prolog',
+    subtitle: 'computation as proof search',
+    created: '2026-06-10',
+    svg, code,
+    steps: [
+      // ---------- RECOGNIZE ----------
+      {
+        layer: 'recognize',
+        title: 'the mental model',
+        narration: `Imagine a <b>librarian</b> who knows only facts ("Tom is Bob's parent") and rules ("a grandparent is a parent of a parent"). You don't tell her <i>how</i> to search — you ask a question and she finds any way to make it true. That's Prolog: you state <span class="pill">facts</span> and <span class="pill">rules</span>, pose a query, and the engine <b>searches for a proof</b>. Computation <i>is</i> proof search.`,
+        codeLines: [1, 2, 3, 9],
+        onEnter: e => e.glow('g0'),
+      },
+
+      // ---------- UNDERSTAND ----------
+      {
+        layer: 'understand',
+        title: 'unification — two-way matching',
+        narration: `A jigsaw piece fits a gap by <b>filling the empty notches</b> from both sides at once. <span class="pill">Unification</span> is that: it makes two terms identical by binding variables. Matching the query against the rule head <span class="pill">grandparent(X, Z)</span> binds <b>X = tom</b> and <b>Z = Who</b> — one move, both directions.`,
+        codeLines: [5, 9],
+        onEnter: e => { e.glow('g0'); e.glow('g1'); e.activate('e01'); },
+      },
+      {
+        layer: 'understand',
+        title: 'resolution — replace a goal with its body',
+        narration: `Following a recipe, you replace "make sauce" with its sub-steps. <span class="pill">SLD resolution</span> does the same: once the head unifies, Prolog <b>replaces the goal with the rule's body</b>. <span class="pill">grandparent(tom, Who)</span> becomes the two subgoals <b>parent(tom, Y)</b> and <b>parent(Y, Who)</b>. The goal shrinks toward facts.`,
+        codeLines: [5, 6, 7],
+        onEnter: e => { e.glow('g1'); e.activate('e01'); },
+      },
+      {
+        layer: 'understand',
+        title: 'backtracking — rewind to the last fork',
+        narration: `A maze with Ariadne's thread: hit a dead end, walk back to the last fork, take the next branch. When a subgoal fails — or you ask for <i>another</i> answer — Prolog rewinds to the most recent <span class="pill">choice point</span> and tries the next matching clause. Here <span class="pill">parent(bob, Who)</span> has two: <b>ann</b>, then on backtrack, <b>pat</b>.`,
+        codeLines: [2, 3],
+        onEnter: e => { e.glow('g2'); e.activate('e23'); e.activate('e24'); },
+      },
+
+      // ---------- APPLY (interactive) ----------
+      {
+        layer: 'apply',
+        title: 'predict the first answer',
+        narration: `Run <span class="pill">?- grandparent(tom, Who).</span> Prolog explores the tree top-down, left-to-right and stops at the first ∎. <b>Which binding comes back first?</b>`,
+        codeLines: [2, 3, 9],
+        choices: [
+          { label: 'Who = ann', correct: true,  reason: `right — clauses are tried top-to-bottom, so parent(bob, ann) matches before parent(bob, pat).` },
+          { label: 'Who = pat', correct: false, reason: `pat is a real answer, but the second one — Prolog reaches it only when you backtrack for more solutions.` },
+          { label: 'Who = bob', correct: false, reason: `bob is the intermediate Y (tom's child), not the grandchild Z — that variable is internal to the rule, never the answer.` },
+        ],
+        onEnter: e => { e.glow('g3'); e.activate('e23'); },
+      },
+
+      // ---------- ANALYZE (interactive) ----------
+      {
+        layer: 'analyze',
+        title: 'clause order is load-bearing',
+        narration: `A to-do list runs top-down: if item #1 says "first, finish this whole list," you loop forever. Prolog reads goals <b>left-to-right</b> — <span class="pill">parent(X, Y)</span> before <span class="pill">parent(Y, Z)</span>. Declaratively order is irrelevant; <i>operationally</i> it decides termination. <b>Define <code>ancestor(X,Z) :- ancestor(X,Y), parent(Y,Z).</code> with the recursive call FIRST — what happens?</b>`,
+        codeLines: [5, 6, 7],
+        choices: [
+          { label: 'Infinite loop', correct: true,  reason: `left recursion — Prolog expands ancestor → ancestor → … forever, never reaching a fact. Put the base/parent goal first.` },
+          { label: 'Returns ann, pat', correct: false, reason: `it would, if the recursive goal weren't first. As written it loops before producing any answer at all.` },
+          { label: 'Compile error', correct: false, reason: `Prolog has no such check — it happily runs the looping program. The failure is at runtime, not compile time.` },
+        ],
+        onEnter: e => e.glow('g1'),
+      },
+      {
+        layer: 'analyze',
+        title: 'the cut ! — committing to a choice',
+        narration: `A one-way turnstile: once through, you can't go back. The <span class="pill">cut (!)</span> discards the choice points made so far in the current goal. Put a cut right after the first parent match — now <b>what does <span class="pill">?- grandparent(tom, Who)</span> return?</b>`,
+        codeLines: [2, 3],
+        choices: [
+          { label: 'Only Who = ann', correct: true,  reason: `the cut throws away the parent(bob, pat) choice point — you lose the second solution. That is a "red cut": it changed the answer set.` },
+          { label: 'ann and pat',    correct: false, reason: `no — the cut commits to the first parent(bob, _) match and prunes the alternative, so pat becomes unreachable.` },
+          { label: 'No solutions',   correct: false, reason: `the cut doesn't fail the goal; the first solution still succeeds. It only prunes the alternatives that come after it.` },
+        ],
+        onEnter: e => { e.glow('g3'); e.dim('g4'); e.dim('e24'); },
+      },
+
+      // ---------- SYNTHESIZE ----------
+      {
+        layer: 'synthesize',
+        title: 'where this generalizes',
+        narration: `Prolog's engine is something you've already met under another name. <b>SLD resolution is backward chaining over Horn clauses</b> — the exact <i>backward frontier</i> of the natural-deduction prover in <code>tools/proof-search</code>: start from the goal, find a clause whose head unifies, reduce to subgoals. Unification is the same machine behind type inference in <span class="wikilink" data-wiki="logic/curry-howard-correspondence">[[curry-howard-correspondence]]</span>; goal-reduction is the operational reading of the elimination rules in <span class="wikilink" data-wiki="logic/natural-deduction">[[natural-deduction]]</span>; and the cut is a control cousin of the structural moves tamed by <span class="wikilink" data-wiki="logic/sequent-calculus">[[sequent-calculus]]</span>. Learn Prolog and you're really learning to read a proof tree — which is most of logic.`,
+        codeLines: [],
+        onEnter: e => { e.glow('g0'); e.glow('g3'); },
+      },
+    ],
+  });
+</script>
+</body>
+</html>
