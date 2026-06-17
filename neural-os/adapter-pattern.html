@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adapter Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --client: #79c0ff; --adapter: #ffa657; --adaptee: #d2a8ff; --target: #7ee787;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .box { transition: opacity .35s, filter .35s; }
+  .box.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .box.dim { opacity: 0.3; }
+  .b-label { font: 700 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .b-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.78; }
+  .conn { stroke: var(--muted); stroke-width: 2; fill: none; marker-end: url(#arrow); opacity: 0.55; transition: opacity .3s, stroke .3s; }
+  .conn.live { opacity: 1; stroke: var(--pick); animation: dash 0.8s linear infinite; stroke-dasharray: 5 4; }
+  .conn.bad { stroke: var(--warn); opacity: 0.85; stroke-dasharray: 3 3; }
+  @keyframes dash { to { stroke-dashoffset: -18; } }
+  .gap-x { fill: var(--warn); font: 700 30px sans-serif; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .gap-x.on { opacity: 1; }
+  .conn-label { font: 600 10px ui-monospace, monospace; fill: var(--muted); text-anchor: middle; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Adapter Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <g id="client" class="box" style="color: var(--client)">
+          <rect x="30" y="140" width="120" height="80" rx="10" fill="var(--client)" opacity="0.9"/>
+          <text class="b-label" x="90" y="170">Client</text>
+          <text class="b-sub" x="90" y="190">expects:</text>
+          <text class="b-sub" x="90" y="206">PaymentApi</text>
+        </g>
+
+        <g id="adapter" class="box" style="color: var(--adapter); opacity: 0; transition: opacity .35s;">
+          <rect x="200" y="120" width="120" height="120" rx="10" fill="var(--adapter)" opacity="0.9"/>
+          <text class="b-label" x="260" y="148">StripeAdapter</text>
+          <text class="b-sub" x="260" y="170">implements</text>
+          <text class="b-sub" x="260" y="186">PaymentApi</text>
+          <line x1="200" y1="200" x2="320" y2="200" stroke="#0d1117" stroke-width="1" opacity="0.4"/>
+          <text class="b-sub" x="260" y="216">holds</text>
+          <text class="b-sub" x="260" y="232">Stripe SDK</text>
+        </g>
+
+        <g id="adaptee" class="box" style="color: var(--adaptee)">
+          <rect x="370" y="140" width="130" height="80" rx="10" fill="var(--adaptee)" opacity="0.9"/>
+          <text class="b-label" x="435" y="170">Stripe SDK</text>
+          <text class="b-sub" x="435" y="190">stripe.charges.</text>
+          <text class="b-sub" x="435" y="206">create({...})</text>
+        </g>
+
+        <path id="conn-direct" class="conn bad" d="M 150 180 L 370 180" marker-end=""/>
+        <text id="gap-x" class="gap-x" x="260" y="190">✗</text>
+
+        <path id="conn-ca" class="conn" d="M 150 180 L 198 180" marker-end="url(#arrow)"/>
+        <text id="conn-ca-label" class="conn-label" x="175" y="170">charge()</text>
+        <path id="conn-ar" class="conn" d="M 322 180 L 368 180" marker-end="url(#arrow)"/>
+        <text id="conn-ar-label" class="conn-label" x="345" y="170">create()</text>
+
+        <text id="caption" class="caption" x="260" y="320"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const steps = [
+  {
+    title: "incompatible shapes",
+    narration: `Your code expects a <span class="pill">PaymentApi</span> with one method: <span class="pill">charge(amount, card)</span>. The Stripe SDK exposes <span class="pill">stripe.charges.create({...})</span> with different arg shape, different return shape, different error model. Two square pegs, one round hole.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">PaymentApi</span> {',
+      '  charge(amount: <span class="t">number</span>, card: <span class="t">string</span>): <span class="t">Receipt</span>',
+      '}',
+      '',
+      '<span class="c">// what Stripe gives you:</span>',
+      'stripe.charges.create({',
+      '  amount:   <span class="n">2500</span>,         <span class="c">// cents</span>',
+      '  currency: <span class="s">"usd"</span>,',
+      '  source:   <span class="s">"tok_visa"</span>',
+      '}) <span class="c">// returns Promise&lt;StripeCharge&gt;</span>',
+    ],
+    state: { adapterOn: false, connDirect: true, gapOn: true, connCa: false, connAr: false, glow: ['client','adaptee'], caption: "client and library don't speak the same shape" }
+  },
+  {
+    title: "the Adapter wears two faces",
+    narration: `Write a class that <b>implements the target interface</b> on the outside, and <b>holds the adaptee</b> on the inside. The client sees <span class="pill">PaymentApi</span>; the Stripe SDK sees an SDK caller. The translation happens between them.`,
+    code: [
+      '<span class="k">class</span> <span class="t">StripeAdapter</span> <span class="k">implements</span> <span class="t">PaymentApi</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> stripe: <span class="t">Stripe</span>) {}',
+      '',
+      '  <span class="k">async</span> charge(amount: <span class="t">number</span>, card: <span class="t">string</span>): <span class="t">Promise</span>&lt;<span class="t">Receipt</span>&gt; {',
+      '    <span class="k">const</span> r = <span class="k">await</span> <span class="k">this</span>.stripe.charges.create({',
+      '      amount:   Math.round(amount * <span class="n">100</span>),  <span class="c">// dollars → cents</span>',
+      '      currency: <span class="s">"usd"</span>,',
+      '      source:   card,',
+      '    })',
+      '    <span class="k">return</span> { id: r.id, amount, ok: r.status === <span class="s">"succeeded"</span> }',
+      '  }',
+      '}',
+    ],
+    state: { adapterOn: true, connDirect: false, gapOn: false, connCa: false, connAr: false, glow: ['adapter'], caption: "Adapter speaks both languages" }
+  },
+  {
+    title: "client calls the target interface",
+    narration: `The client never imports Stripe. It calls <span class="pill">payments.charge(25.00, "tok_visa")</span> against the abstraction. The adapter receives that call.`,
+    code: [
+      '<span class="k">const</span> payments: <span class="t">PaymentApi</span> = <span class="k">new</span> StripeAdapter(stripe)',
+      '',
+      '<span class="k">await</span> payments.charge(<span class="n">25.00</span>, <span class="s">"tok_visa"</span>)',
+      '<span class="c">// client used PaymentApi. it has no idea Stripe is behind it.</span>',
+    ],
+    state: { adapterOn: true, connDirect: false, gapOn: false, connCa: true, connAr: false, glow: ['client','adapter'], caption: "client → Adapter via the target interface" }
+  },
+  {
+    title: "adapter translates",
+    narration: `The adapter converts shapes (dollars → cents), fills in defaults (currency = USD), forwards the call, then reshapes the response back into the abstraction's contract. The translation logic lives in one place.`,
+    code: [
+      '<span class="c">// inside charge():</span>',
+      '<span class="k">const</span> r = <span class="k">await</span> <span class="k">this</span>.stripe.charges.create({',
+      '  amount:   Math.round(amount * <span class="n">100</span>),',
+      '  currency: <span class="s">"usd"</span>,',
+      '  source:   card,',
+      '})',
+      '<span class="k">return</span> { id: r.id, amount, ok: r.status === <span class="s">"succeeded"</span> }',
+      '',
+      '<span class="c">// dollars→cents, defaults filled, response reshaped — all here, nowhere else.</span>',
+    ],
+    state: { adapterOn: true, connDirect: false, gapOn: false, connCa: true, connAr: true, glow: ['adapter','adaptee'], caption: "shape translation lives inside the adapter" }
+  },
+  {
+    title: "swap the backend without touching callers",
+    narration: `Want PayPal instead? Write a <b>PaypalAdapter</b> implementing the same <span class="pill">PaymentApi</span>. Inject it. Every call site is unchanged. The third-party library is now a removable component.`,
+    code: [
+      '<span class="k">class</span> <span class="t">PaypalAdapter</span> <span class="k">implements</span> <span class="t">PaymentApi</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> pp: <span class="t">PayPal</span>) {}',
+      '  <span class="k">async</span> charge(amount, card) {',
+      '    <span class="k">const</span> r = <span class="k">await</span> <span class="k">this</span>.pp.payments.execute({ total: amount, payer: card })',
+      '    <span class="k">return</span> { id: r.transaction_id, amount, ok: r.state === <span class="s">"approved"</span> }',
+      '  }',
+      '}',
+      '',
+      '<span class="k">const</span> payments: <span class="t">PaymentApi</span> = config.useStripe',
+      '  ? <span class="k">new</span> StripeAdapter(stripe)',
+      '  : <span class="k">new</span> PaypalAdapter(paypal)',
+      '<span class="c">// callers don\'t change.</span>',
+    ],
+    state: { adapterOn: true, connDirect: false, gapOn: false, connCa: true, connAr: true, glow: ['client','adapter'], caption: "the adapter family is your portable layer" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Adapter buys interface compatibility without modifying either side. Pays off when integrating libraries you don't own, when you want to swap backends, or when migrating off a legacy API gradually. The cost: an extra hop and a class that exists only for translation. Often confused with <b>[[decorator-pattern]]</b> (same shape: wrapper that delegates) — the distinction is <i>intent</i>. Adapter changes the interface; Decorator preserves it and adds behavior. Also cousin of <b>[[facade-pattern]]</b> (Facade simplifies a subsystem to a new interface; Adapter aligns an existing interface to a required one).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - integrating third-party libraries</span>',
+      '<span class="c">//   - replacing a legacy API behind the same call sites</span>',
+      '<span class="c">//   - test doubles: hand-built fake implements the target interface</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - you control both sides — change the interface instead</span>',
+      '<span class="c">//   - the translation is non-trivial business logic (that\'s a Service, not an Adapter)</span>',
+      '<span class="c">//   - one-off call in one place (just call the SDK)</span>',
+    ],
+    state: { adapterOn: true, connDirect: false, gapOn: false, connCa: false, connAr: false, glow: ['adapter'], caption: "use it when the shape mismatch is real and you can't fix the other side" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  $('adapter').style.opacity = s.state.adapterOn ? 1 : 0;
+  $('conn-direct').style.opacity = s.state.connDirect ? 0.8 : 0;
+  $('gap-x').classList.toggle('on', s.state.gapOn);
+  $('conn-ca').classList.toggle('live', s.state.connCa);
+  $('conn-ar').classList.toggle('live', s.state.connAr);
+  $('conn-ca-label').style.opacity = s.state.connCa ? 1 : 0.35;
+  $('conn-ar-label').style.opacity = s.state.connAr ? 1 : 0.35;
+  ['client','adapter','adaptee'].forEach(id => {
+    $(id).classList.toggle('glow', s.state.glow.includes(id));
+  });
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

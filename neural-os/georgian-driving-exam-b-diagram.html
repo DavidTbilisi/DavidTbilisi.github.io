@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-11">
+<head>
+<meta charset="utf-8">
+<title>Georgian Driving Exam B — Diagram (system view)</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  :root {
+    --num:  #7ee787;   /* NUMERIC cluster        */
+    --sign: #79c0ff;   /* VISUAL-SIGN cluster    */
+    --rule: #f78166;   /* RULE-ENGINE cluster    */
+    --prop: #d2a8ff;   /* PROPOSITIONAL cluster  */
+    --gate: #ffa657;   /* ladder / verdict       */
+  }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+  // ──────────────────────────────────────────────────────────────
+  // System map: the 1,032-question bank (left) is SORTED by memory
+  // load into 4 clusters; each cluster feeds its own ENCODER; all
+  // encoders feed the DRILL LADDER; the ladder gates the EXAM.
+  // ──────────────────────────────────────────────────────────────
+  const svg = `
+    <svg viewBox="0 0 940 470">
+      ${Explain.svgDefs()}
+
+      <!-- the bank -->
+      ${Explain.glyph('document', { x: 78,  y: 235, id: 'bank',   label: '1032 Q', sub: '31 themes' })}
+      ${Explain.glyph('gear',     { x: 205, y: 235, id: 'sorter', label: 'sort',   sub: 'memory load', color: 'var(--accent)' })}
+      ${Explain.glyph('arrow',    { from: [118, 235], to: [172, 235], id: 'e-in' })}
+
+      <!-- 4 clusters, chunked by size -->
+      ${Explain.glyph('box', { x: 368, y: 80,  w: 142, h: 42, id: 'cl-num',  label: 'NUMERIC',       sub: '~46q · T17/18/25',        color: 'var(--num)' })}
+      ${Explain.glyph('box', { x: 368, y: 185, w: 142, h: 42, id: 'cl-sign', label: 'VISUAL-SIGN',   sub: '~280q · T3–9/12/13/28',   color: 'var(--sign)' })}
+      ${Explain.glyph('box', { x: 368, y: 290, w: 142, h: 42, id: 'cl-rule', label: 'RULE-ENGINE',   sub: '~345q · T10/11/15–23',    color: 'var(--rule)' })}
+      ${Explain.glyph('box', { x: 368, y: 395, w: 142, h: 42, id: 'cl-prop', label: 'PROPOSITIONAL', sub: '~360q · T1/14/24/26–31',  color: 'var(--prop)' })}
+
+      ${Explain.glyph('arrow', { from: [232, 220], to: [294, 90],  id: 'e-s-num',  curve: -0.2 })}
+      ${Explain.glyph('arrow', { from: [238, 230], to: [294, 188], id: 'e-s-sign', curve: -0.1 })}
+      ${Explain.glyph('arrow', { from: [238, 242], to: [294, 286], id: 'e-s-rule', curve: 0.1 })}
+      ${Explain.glyph('arrow', { from: [232, 252], to: [294, 388], id: 'e-s-prop', curve: 0.2 })}
+
+      <!-- 4 encoders, one per cluster -->
+      ${Explain.glyph('cylinder', { x: 585, y: 80,  id: 'enc-peg',     label: 'Peg matrix',    sub: '<5s / cell',   color: 'var(--num)' })}
+      ${Explain.glyph('box',      { x: 585, y: 185, w: 138, h: 42, id: 'enc-glyph', label: '△ ○ □ grammar', sub: '<2s / sign', color: 'var(--sign)' })}
+      ${Explain.glyph('gear',     { x: 585, y: 290, id: 'enc-lattice', label: 'C-L-S-R',       sub: '<8s / scene',  color: 'var(--rule)' })}
+      ${Explain.glyph('box',      { x: 585, y: 395, w: 138, h: 42, id: 'enc-deck',  label: 'NEDF + SR deck', sub: '~200 cards', color: 'var(--prop)' })}
+
+      ${Explain.glyph('arrow', { from: [440, 80],  to: [540, 80],  id: 'e-num-enc' })}
+      ${Explain.glyph('arrow', { from: [440, 185], to: [515, 185], id: 'e-sign-enc' })}
+      ${Explain.glyph('arrow', { from: [440, 290], to: [552, 290], id: 'e-rule-enc' })}
+      ${Explain.glyph('arrow', { from: [440, 395], to: [515, 395], id: 'e-prop-enc' })}
+
+      <!-- drill ladder + exam gate -->
+      ${Explain.glyph('stack', { x: 805, y: 165, w: 160, id: 'ladder', label: 'drill ladder',
+                                 layers: ['27/30 ×3 verdict','timed 30q tickets','recognition gyms','peg reflex'], color: 'var(--gate)' })}
+      ${Explain.glyph('arrow', { from: [630, 86],  to: [732, 140], id: 'e-l1', curve: -0.15 })}
+      ${Explain.glyph('arrow', { from: [656, 190], to: [732, 165], id: 'e-l2' })}
+      ${Explain.glyph('arrow', { from: [630, 282], to: [732, 195], id: 'e-l3', curve: 0.15 })}
+      ${Explain.glyph('arrow', { from: [656, 388], to: [732, 220], id: 'e-l4', curve: 0.25 })}
+
+      ${Explain.glyph('shield', { x: 805, y: 400, id: 'exam', label: 'EXAM', sub: '30q · pass 25/30', color: 'var(--gate)' })}
+      ${Explain.glyph('arrow',  { from: [805, 268], to: [805, 368], id: 'e-verdict', label: 'ready' })}
+    </svg>`;
+
+  // ──────────────────────────────────────────────────────────────
+  // Code panel: the whole system as one runnable Python spec.
+  // ──────────────────────────────────────────────────────────────
+  const code = `<pre>
+<span class="ln"><span class="c"># The whole system as one spec — clusters, tools, pass floors.</span></span>
+<span class="ln"><span class="n">CLUSTERS</span> = {</span>
+<span class="ln">  <span class="s">"NUMERIC"</span>:       <span class="k">dict</span>(themes=[17,18,25],             q=46,  tool=<span class="s">"peg_matrix"</span>),</span>
+<span class="ln">  <span class="s">"VISUAL_SIGN"</span>:   <span class="k">dict</span>(themes=[3,4,5,6,7,8,9,12,13,28], q=280, tool=<span class="s">"glyph_grammar"</span>),</span>
+<span class="ln">  <span class="s">"RULE_ENGINE"</span>:   <span class="k">dict</span>(themes=[10,11,15,16,19,20,21,22,23], q=345, tool=<span class="s">"priority_lattice"</span>),</span>
+<span class="ln">  <span class="s">"PROPOSITIONAL"</span>: <span class="k">dict</span>(themes=[1,14,24,26,27,29,30,31], q=360, tool=<span class="s">"nedf_tables + sr_deck"</span>),</span>
+<span class="ln">}</span>
+<span class="ln"><span class="n">PHASES</span> = [<span class="s">"NUMERIC"</span>, <span class="s">"VISUAL_SIGN"</span>, <span class="s">"RULE_ENGINE"</span>, <span class="s">"PROPOSITIONAL"</span>]  <span class="c"># smallest bin first</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="k">def</span> <span class="n">derive</span>(scene):</span>
+<span class="ln">    <span class="s">"""C-L-S-R: intersections are derived, never memorized."""</span></span>
+<span class="ln">    <span class="k">for</span> authority <span class="k">in</span> (<span class="s">"controller"</span>, <span class="s">"lights"</span>, <span class="s">"signs"</span>):</span>
+<span class="ln">        <span class="k">if</span> scene.has(authority):</span>
+<span class="ln">            <span class="k">return</span> scene.obey(authority)   <span class="c"># higher silences lower</span></span>
+<span class="ln">    <span class="k">return</span> scene.right_hand_rule()         <span class="c"># equal roads fallback</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="k">def</span> <span class="n">distractor_shape</span>(options):</span>
+<span class="ln">    <span class="k">if</span> has_both_clause(options):   <span class="k">return</span> <span class="s">"only-vs-both swap"</span></span>
+<span class="ln">    <span class="k">if</span> near_neighbors(options):    <span class="k">return</span> <span class="s">"near-neighbor number"</span></span>
+<span class="ln">    <span class="k">return</span> <span class="s">"vehicle-type substitution"</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="k">def</span> <span class="n">ready</span>(meter):                            <span class="c"># floor sits ABOVE official 25/30</span></span>
+<span class="ln">    <span class="k">return</span> <span class="k">all</span>(s &gt;= 27 <span class="k">for</span> s <span class="k">in</span> meter.last_simulations(3))</span>
+</pre>`;
+
+  // ============================================================
+  // U — See (CAST): the machine, climbing the comprehension ladder.
+  // ============================================================
+  const uSee = [
+    {
+      layer: 'recognize', solo: 'unistructural', knowledge: 'conceptual',
+      title: 'One bank, four shapes of memory',
+      narration:
+        'Sorting laundry: whites, colors, delicates, wool — <i>same hamper, four different wash programs</i>. ' +
+        'The Georgian B exam is the same: <b>1,032 questions that look like one subject but sort into four memory loads, each cracked by a different encoder</b>. ' +
+        'Studying it as one pile is the mistake; the whole system below is just this sorting, done once, plus the right program per pile.',
+      codeLines: [1, 2],
+      onEnter: (e) => { e.glow('bank'); e.glow('sorter'); e.activate('e-in'); },
+    },
+    {
+      layer: 'recognize', solo: 'multistructural', knowledge: 'factual',
+      title: 'The four bins, chunked by size',
+      narration:
+        'Largest to smallest: <span class="pill">PROPOSITIONAL</span> ~360q (legal facts, first aid, safety), <span class="pill">RULE-ENGINE</span> ~345q (intersections, signals, manoeuvres), ' +
+        '<span class="pill">VISUAL-SIGN</span> ~280q (the sign families), <span class="pill">NUMERIC</span> ~46q (speeds, gaps, distances). ' +
+        'Size is not difficulty — the smallest bin is one evening of work, and the biggest is mostly flashcards.',
+      codeLines: [3, 4, 5, 6],
+      onEnter: (e) => { e.glow('cl-num'); e.glow('cl-sign'); e.glow('cl-rule'); e.glow('cl-prop'); },
+    },
+    {
+      layer: 'understand', solo: 'relational', knowledge: 'conceptual',
+      title: 'Why each bin needs its own tool',
+      narration:
+        'The bins differ in <b>how they punish you</b>. Numbers punish fuzzy recall (the options cluster at 80/90/110), so they get <b>exact peg cells</b>. ' +
+        'Signs are read in one glance, so they get a <b>shape grammar</b>, not 280 memorized pictures. ' +
+        'Intersections are combinatorial — no list covers every diagram — so they get a <b>derivation engine</b>. ' +
+        'Legal facts come with near-miss twins, so they get <b>exception tables + spaced cards</b> that encode the wrong answer too.',
+      codeLines: [3, 4, 5, 6],
+      onEnter: (e) => { e.glow('enc-peg'); e.glow('enc-glyph'); e.glow('enc-lattice'); e.glow('enc-deck');
+                       e.activate('e-num-enc'); e.activate('e-sign-enc'); e.activate('e-rule-enc'); e.activate('e-prop-enc'); },
+    },
+    {
+      layer: 'understand', solo: 'relational', knowledge: 'procedural',
+      title: 'The ladder and the gate',
+      narration:
+        'Every encoder feeds one <span class="pill">drill ladder</span>: peg reflex → recognition gyms → timed 30-question tickets → verdict. ' +
+        'The verdict floor is <b>27/30 on three consecutive simulations</b> — deliberately above the official 25/30, so exam-day noise (one weird translation, one image you have never seen) cannot push you under the bar.',
+      codeLines: [23, 24],
+      onEnter: (e) => { e.glow('ladder'); e.glow('exam'); e.activate('e-verdict'); },
+    },
+    {
+      layer: 'apply', solo: 'relational', knowledge: 'conceptual', mode: 'predict',
+      title: 'Sort this question',
+      narration:
+        'A question reads: <i>"At an unregulated intersection of equal roads, who must yield?"</i> ' +
+        'Which bin does it land in — and therefore which tool fires?',
+      codeLines: [10, 11, 12, 13, 14, 15],
+      choices: [
+        { label: 'RULE-ENGINE — derive it from the lattice', correct: true,
+          reason: 'Right. "Who yields" questions are scenarios, and scenarios vary endlessly — you run C-L-S-R (no controller, no lights, no signs → right-hand rule), you never recall an answer.' },
+        { label: 'PROPOSITIONAL — memorize the fact', correct: false,
+          reason: 'Memorizing "the answer to Q612" fails the moment the diagram rotates or adds a tram. Scenario questions must be derived, not recalled.' },
+        { label: 'NUMERIC — there is a number hidden in it', correct: false,
+          reason: 'No quantity is being tested. The numeric bin is only for questions whose answer IS a value — speeds, gaps, distances.' },
+      ],
+      onEnter: (e) => { e.glow('cl-rule'); e.glow('enc-lattice'); e.activate('e-rule-enc'); },
+    },
+    {
+      layer: 'analyze', solo: 'relational', knowledge: 'conceptual', mode: 'predict',
+      title: 'Where rote breaks',
+      narration:
+        'A friend says: <i>"I will just grind all 1,032 answers on the practice site — same result, no system needed."</i> ' +
+        'Where does that plan break first?',
+      codeLines: [10, 11],
+      choices: [
+        { label: 'RULE-ENGINE — memorized answers don\'t survive a redrawn diagram', correct: true,
+          reason: 'Right. The 46 intersection questions are samples from an infinite scenario space; the live exam redraws them. Only the derivation (C-L-S-R) transfers. The other bins tolerate grinding much better.' },
+        { label: 'NUMERIC — too many numbers to grind', correct: false,
+          reason: 'Backwards — there are only ~20 distinct values in the whole bank. The numeric bin is the MOST grindable; it is just faster with pegs.' },
+        { label: 'It doesn\'t break — 1,032 is finite', correct: false,
+          reason: 'The bank is finite but the diagrams are parameterized: rotate the intersection or swap the vehicles and a memorized answer betrays you. Finite corpus ≠ finite scenarios.' },
+      ],
+      onEnter: (e) => { e.glow('cl-rule'); e.glow('bank'); },
+    },
+    {
+      layer: 'synthesize', solo: 'extended', knowledge: 'conceptual',
+      title: 'The whole machine, named',
+      narration:
+        'The mnemonic for the four bins is <b>TGED</b> — <i>"Numbers in a Table, Signs by their Grammar, Rules in an Engine, Facts in a Deck."</i> ' +
+        'The hub page is <span class="wikilink" data-wiki="georgian-driving-exam-b-overview">[[georgian-driving-exam-b-overview]]</span>; the phase-by-phase plan with METER gates is ' +
+        '<span class="wikilink" data-wiki="georgian-driving-exam-b-learning-protocol">[[georgian-driving-exam-b-learning-protocol]]</span>; the full ladder with per-rung floors is ' +
+        '<span class="wikilink" data-wiki="georgian-driving-exam-b-drill-ladder">[[georgian-driving-exam-b-drill-ladder]]</span>. Everything else in this walkthrough hangs off those three.',
+      codeLines: [],
+      onEnter: (e) => { e.glow('bank'); e.glow('ladder'); e.glow('exam'); },
+    },
+  ];
+
+  // ============================================================
+  // D — Name (NEDF): the four names and how to tell bins apart.
+  // ============================================================
+  const dName = [
+    {
+      layer: 'understand', solo: 'multistructural', knowledge: 'factual',
+      title: 'TGED — name the tool, know the bin',
+      narration:
+        '<b>T</b>able · <b>G</b>rammar · <b>E</b>ngine · <b>D</b>eck — read as <i>"tagged"</i>, because every theme gets tagged into exactly one bin. ' +
+        'The distinguisher question: <i>what does a wrong answer look like here?</i> A near-neighbor number → Table. A confusable shape → Grammar. ' +
+        'A plausible-but-wrong yield order → Engine. An "only X" where the law says "both" → Deck.',
+      codeLines: [17, 18, 19, 20],
+      onEnter: (e) => { e.glow('cl-num'); e.glow('cl-sign'); e.glow('cl-rule'); e.glow('cl-prop'); },
+    },
+    {
+      layer: 'analyze', solo: 'relational', knowledge: 'conceptual', mode: 'predict',
+      title: 'Classify the edge case',
+      narration:
+        'Theme 21, railway crossings: barrier vs no barrier, 5 m vs 10 m, when overtaking is banned. ' +
+        'It has shapes, numbers, and scenarios all at once. Which bin owns it?',
+      codeLines: [5],
+      choices: [
+        { label: 'RULE-ENGINE — its numbers are outsourced to the Table', correct: true,
+          reason: 'Right. The decision structure (barrier present? → behave like a red light) is engine work; the 5 m / 10 m / 50 m cells live in the numeric table and are pegged there. One theme, two tools, no conflict.' },
+        { label: 'NUMERIC — it is full of meters', correct: false,
+          reason: 'The numbers are real but they decorate a scenario. The load-bearing question is "what must I do at THIS crossing" — that is derivation, with pegged numbers slotted in.' },
+        { label: 'VISUAL-SIGN — the crossing signs are shapes', correct: false,
+          reason: 'The two or three crossing signs are grammar work, yes — but the bulk of T21 asks what you DO, not what the sign IS. Behavior questions are engine questions.' },
+      ],
+      onEnter: (e) => { e.glow('cl-rule'); e.glow('cl-num'); },
+    },
+  ];
+
+  // ============================================================
+  // F — Do (SPEAR): the 4-phase playbook.
+  // ============================================================
+  const fDo = [
+    {
+      layer: 'apply', solo: 'relational', knowledge: 'procedural', mode: 'predict',
+      title: 'Why the smallest bin goes first',
+      narration:
+        'The protocol runs the bins in size order, smallest first: <span class="pill">NUMERIC → SIGNS → ENGINE → DECK</span>, roughly two weeks total. ' +
+        'You have one evening tonight. Why spend it on the 46-question bin instead of the 360-question one?',
+      codeLines: [8],
+      choices: [
+        { label: 'Highest yield per hour — and the numbers reappear inside every other bin', correct: true,
+          reason: 'Right. ~20 pegged values close 46 questions in one evening (instant METER win), and those same values resurface inside engine scenarios (railway 5/10 m) and deck cards. Phase 1 is load-bearing for phases 3–4.' },
+        { label: 'It is the hardest, so do it fresh', correct: false,
+          reason: 'It is the EASIEST — exact values with exact pegs. The hardest bin is the engine, which is why it gets the most calendar time, not the first evening.' },
+        { label: 'Order doesn\'t matter with spaced repetition', correct: false,
+          reason: 'SR keeps what you encode — it doesn\'t choose what to encode first. Sequencing by yield-per-hour is what makes the two-week estimate real.' },
+      ],
+      onEnter: (e) => { e.glow('cl-num'); e.glow('enc-peg'); e.activate('e-num-enc'); },
+    },
+    {
+      layer: 'apply', solo: 'relational', knowledge: 'procedural', mode: 'generate',
+      title: 'Run the engine by hand',
+      narration:
+        'Scenario: <b>unregulated intersection of equal roads</b>. You are turning <b>left</b>. A <b>tram</b> approaches from the opposite direction going straight; a <b>car</b> waits on your right. ' +
+        'Trace the derivation in the box — every C-L-S-R level you check, then the final order of passage.',
+      codeLines: [10, 11, 12, 13, 14, 15],
+      prompt: 'Write the C-L-S-R trace for this scene, level by level, ending with who goes 1st / 2nd / 3rd.',
+      rubric: [
+        'Checks Cops → Lights → Signs in order before falling to the Right-hand rule',
+        'Tram priority over non-rail vehicles on equal roads named',
+        'Left-turner yields to oncoming straight traffic named',
+      ],
+      sampleAnswer:
+        '<b>C</b>: no controller. <b>L</b>: no lights. <b>S</b>: no priority signs — roads are equal. <b>R</b>: right-hand rule governs the cars; ' +
+        'but the <b>tram beats every non-rail vehicle on equal roads → tram goes 1st</b>. Between the cars: the right-hand car has my right of way, and ' +
+        'I am also a <b>left-turner yielding to oncoming traffic</b> — so <b>right-hand car 2nd, me 3rd</b>.',
+      onEnter: (e) => { e.glow('enc-lattice'); e.activate('e-rule-enc'); },
+    },
+  ];
+
+  // ============================================================
+  // B — Watch (HEART): the failure modes.
+  // ============================================================
+  const bWatch = [
+    {
+      layer: 'understand', solo: 'multistructural', knowledge: 'conceptual',
+      title: 'The bank attacks with three shapes',
+      narration:
+        'Phishing emails reuse a small set of tricks; so does this bank. Three distractor shapes cover almost every wrong answer: ' +
+        'the <span class="pill">only-vs-both swap</span> (a split rule offered as "only half of it"), the <span class="pill">near-neighbor number</span> (80 next to 90, 3 s next to 4 s), ' +
+        'and the <span class="pill">vehicle-type substitution</span> (the rule is true — for a different vehicle). ' +
+        'Train the attack shapes once and they stop working on you everywhere.',
+      codeLines: [17, 18, 19, 20],
+      onEnter: (e) => { e.glow('bank'); },
+    },
+    {
+      layer: 'analyze', solo: 'relational', knowledge: 'metacognitive', mode: 'predict',
+      title: 'Catch yourself before the trap does',
+      narration:
+        'Two options share 90% of their words; a third says <i>"both of the above conditions."</i> Your gut says "both" is always right. ' +
+        'Also remember: this bank is <b>2014-vintage</b> — its first-aid answers differ from modern guidance, and the exam grades by the bank. What is the disciplined move?',
+      codeLines: [18],
+      choices: [
+        { label: 'Treat "both" as a hypothesis — verify the rule actually has two halves', correct: true,
+          reason: 'Right. "Both" wins OFTEN because the law writes paired duties — but the bank knows you noticed, and plants "both" as a trap on single-clause rules. The reflex is recognize-then-verify, never auto-pick. Same discipline for first aid: answer with the bank\'s 2014 value, flag it mentally as dated.' },
+        { label: 'Always pick "both" — it is a known pattern', correct: false,
+          reason: 'That is over-fitting to the pattern. The pattern tells you where to LOOK (does this rule have two halves?), not what to answer.' },
+        { label: 'Ignore patterns; read every option from scratch', correct: false,
+          reason: 'Wasteful under a 60-second-per-question budget. The shapes exist; refusing to use them just spends time you will want for the diagram questions.' },
+      ],
+      onEnter: (e) => { e.glow('bank'); e.glow('cl-prop'); },
+    },
+  ];
+
+  // ============================================================
+  // L — Predict (ORACLE): predict-from-input drills.
+  // ============================================================
+  const lPredict = [
+    {
+      layer: 'apply', solo: 'relational', knowledge: 'factual', mode: 'predict',
+      title: 'Walk the gap grid',
+      narration:
+        'The following-gap grid has one anchor and two relations: normal/inhabited = <b>2 s</b>; <b>ice triples</b>; <b>uninhabited steps up</b>. ' +
+        'Predict: ice-covered road, <i>uninhabited</i> area — minimum gap?',
+      codeLines: [3],
+      choices: [
+        { label: '9 s', correct: true,
+          reason: 'Right. 2 s → uninhabited makes it 3 s → ice triples it to 9 s. (Peg: the balloon drifting the whole icy gap.) The grid self-checks: any recalled pair that breaks "ice = ×3" is a wrong recall.' },
+        { label: '6 s', correct: false,
+          reason: '6 s is ice + INHABITED (2 × 3). You forgot the uninhabited step-up. Run both relations, not one.' },
+        { label: '4 s', correct: false,
+          reason: '4 s appears in the bank only as a distractor — it is on no cell of the real grid. A near-neighbor trap doing its job.' },
+      ],
+      onEnter: (e) => { e.glow('cl-num'); e.glow('enc-peg'); },
+    },
+    {
+      layer: 'analyze', solo: 'relational', knowledge: 'factual', mode: 'predict',
+      title: 'Name the trap while answering',
+      narration:
+        'Q: <i>"Maximum speed for a B-category car towing a light trailer on a motorway?"</i> Options: 60 · 80 · 90 · 110. ' +
+        'Answer it — and name which distractor shape the 90 and 110 are.',
+      codeLines: [19],
+      choices: [
+        { label: '80 — and 90/110 are near-neighbor traps from the no-trailer row', correct: true,
+          reason: 'Right. The gate slams on the wheel the moment B tows anything: 80. The 90 and 110 are the UN-towing B values planted as near-neighbors — the bank is betting you pegged the wrong row.' },
+        { label: '110 — motorway max is motorway max', correct: false,
+          reason: '110 is B WITHOUT a trailer. Towing rewrites the row — that is exactly the substitution this question tests.' },
+        { label: '90 — split the difference', correct: false,
+          reason: '90 is B outside a settlement, no trailer. "Sounds close" is the near-neighbor trap working as designed; a pegged Gate×Donut (80) is immune.' },
+      ],
+      onEnter: (e) => { e.glow('enc-peg'); e.glow('cl-num'); },
+    },
+  ];
+
+  // ============================================================
+  // R — Act (GRACE): the in-exam reflex.
+  // ============================================================
+  const rAct = [
+    {
+      layer: 'apply', solo: 'relational', knowledge: 'metacognitive', mode: 'predict',
+      title: 'The 60-second reflex',
+      narration:
+        'Per question: <b>read the stem → tag the bin (TGED) → fire that bin\'s tool → scan the options for a distractor shape → commit</b>. ' +
+        'Mid-exam, you blank on a number. First move?',
+      codeLines: [17, 23],
+      choices: [
+        { label: 'Replay the peg scene — a pegged number is exact or absent, never fuzzy', correct: true,
+          reason: 'Right. Ask "what was acting on the wheel?" — if the vine comes back, it is 90, full stop. Pegs fail loudly (no scene) rather than quietly (wrong neighbor), which is exactly what you want under pressure.' },
+        { label: 'Pick the middle value — it is usually safe', correct: false,
+          reason: 'The bank places the correct value OFF-center on purpose and surrounds it with neighbors. "Middle" is where the trap lives.' },
+        { label: 'Pick the longest option', correct: false,
+          reason: 'Length correlates with nothing here — answer positions and lengths are near-uniform across the 1,032 questions. The only working shortcuts are the encoders.' },
+      ],
+      onEnter: (e) => { e.glow('exam'); e.glow('enc-peg'); },
+    },
+    {
+      layer: 'synthesize', solo: 'extended', knowledge: 'conceptual', mode: 'teach-back',
+      title: 'Teach the system back',
+      narration:
+        'The Feynman gate. Explain to a friend who just got their learner permit <b>how to prepare for the B theory exam in two weeks using this system</b> — four sentences, no jargon.',
+      codeLines: [],
+      prompt: 'Four sentences, plain words, for a friend with a learner permit. No system vocabulary — just what to do and why it works.',
+      sampleAnswer:
+        'The 1,032 questions are really four piles: a tiny pile of numbers, a pile of signs, a pile of "who goes first" puzzles, and a big pile of legal facts. ' +
+        'Spend the first evening locking the ~20 numbers with vivid images so you can never confuse 80 with 90. ' +
+        'Learn signs as a 3-part code (shape = what force, color = allowed or forbidden, picture = about what) and learn ONE checklist for intersections — cops, lights, signs, then right-hand rule — instead of memorizing diagrams. ' +
+        'Everything else goes on flashcards that also show you the trick wrong answer, and you book the real exam only after scoring 27/30 three practice runs in a row.',
+      onEnter: (e) => { e.glow('bank'); e.glow('exam'); },
+    },
+  ];
+
+  // ============================================================
+  // BRIDGE: cross-domain analogies (candidates — curate or reject).
+  // ============================================================
+  const bridge = [
+    {
+      layer: 'synthesize', solo: 'extended', knowledge: 'conceptual',
+      title: 'Priority lattice ≈ operator precedence',
+      narration:
+        'The <b>C-L-S-R lattice</b> is <b>operator precedence with parentheses</b>. A traffic controller is a parenthesis — it silences every rule below it; ' +
+        'lights outrank signs the way <span class="pill">×</span> outranks <span class="pill">+</span>; the right-hand rule is left-to-right associativity, the tie-breaker when nothing above speaks. ' +
+        'Even the exceptions match: a flashing yellow light is a no-op parenthesis — present but delegating back down to the signs. ' +
+        'Both systems are evaluated the same way: find the highest authority present, obey it, ignore everything beneath. ' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [10, 11, 12, 13, 14, 15],
+      onEnter: (e) => { e.glow('enc-lattice'); },
+    },
+    {
+      layer: 'synthesize', solo: 'extended', knowledge: 'conceptual',
+      title: 'Cluster-by-memory-load ≈ index selection in a database',
+      narration:
+        'Sorting themes into four bins is <b>choosing an index per query shape</b>. A DBA does not store one copy of the data and scan it for everything — ' +
+        'exact-match lookups get a hash index (<span class="pill">pegs</span>), pattern reads get a structured key (<span class="pill">glyph grammar</span>), ' +
+        'computed answers get a stored procedure (<span class="pill">the lattice</span>), and bulk facts get a covering index with the anti-join baked in (<span class="pill">NEDF cards that carry the wrong answer</span>). ' +
+        'The shared mechanism: <b>encoding is chosen by access pattern, not by content</b>. ' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [2, 3, 4, 5, 6],
+      onEnter: (e) => { e.glow('sorter'); e.glow('enc-peg'); e.glow('enc-glyph'); e.glow('enc-lattice'); e.glow('enc-deck'); },
+    },
+    {
+      layer: 'synthesize', solo: 'extended', knowledge: 'metacognitive',
+      title: 'Distractor anatomy ≈ phishing recognition',
+      narration:
+        'Training on <b>wrong-answer shapes</b> is <b>anti-phishing training</b>. You cannot memorize every legitimate email, so you learn the attack\'s shape instead: ' +
+        'the lookalike domain is the <span class="pill">near-neighbor number</span>, the urgency clause is the <span class="pill">only-vs-both swap</span>, the spoofed sender is the <span class="pill">vehicle substitution</span>. ' +
+        'Both gyms train the same reflex — <i>recognize the attack class, then verify</i> — and both fail the same way if you over-fit: auto-rejecting anything that pattern-matches. ' +
+        'This is the wiki\'s <span class="wikilink" data-wiki="problem-solving/recognition-gym-pattern">[[recognition-gym-pattern]]</span> wearing two different uniforms. ' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [17, 18, 19, 20],
+      onEnter: (e) => { e.glow('bank'); },
+    },
+  ];
+
+  Explain.init({
+    title:    'Georgian Driving Exam B',
+    subtitle: 'system view · CAST matrix — one of several representations',
+    created:  '2026-06-11',
+    svg, code,
+    matrix: {
+      'u-see':     { name: 'U — See',     framework: 'CAST',   steps: uSee },
+      'd-name':    { name: 'D — Name',    framework: 'NEDF',   steps: dName },
+      'f-do':      { name: 'F — Do',      framework: 'SPEAR',  steps: fDo },
+      'b-watch':   { name: 'B — Watch',   framework: 'HEART',  steps: bWatch },
+      'l-predict': { name: 'L — Predict', framework: 'ORACLE', steps: lPredict },
+      'r-act':     { name: 'R — Act',     framework: 'GRACE',  steps: rAct },
+      'bridge':    { name: 'BRIDGE',      framework: 'cross-domain', steps: bridge },
+    },
+  });
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

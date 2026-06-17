@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Singleton Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --inst: #79c0ff; --client: #ffa657; --warn-bg: #f85149;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .inst-box { fill: var(--inst); stroke: var(--inst); transition: opacity .35s, filter .35s; }
+  .inst-box.glow { filter: drop-shadow(0 0 14px var(--inst)); }
+  .inst-empty { fill: transparent; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 4 3; transition: opacity .35s; }
+  .inst-label { fill: #0d1117; font: 700 13px sans-serif; text-anchor: middle; }
+  .inst-sub { fill: #0d1117; font: 500 10px ui-monospace, monospace; text-anchor: middle; opacity: 0.78; }
+  .client { transition: opacity .35s, filter .35s; }
+  .client.glow { filter: drop-shadow(0 0 10px var(--client)); }
+  .arrow-line { stroke: var(--pick); stroke-width: 2; fill: none; marker-end: url(#arrow); opacity: 0; transition: opacity .35s; stroke-dasharray: 4 3; }
+  .arrow-line.on { opacity: 1; animation: dash 0.8s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -14; } }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .x-banner { fill: var(--warn); font: 700 22px sans-serif; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .x-banner.on { opacity: 1; }
+  .warn-label { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .warn-label.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Singleton Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <rect class="inst-empty" id="inst-empty" x="190" y="130" width="140" height="80" rx="10"/>
+        <text id="inst-empty-label" class="caption" x="260" y="174">_instance = null</text>
+
+        <rect class="inst-box" id="inst-real" x="190" y="130" width="140" height="80" rx="10" style="opacity: 0"/>
+        <text class="inst-label" id="inst-label" x="260" y="160" style="opacity: 0">Logger</text>
+        <text class="inst-sub" id="inst-sub" x="260" y="180" style="opacity: 0">level: "info"</text>
+        <text class="inst-sub" id="inst-sub2" x="260" y="196" style="opacity: 0">streams: 1</text>
+
+        <g id="client-1" class="client" style="color: var(--client)">
+          <rect x="20"  y="70"  width="100" height="40" rx="6" fill="var(--client)" opacity="0.9"/>
+          <text class="inst-label" x="70" y="92">moduleA</text>
+          <text class="inst-sub" x="70" y="106">Logger.getInstance()</text>
+        </g>
+        <g id="client-2" class="client" style="color: var(--client)">
+          <rect x="20"  y="160" width="100" height="40" rx="6" fill="var(--client)" opacity="0.9"/>
+          <text class="inst-label" x="70" y="182">moduleB</text>
+          <text class="inst-sub" x="70" y="196">Logger.getInstance()</text>
+        </g>
+        <g id="client-3" class="client" style="color: var(--client)">
+          <rect x="20"  y="250" width="100" height="40" rx="6" fill="var(--client)" opacity="0.9"/>
+          <text class="inst-label" x="70" y="272">moduleC</text>
+          <text class="inst-sub" x="70" y="286">Logger.getInstance()</text>
+        </g>
+        <g id="client-4" class="client" style="color: var(--client)">
+          <rect x="400" y="70"  width="100" height="40" rx="6" fill="var(--client)" opacity="0.9"/>
+          <text class="inst-label" x="450" y="92">moduleD</text>
+        </g>
+        <g id="client-5" class="client" style="color: var(--client)">
+          <rect x="400" y="160" width="100" height="40" rx="6" fill="var(--client)" opacity="0.9"/>
+          <text class="inst-label" x="450" y="182">moduleE</text>
+        </g>
+        <g id="client-6" class="client" style="color: var(--client)">
+          <rect x="400" y="250" width="100" height="40" rx="6" fill="var(--client)" opacity="0.9"/>
+          <text class="inst-label" x="450" y="272">moduleF</text>
+        </g>
+
+        <line id="arr-1" class="arrow-line" x1="120" y1="90"  x2="188" y2="160" marker-end="url(#arrow)"/>
+        <line id="arr-2" class="arrow-line" x1="120" y1="180" x2="188" y2="170" marker-end="url(#arrow)"/>
+        <line id="arr-3" class="arrow-line" x1="120" y1="270" x2="188" y2="180" marker-end="url(#arrow)"/>
+        <line id="arr-4" class="arrow-line" x1="400" y1="90"  x2="330" y2="160" marker-end="url(#arrow)"/>
+        <line id="arr-5" class="arrow-line" x1="400" y1="180" x2="330" y2="170" marker-end="url(#arrow)"/>
+        <line id="arr-6" class="arrow-line" x1="400" y1="270" x2="330" y2="180" marker-end="url(#arrow)"/>
+
+        <text id="x-ban" class="x-banner" x="260" y="118">⚠ test isolation broken</text>
+        <text id="warn-2" class="warn-label" x="260" y="222">hidden coupling — every module depends on Logger</text>
+
+        <text id="caption" class="caption" x="260" y="345"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const CLIENTS = ['client-1','client-2','client-3','client-4','client-5','client-6'];
+const ARROWS  = ['arr-1','arr-2','arr-3','arr-4','arr-5','arr-6'];
+const steps = [
+  {
+    title: "exactly one of this thing",
+    narration: `Some objects only make sense as one: an app's <b>Logger</b>, a <b>DBConnectionPool</b>, a process-wide <b>Config</b>. Two parallel loggers would interleave lines; two pools would double the connections. You want every module to point at the same instance.`,
+    code: [
+      '<span class="c">// the bad version: every caller news up a logger</span>',
+      'moduleA: <span class="k">const</span> log = <span class="k">new</span> Logger(<span class="s">"info"</span>)',
+      'moduleB: <span class="k">const</span> log = <span class="k">new</span> Logger(<span class="s">"debug"</span>)   <span class="c">// different config!</span>',
+      'moduleC: <span class="k">const</span> log = <span class="k">new</span> Logger(<span class="s">"info"</span>)',
+      '<span class="c">// three loggers, three writers, interleaved output, divergent levels.</span>',
+    ],
+    state: { instReal: false, instLabel: 'Logger', instSub: 'level: "info"', instSub2: 'streams: 1', dim: [], glow: CLIENTS, arrows: [], xBan: false, warn2: false, caption: "naive: every module makes its own instance" }
+  },
+  {
+    title: "the recipe",
+    narration: `Make the constructor <b>private</b>, hold the lone instance in a <span class="pill">static</span> field, expose <span class="pill">getInstance()</span>. The class itself becomes the only place that can call <span class="pill">new</span>.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Logger</span> {',
+      '  <span class="k">private static</span> _instance: <span class="t">Logger</span> | <span class="k">null</span> = <span class="k">null</span>',
+      '',
+      '  <span class="k">private constructor</span>(<span class="k">private</span> level: <span class="t">string</span>) {}    <span class="c">// ← private</span>',
+      '',
+      '  <span class="k">static</span> getInstance(): <span class="t">Logger</span> {',
+      '    <span class="k">if</span> (!Logger._instance) {',
+      '      Logger._instance = <span class="k">new</span> Logger(<span class="s">"info"</span>)',
+      '    }',
+      '    <span class="k">return</span> Logger._instance',
+      '  }',
+      '}',
+    ],
+    state: { instReal: false, instLabel: 'Logger', instSub: '_instance = null', instSub2: 'private ctor', dim: CLIENTS, glow: [], arrows: [], xBan: false, warn2: false, caption: "private ctor + static accessor = one global gate" }
+  },
+  {
+    title: "lazy first call",
+    narration: `The first <span class="pill">getInstance()</span> constructs the object. Every later call returns the same pointer. Lazy: nothing happens until something actually needs it.`,
+    code: [
+      '<span class="k">const</span> a = Logger.getInstance()',
+      '<span class="c">// → _instance was null → new Logger("info") → return it</span>',
+      '',
+      '<span class="k">const</span> b = Logger.getInstance()',
+      '<span class="c">// → _instance is set → return the same one</span>',
+      '',
+      'a === b                       <span class="c">// → true</span>',
+      'a.info(<span class="s">"hi"</span>); b.info(<span class="s">"there"</span>) <span class="c">// → both write to the one logger</span>',
+    ],
+    state: { instReal: true, instLabel: 'Logger', instSub: 'level: "info"', instSub2: 'one shared instance', dim: ['client-4','client-5','client-6'], glow: ['client-1','client-2','client-3'], arrows: ['arr-1','arr-2','arr-3'], xBan: false, warn2: false, caption: "first call creates; rest get the same pointer" }
+  },
+  {
+    title: "everyone converges on it",
+    narration: `Each module's call lands on the same instance. The state — level, output stream, in-memory cache — is shared. Updates from one module are visible to all others. That's the entire feature.`,
+    code: [
+      'moduleA: Logger.getInstance().info(<span class="s">"started"</span>)',
+      'moduleB: Logger.getInstance().setLevel(<span class="s">"debug"</span>)',
+      'moduleC: Logger.getInstance().info(<span class="s">"now under debug too"</span>)',
+      '',
+      '<span class="c">// changing the level in B affects C. shared mutable state.</span>',
+      '<span class="c">// also why it\'s subtle: A,B,C are now coupled through the singleton.</span>',
+    ],
+    state: { instReal: true, instLabel: 'Logger', instSub: 'level: "debug"', instSub2: 'shared mutable state', dim: [], glow: CLIENTS, arrows: ARROWS, xBan: false, warn2: false, caption: "six callers, one instance, shared state" }
+  },
+  {
+    title: "the test-killer",
+    narration: `Tests run in the same process. Test 1 sets <span class="pill">level = "debug"</span>. Test 2 inherits it. State <b>leaks across tests</b>. You can't construct a fresh Logger; the constructor is private. Most teams add a <span class="pill">reset()</span> back-door — already smelly.`,
+    code: [
+      '<span class="c">// test 1</span>',
+      'Logger.getInstance().setLevel(<span class="s">"debug"</span>)',
+      'expect(...).toBe(...)',
+      '',
+      '<span class="c">// test 2 — same process, same singleton, leaks level="debug"</span>',
+      'expect(Logger.getInstance().getLevel()).toBe(<span class="s">"info"</span>)   <span class="c">// ❌ fails</span>',
+      '',
+      '<span class="c">// the workaround:</span>',
+      '<span class="k">static</span> _resetForTests() { Logger._instance = <span class="k">null</span> }   <span class="c">// the smell</span>',
+    ],
+    state: { instReal: true, instLabel: 'Logger', instSub: 'level: "debug"', instSub2: 'leaked state across tests', dim: [], glow: ['client-1','client-2'], arrows: ['arr-1','arr-2'], xBan: true, warn2: true, caption: "global state survives every test boundary" }
+  },
+  {
+    title: "the modern alternative",
+    narration: `<b>Dependency injection</b> gives you the same "one instance" without the global. Construct it once at the root; pass it down. Tests get a fresh fake. The "single" stays a fact about lifetime, not enforced by the class.`,
+    code: [
+      '<span class="c">// no Singleton class — just inject a single instance</span>',
+      '<span class="k">const</span> logger = <span class="k">new</span> Logger(<span class="s">"info"</span>)',
+      '',
+      'startApp({ logger })             <span class="c">// pass it down once</span>',
+      '<span class="c">// child modules receive it as a param, not as Logger.getInstance()</span>',
+      '',
+      '<span class="c">// test gets a fresh, isolated fake — no shared global</span>',
+      '<span class="k">const</span> fake = <span class="k">new</span> FakeLogger()',
+      'startApp({ logger: fake })',
+    ],
+    state: { instReal: true, instLabel: 'Logger', instSub: 'passed by injection', instSub2: '(not via static)', dim: [], glow: CLIENTS, arrows: ARROWS, xBan: false, warn2: false, caption: "DI delivers the same uniqueness, none of the global coupling" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Singleton enforces "exactly one" at the class level. Pays off when uniqueness is a <i>correctness invariant</i> (process-wide hardware handle, mutex registry) and the global access is actually desired. Costs: hidden coupling, broken test isolation, hostile to parallelism (state shared across threads/workers), violates dependency inversion. Most modern style guides treat Singleton as a code smell unless the alternative is worse. Closest cousin: <b>[[flyweight-pattern]]</b> (small fixed pool of shared instances; Singleton is the degenerate "pool of one"). For genuinely-one objects that must be injectable, prefer DI containers (Spring, Angular's <span class="pill">providedIn: 'root'</span>) over hand-rolled Singleton.`,
+    code: [
+      '<span class="c">// good fit (rare):</span>',
+      '<span class="c">//   - hardware handle that physically has one (Bluetooth radio)</span>',
+      '<span class="c">//   - registry of process-wide mutexes / file locks</span>',
+      '<span class="c">//   - stateless app-wide constants (then just export them)</span>',
+      '',
+      '<span class="c">// poor fit (common):</span>',
+      '<span class="c">//   - "looked simpler than passing it" → use DI</span>',
+      '<span class="c">//   - logger / config / DB pool → bind once at root, inject</span>',
+      '<span class="c">//   - shared cache → flyweight or a dedicated cache service</span>',
+      '<span class="c">//   - anywhere your test setup needs _resetForTests()</span>',
+    ],
+    state: { instReal: true, instLabel: 'Logger', instSub: '', instSub2: '', dim: [], glow: [], arrows: [], xBan: false, warn2: false, caption: "use it only when uniqueness is a real invariant, not a convenience" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  $('inst-empty').style.opacity = s.state.instReal ? 0 : 1;
+  $('inst-empty-label').style.opacity = s.state.instReal ? 0 : 1;
+  $('inst-real').style.opacity = s.state.instReal ? 1 : 0;
+  $('inst-label').style.opacity = s.state.instReal ? 1 : 0;
+  $('inst-label').textContent = s.state.instLabel;
+  $('inst-sub').style.opacity = s.state.instReal ? 1 : 0;
+  $('inst-sub').textContent = s.state.instSub;
+  $('inst-sub2').style.opacity = s.state.instReal ? 1 : 0;
+  $('inst-sub2').textContent = s.state.instSub2;
+
+  CLIENTS.forEach(id => {
+    $(id).classList.toggle('glow', s.state.glow.includes(id));
+    $(id).style.opacity = s.state.dim.includes(id) ? 0.3 : 1;
+  });
+  ARROWS.forEach(id => $(id).classList.toggle('on', s.state.arrows.includes(id)));
+  $('x-ban').classList.toggle('on', s.state.xBan);
+  $('warn-2').classList.toggle('on', s.state.warn2);
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-05">
+<head>
+<meta charset="utf-8">
+<title>CISSP Risk Treatment × Cynefin — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166; --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+    /* Bloom layer colors */
+    --l1: #7ee787; --l2: #79c0ff; --l3: #f78166; --l4: #ffa657; --l5: #d2a8ff;
+    /* Cynefin domain colors (chaotic → clear) */
+    --d-chaotic:     #f85149;
+    --d-complex:     #d2a8ff;
+    --d-complicated: #ffa657;
+    --d-clear:       #7ee787;
+    /* Treatment label color */
+    --treatment: #79c0ff;
+    --right: #7ee787;
+    --wrong: #f85149;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .bloom-pill { display: inline-block; padding: 2px 9px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-right: 6px; }
+  .bloom-pill.l1 { background: rgba(126,231,135,0.16); color: var(--l1); }
+  .bloom-pill.l2 { background: rgba(121,192,255,0.16); color: var(--l2); }
+  .bloom-pill.l3 { background: rgba(247,129,102,0.16); color: var(--l3); }
+  .bloom-pill.l4 { background: rgba(255,166,87,0.16); color: var(--l4); }
+  .bloom-pill.l5 { background: rgba(210,168,255,0.18); color: var(--l5); }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .narration .wikilink { color: var(--l5); text-decoration: underline; text-decoration-color: rgba(210,168,255,0.4); cursor: pointer; }
+  .narration .wikilink:after { content: " ↗"; font-size: 10px; opacity: 0.6; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .t { color: #7ee787; }
+  /* Choice buttons */
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+  .choice { background: var(--bg); color: var(--text); border: 1px solid var(--line); padding: 7px 13px; border-radius: 7px; cursor: pointer; font: inherit; font-size: 13px; transition: all .15s; }
+  .choice:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .choice:disabled { cursor: not-allowed; opacity: 0.7; }
+  .choice.picked.correct { background: rgba(126,231,135,0.15); border-color: var(--right); color: var(--right); }
+  .choice.picked.wrong { background: rgba(248,81,73,0.15); border-color: var(--wrong); color: var(--wrong); }
+  .choice.correct:not(.picked) { border-style: dashed; border-color: var(--right); color: var(--right); }
+  .feedback { font-size: 13px; line-height: 1.55; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; display: none; }
+  .feedback.show { display: block; }
+  .feedback.right { background: rgba(126,231,135,0.10); color: var(--right); border-left: 3px solid var(--right); }
+  .feedback.wrong { background: rgba(248,81,73,0.10); color: var(--wrong); border-left: 3px solid var(--wrong); }
+  .ask { font-size: 13px; color: var(--muted); margin: 6px 0; font-style: italic; }
+  /* Quadrant nodes */
+  .door { transition: opacity .35s, filter .35s, transform .35s; transform-origin: center; transform-box: fill-box; }
+  .door.dim { opacity: 0.32; }
+  .door.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .door-body { fill: var(--panel); stroke-width: 2; }
+  .door-label { font: 700 12px sans-serif; text-anchor: middle; fill: var(--text); }
+  .door-treatment { font: 700 13px ui-monospace, monospace; text-anchor: middle; fill: var(--treatment); }
+  .door-domain { font: 600 11px sans-serif; text-anchor: middle; fill: var(--muted); }
+  .door-acrostic { font: 800 22px ui-monospace, monospace; text-anchor: middle; }
+  .spectrum-arrow { stroke: var(--muted); stroke-width: 2; fill: none; marker-end: url(#arrowSpec); opacity: 0.7; }
+  .spectrum-label { font: 600 11px ui-monospace, monospace; fill: var(--muted); }
+  .actor { transition: transform .55s cubic-bezier(.4,1.4,.4,1), opacity .35s; }
+  .actor-circle { fill: var(--accent); stroke: var(--text); stroke-width: 1.5; }
+  .actor-text { fill: var(--bg); font: 700 12px sans-serif; text-anchor: middle; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--l1) 0%, var(--l2) 25%, var(--l3) 50%, var(--l4) 75%, var(--l5) 100%); transition: width .35s ease; width: 0; }
+  button.nav-btn { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button.nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button.nav-btn:active:not(:disabled) { transform: translateY(1px); }
+  button.nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>CISSP Risk Treatment × Cynefin <small>— a visual walkthrough</small></h1>
+    <div class="step-count">
+      <span id="pill" class="bloom-pill l1">Recognize</span>
+      Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <p class="ask" id="ask"></p>
+      <div class="choices" id="choices"></div>
+      <div class="feedback" id="feedback"></div>
+      <svg id="stage" viewBox="0 0 560 380" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrowSpec" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"/>
+          </marker>
+        </defs>
+
+        <!-- Cynefin spectrum arrow (chaotic → clear, left to right) -->
+        <path class="spectrum-arrow" d="M 40 30 L 520 30"/>
+        <text class="spectrum-label" x="40" y="20">chaotic</text>
+        <text class="spectrum-label" x="500" y="20">clear</text>
+
+        <!-- 4 doors arranged left-to-right -->
+        <g id="door-1" class="door" style="color: var(--d-chaotic)">
+          <rect class="door-body" x="40" y="60" width="110" height="170" rx="8" stroke="var(--d-chaotic)"/>
+          <text class="door-domain" x="95" y="82">Chaotic</text>
+          <text class="door-acrostic" x="95" y="135" fill="var(--d-chaotic)">A</text>
+          <text class="door-treatment" x="95" y="170">Avoid</text>
+          <text class="door-label" x="95" y="200">turn away</text>
+          <text class="door-label" x="95" y="218" fill="var(--muted)">"no structure"</text>
+        </g>
+
+        <g id="door-2" class="door" style="color: var(--d-complex)">
+          <rect class="door-body" x="170" y="60" width="110" height="170" rx="8" stroke="var(--d-complex)"/>
+          <text class="door-domain" x="225" y="82">Complex</text>
+          <text class="door-acrostic" x="225" y="135" fill="var(--d-complex)">T</text>
+          <text class="door-treatment" x="225" y="170">Transfer</text>
+          <text class="door-label" x="225" y="200">hand to specialist</text>
+          <text class="door-label" x="225" y="218" fill="var(--muted)">"probe-sense"</text>
+        </g>
+
+        <g id="door-3" class="door" style="color: var(--d-complicated)">
+          <rect class="door-body" x="300" y="60" width="110" height="170" rx="8" stroke="var(--d-complicated)"/>
+          <text class="door-domain" x="355" y="82">Complicated</text>
+          <text class="door-acrostic" x="355" y="135" fill="var(--d-complicated)">M</text>
+          <text class="door-treatment" x="355" y="170">Mitigate</text>
+          <text class="door-label" x="355" y="200">install controls</text>
+          <text class="door-label" x="355" y="218" fill="var(--muted)">"sense-analyse"</text>
+        </g>
+
+        <g id="door-4" class="door" style="color: var(--d-clear)">
+          <rect class="door-body" x="430" y="60" width="110" height="170" rx="8" stroke="var(--d-clear)"/>
+          <text class="door-domain" x="485" y="82">Clear</text>
+          <text class="door-acrostic" x="485" y="135" fill="var(--d-clear)">A</text>
+          <text class="door-treatment" x="485" y="170">Accept</text>
+          <text class="door-label" x="485" y="200">sign the logbook</text>
+          <text class="door-label" x="485" y="218" fill="var(--muted)">"best practice"</text>
+        </g>
+
+        <!-- Actor (the merfolk-warrior) that travels to a door -->
+        <g id="actor" class="actor" transform="translate(280, 290)" style="opacity: 0">
+          <circle class="actor-circle" r="24"/>
+          <text class="actor-text" y="5">YOU</text>
+        </g>
+
+        <!-- Caption -->
+        <text id="caption" class="caption" x="280" y="365"></text>
+
+        <!-- ATMA acrostic banner (shown in Synthesize) -->
+        <g id="atma-banner" style="opacity: 0">
+          <rect x="190" y="248" width="180" height="32" rx="6" fill="var(--bg)" stroke="var(--pick)" stroke-width="1.5"/>
+          <text x="280" y="269" text-anchor="middle" font="700 16px ui-monospace, monospace" fill="var(--pick)">A · T · M · A</text>
+        </g>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Decision tree</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button class="nav-btn" id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button class="nav-btn" id="next">Next →</button>
+  </nav>
+  <div class="hint">← / → arrow keys to navigate · Apply &amp; Analyze steps require a choice before Next unlocks</div>
+</div>
+
+<script>
+const DOOR_POS = {
+  1: { x: 95,  y: 290 },  // Avoid (Chaotic)
+  2: { x: 225, y: 290 },  // Transfer (Complex)
+  3: { x: 355, y: 290 },  // Mitigate (Complicated)
+  4: { x: 485, y: 290 },  // Accept (Clear)
+};
+const ALL_DOORS = [1,2,3,4];
+
+const steps = [
+  {
+    layer: "recognize",
+    title: "four doors",
+    narration: `Every risk in a properly enumerated register ends with one of <b>four treatment decisions</b>. Look at the four panels above. Don't read the labels yet — just register the <i>shape</i>: four cells, left to right.`,
+    code: [
+      '<span class="c">// every identified risk routes to exactly one of:</span>',
+      '<span class="t">Avoid</span>      <span class="c">— eliminate the activity</span>',
+      '<span class="t">Transfer</span>   <span class="c">— shift to a third party</span>',
+      '<span class="t">Mitigate</span>   <span class="c">— deploy controls</span>',
+      '<span class="t">Accept</span>     <span class="c">— acknowledge, monitor</span>',
+      '',
+      '<span class="c">// these four are EXHAUSTIVE — no risk falls outside.</span>',
+    ],
+    door: { glow: [], dim: [], actor: null, atma: false, caption: "four doors, left to right" }
+  },
+  {
+    layer: "understand",
+    title: "Cynefin overlay",
+    narration: `The doors aren't arbitrary — they sit along the <b>Cynefin spectrum</b>, from <span style="color:var(--d-chaotic)">Chaotic</span> on the left to <span style="color:var(--d-clear)">Clear</span> on the right. Each Cynefin domain has a <i>right way to manage it</i>, and that management style <b>is</b> the treatment.`,
+    code: [
+      '<span class="c">// Cynefin domain → right management → CISSP treatment</span>',
+      '<span class="c">// (read chaotic → clear, left to right)</span>',
+      '',
+      '<span class="t">Chaotic</span>     act-sense-respond     <span class="k">→</span> <span class="t">Avoid</span>',
+      '<span class="t">Complex</span>     probe-sense-respond   <span class="k">→</span> <span class="t">Transfer</span>',
+      '<span class="t">Complicated</span> sense-analyse-respond <span class="k">→</span> <span class="t">Mitigate</span>',
+      '<span class="t">Clear</span>       sense-categorise      <span class="k">→</span> <span class="t">Accept</span>',
+    ],
+    door: { glow: [1,2,3,4], dim: [], actor: null, atma: false, caption: "Cynefin domain implies treatment 1-to-1" }
+  },
+  {
+    layer: "understand",
+    title: "why the alignment holds",
+    narration: `Each pairing has a <b>mechanism</b>, not just a label. <span class="pill">Chaotic→Avoid</span>: you can't reason about controls during collapse, so remove the activity from scope. <span class="pill">Complex→Transfer</span>: outcomes can't be predicted ex-ante, so let pattern-libraries (insurers, MSSPs) carry them. <span class="pill">Complicated→Mitigate</span>: knowable with analysis, so engineer specific controls. <span class="pill">Clear→Accept</span>: well-understood, quantifiable, document and move on.`,
+    code: [
+      '<span class="c">// the load-bearing mechanism per pairing:</span>',
+      '',
+      '<span class="t">Chaotic→Avoid</span>     : can\'t reason → drop scope',
+      '<span class="t">Complex→Transfer</span>  : can\'t predict → specialist carries',
+      '<span class="t">Complicated→Mitigate</span>: analyzable → cost-benefit controls',
+      '<span class="t">Clear→Accept</span>      : quantifiable → log and review',
+      '',
+      '<span class="c">// the "right management" is the treatment.</span>',
+    ],
+    door: { glow: [1,2,3,4], dim: [], actor: null, atma: false, caption: "treatment = right-management for that Cynefin domain" }
+  },
+  {
+    layer: "apply",
+    title: "scenario: novel zero-day class",
+    ask: "Your team learns of a novel zero-day class of vulnerability that no vendor patch addresses yet. Defenders' pattern-library is empty. Which door?",
+    choices: [
+      { label: "Avoid",    correct: false, why: "Avoid means dropping the activity from scope. But the activity (e.g., serving customers) isn't optional — and 'no patch yet' isn't 'no structure'. Cynefin = Complex, not Chaotic." },
+      { label: "Transfer", correct: true,  why: "Right. Novel + emergent + unpredictable = Complex domain. Specialists with deep pattern-libraries (threat intel + IR retainer + cyber-insurance) carry it better than your in-house team can." },
+      { label: "Mitigate", correct: false, why: "The most common error. You're tempted to deploy a control checklist, but the threat is Complex (emergent), not Complicated (analyzable). A checklist for an unknown shape misses." },
+      { label: "Accept",   correct: false, why: "Accept requires the risk to be quantified AND within appetite. A novel zero-day is unquantified by definition. Premature Accept hides exposure." },
+    ],
+    narration: `<span class="pill">apply</span> — Pick the door before you advance. Wrong picks explain <i>why</i> they're wrong; the explanation is the teaching.`,
+    code: [
+      '<span class="c">// the scenario:</span>',
+      'risk = {',
+      '  category: <span class="s">"novel zero-day class"</span>,',
+      '  patch_available: <span class="k">false</span>,',
+      '  internal_pattern_library: <span class="s">"empty"</span>,',
+      '  activity_essential: <span class="k">true</span>,',
+      '  predictability: <span class="s">"unknown — emergent"</span>',
+      '}',
+      '',
+      '<span class="c">// what Cynefin domain?</span>',
+      '<span class="c">// what treatment follows?</span>',
+    ],
+    door: { glow: [], dim: [1,2,3,4], actor: null, atma: false, caption: "pick the door — the door IS the treatment" }
+  },
+  {
+    layer: "apply",
+    title: "scenario: low-likelihood minor outage",
+    ask: "A known, well-understood risk: ~$50/year expected loss. Available control costs $500/year. Activity is core to revenue. Which door?",
+    choices: [
+      { label: "Avoid",    correct: false, why: "Avoid drops the activity. But the activity is core to revenue — you'd be killing the business to escape a $50/yr risk." },
+      { label: "Transfer", correct: false, why: "Transfer is for Complex risks where specialists' pattern-library beats yours. This risk is quantified and known — you don't need an insurer for it." },
+      { label: "Mitigate", correct: false, why: "Mitigate makes sense only when (cost of controls) < (ALE reduction). Here, $500 control for $50 ALE = 10× worse. Don't mitigate." },
+      { label: "Accept",   correct: true,  why: "Right. Known + quantified + residual within appetite + control cost > expected loss = Accept. Document the acceptance, periodic re-review, move on." },
+    ],
+    narration: `<span class="pill">apply</span> — Same framework, opposite end of the Cynefin spectrum. The cost test (<i>controls vs ALE reduction</i>) is what flips Mitigate→Accept here.`,
+    code: [
+      '<span class="c">// the scenario:</span>',
+      'risk = {',
+      '  ALE: <span class="n">50</span>,                  <span class="c">// expected loss per year</span>',
+      '  control_cost_per_year: <span class="n">500</span>,',
+      '  activity_essential: <span class="k">true</span>,',
+      '  predictability: <span class="s">"well-understood"</span>,',
+      '  residual_within_appetite: <span class="k">true</span>',
+      '}',
+      '',
+      '<span class="c">// cost > benefit AND residual within appetite</span>',
+      '<span class="c">// → which Cynefin domain? which door?</span>',
+    ],
+    door: { glow: [], dim: [1,2,3,4], actor: null, atma: false, caption: "cost test: $500 control for $50 ALE? do not mitigate" }
+  },
+  {
+    layer: "analyze",
+    title: "the most common error",
+    ask: "You face a novel, emerging threat your team has never seen before. What's the typical wrong move — and why does it fail?",
+    choices: [
+      { label: "Misread Complex as Chaotic → Avoid",      correct: false, why: "Possible but rare. Most teams don't drop scope from novelty alone; they try to manage it. The classic error is the opposite direction." },
+      { label: "Misread Complex as Complicated → Mitigate", correct: true,  why: "The classic error. The Complex domain looks 'just hard' so teams deploy a control checklist (Mitigate). But Complex = emergent, so checklists miss the shape. Right move = Transfer to specialists with pattern-libraries." },
+      { label: "Misread Complex as Clear → Accept",         correct: false, why: "Premature Accept is dangerous but uncommon — most teams know unfamiliar = not Clear. The lure is Complicated, not Clear." },
+      { label: "Misread Clear as Complex → Transfer",       correct: false, why: "This would mean buying insurance for a $50 ALE — wasteful but not the classic CISSP failure mode." },
+    ],
+    narration: `<span class="pill">analyze</span> — The framework's main failure mode is <b>mis-classifying the Cynefin domain</b>, which routes to the wrong treatment family. Pick the trap that costs teams most.`,
+    code: [
+      '<span class="c">// the failure mode:</span>',
+      '<span class="c">// Complex risk misread as Complicated</span>',
+      '<span class="c">// → deploy a control checklist</span>',
+      '<span class="c">// → checklist designed for known shapes</span>',
+      '<span class="c">// → misses the emergent novel shape</span>',
+      '<span class="c">// → false sense of coverage</span>',
+      '<span class="c">// → incident</span>',
+      '',
+      '<span class="c">// Detection: when you can\'t name BOTH the Cynefin</span>',
+      '<span class="c">// domain AND the treatment in one breath,</span>',
+      '<span class="c">// the cross-link is half-collapsed.</span>',
+    ],
+    door: { glow: [2], dim: [1,4], actor: null, atma: false, caption: "Complex→Transfer is the route most often mis-routed to Mitigate" }
+  },
+  {
+    layer: "synthesize",
+    title: "the unlock & where it travels",
+    narration: `<b>The unlock</b>: Risk-treatment × Cynefin — registered as a confirmed unlock in <span class="wikilink" data-link="composability-index">composability-index</span>. The mnemonic is the acrostic <span class="pill">A·T·M·A</span> read along the Cynefin spectrum chaotic→clear. The checksum: <b>4 letters, 4 doors, 4 C's</b> (Chaotic·Complex·Complicated·Clear). If any count breaks, the quadrant is corrupted. The same shape appears in <span class="wikilink" data-link="cissp-due-care-due-diligence">Due Care vs Due Diligence</span> (act-vs-prove meta-pattern — every Accept must be <i>documented</i>) and in <span class="wikilink" data-link="cynefin-framework">decision-architecture under uncertainty</span> generally.`,
+    code: [
+      '<span class="c">// MNEMONIC</span>',
+      '<span class="t">A T M A</span>  read chaotic → clear',
+      '   <span class="k">|</span>   ',
+      '   <span class="c">Avoid · Transfer · Mitigate · Accept</span>',
+      '',
+      '<span class="c">// CHECKSUM (4-4-4 triple)</span>',
+      '<span class="c">// 4 letters, 4 doors, 4 Cynefin C\'s</span>',
+      '<span class="c">// A appears at positions 1 and 4 (the extremes)</span>',
+      '',
+      '<span class="c">// CROSS-DOMAIN: same shape as</span>',
+      '<span class="c">//   Due Care / Due Diligence (act vs prove)</span>',
+      '<span class="c">//   probe-sense-respond decision architecture</span>',
+    ],
+    door: { glow: [1,2,3,4], dim: [], actor: null, atma: true, caption: "mnemonic = the unlock. checksum = 4·4·4." }
+  },
+];
+
+const BLOOM_LABELS = {
+  recognize: "Recognize",
+  understand: "Understand",
+  apply: "Apply",
+  analyze: "Analyze",
+  synthesize: "Synthesize",
+};
+const BLOOM_PILL = { recognize: "l1", understand: "l2", apply: "l3", analyze: "l4", synthesize: "l5" };
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+let answered = new Array(steps.length).fill(false);
+$('total').textContent = steps.length;
+
+function renderChoices(s) {
+  const ch = $('choices');
+  const fb = $('feedback');
+  const ask = $('ask');
+  ch.innerHTML = '';
+  fb.classList.remove('show', 'right', 'wrong');
+  fb.innerHTML = '';
+  if (!s.choices) { ask.textContent = ''; return; }
+  ask.textContent = s.ask || '';
+  s.choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice' + (answered[idx] && c.correct ? ' correct' : '');
+    btn.textContent = c.label;
+    btn.disabled = answered[idx];
+    btn.addEventListener('click', () => pick(i));
+    ch.appendChild(btn);
+  });
+  if (answered[idx]) {
+    const picked = s._picked;
+    const c = s.choices[picked];
+    fb.classList.add('show', c.correct ? 'right' : 'wrong');
+    fb.innerHTML = `<b>${c.correct ? '✓ ' + c.label : '✗ ' + c.label}</b> — ${c.why}`;
+    Array.from(ch.children).forEach((btn, i) => {
+      if (i === picked) btn.classList.add('picked', s.choices[i].correct ? 'correct' : 'wrong');
+    });
+  }
+}
+
+function pick(i) {
+  const s = steps[idx];
+  answered[idx] = true;
+  s._picked = i;
+  renderChoices(s);
+  updateNav();
+  // animate actor to the door of the correct answer (or the picked one if right)
+  const correctIdx = s.choices.findIndex(c => c.correct);
+  const targetDoor = correctIdx + 1; // doors are 1-indexed
+  if (DOOR_POS[targetDoor]) {
+    const { x, y } = DOOR_POS[targetDoor];
+    $('actor').setAttribute('transform', `translate(${x}, ${y})`);
+    $('actor').style.opacity = 1;
+  }
+}
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  const pill = $('pill');
+  pill.className = 'bloom-pill ' + BLOOM_PILL[s.layer];
+  pill.textContent = BLOOM_LABELS[s.layer];
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_DOORS.forEach(n => {
+    const el = $('door-' + n);
+    el.classList.toggle('dim', s.door.dim.includes(n));
+    el.classList.toggle('glow', s.door.glow.includes(n));
+  });
+
+  // ATMA banner
+  $('atma-banner').style.opacity = s.door.atma ? 1 : 0;
+
+  // Actor
+  const actor = $('actor');
+  if (s.door.actor) {
+    const { x, y } = DOOR_POS[s.door.actor];
+    actor.setAttribute('transform', `translate(${x}, ${y})`);
+    actor.style.opacity = 1;
+  } else if (!answered[idx]) {
+    actor.style.opacity = 0;
+  }
+
+  $('caption').textContent = s.door.caption || '';
+  renderChoices(s);
+  updateNav();
+}
+
+function updateNav() {
+  $('prev').disabled = idx === 0;
+  // Apply and Analyze require an answered choice before Next unlocks
+  const s = steps[idx];
+  const gated = (s.layer === 'apply' || s.layer === 'analyze') && s.choices && !answered[idx];
+  $('next').disabled = idx === steps.length - 1 || gated;
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); if (!$('next').disabled) go(1); }
+});
+
+// Wiki links open in Obsidian if available
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('.wikilink');
+  if (!link) return;
+  const page = link.dataset.link;
+  if (page) window.open('obsidian://open?vault=Neural-OS-Research&file=' + encodeURIComponent(page), '_blank');
+});
+
+render();
+</script>
+</body>
+</html>

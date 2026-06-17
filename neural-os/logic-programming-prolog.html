@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-04">
+<head>
+<meta charset="utf-8">
+<title>Logic Programming (Prolog) — Visual Walkthrough</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  :root {
+    --fact-c: #7ee787;
+    --rule-c: #ffa657;
+    --goal-c: #79c0ff;
+    --bind-c: #d2a8ff;
+    --fail-c: #f85149;
+    --succ-c: #7ee787;
+  }
+  .kb-divider { stroke: var(--line); stroke-dasharray: 3 3; }
+  .paradigm-band { fill: var(--muted); font: 600 10px ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; text-anchor: middle; }
+  .paradigm-band.decl { fill: var(--goal-c); }
+  .paradigm-band.imp  { fill: var(--rule-c); }
+  .answer-pill { fill: var(--succ-c); font: 700 18px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .4s; }
+  .answer-pill.on { opacity: 1; }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+  const svg = `
+    <svg viewBox="0 0 780 440">
+      ${Explain.svgDefs()}
+
+      <text class="paradigm-band decl" x="150" y="20">declarative: what is true</text>
+      <text class="paradigm-band imp"  x="550" y="20">imperative engine: how to prove it</text>
+      <line class="kb-divider" x1="225" y1="40" x2="225" y2="430"/>
+
+      ${Explain.glyph('box',      { x: 105, y: 80,  w: 170, h: 40, id: 'f1', label: 'F1   parent(tom, bob)', color: 'var(--fact-c)' })}
+      ${Explain.glyph('box',      { x: 105, y: 135, w: 170, h: 40, id: 'f2', label: 'F2   parent(bob, ann)', color: 'var(--fact-c)' })}
+      ${Explain.glyph('box',      { x: 105, y: 190, w: 170, h: 40, id: 'f3', label: 'F3   parent(ann, liz)', color: 'var(--fact-c)' })}
+      ${Explain.glyph('box',      { x: 105, y: 290, w: 200, h: 60, id: 'r1', label: 'R1   grandparent(X,Z)', sub: ':- parent(X,Y), parent(Y,Z)', color: 'var(--rule-c)' })}
+
+      <text x="510" y="55" text-anchor="middle" fill="var(--text)" font="700 14px ui-monospace, monospace">?- grandparent(tom, Q).</text>
+
+      ${Explain.glyph('node',  { x: 510, y: 100, r: 22, id: 'g1', label: 'G',  color: 'var(--goal-c)' })}
+      ${Explain.glyph('node',  { x: 510, y: 190, r: 22, id: 'g2', label: '∧',  color: 'var(--goal-c)' })}
+      <text x="538" y="183" text-anchor="start" fill="var(--goal-c)" font="600 10px ui-monospace, monospace">p(tom,Y)</text>
+      <text x="538" y="197" text-anchor="start" fill="var(--goal-c)" font="600 10px ui-monospace, monospace">∧ p(Y,Q)</text>
+      ${Explain.glyph('node',  { x: 380, y: 270, r: 16, id: 'g3', label: '✓',  color: 'var(--succ-c)' })}
+      <text x="430" y="274" text-anchor="start" fill="var(--succ-c)" font="600 11px ui-monospace, monospace">Y = bob  (via F1)</text>
+      ${Explain.glyph('node',  { x: 380, y: 335, r: 20, id: 'g4', label: '∧',  color: 'var(--goal-c)' })}
+      <text x="430" y="339" text-anchor="start" fill="var(--goal-c)" font="600 11px ui-monospace, monospace">parent(bob, Q)</text>
+      ${Explain.glyph('node',  { x: 260, y: 405, r: 14, id: 'g5', label: '✗',  color: 'var(--fail-c)' })}
+      ${Explain.glyph('node',  { x: 470, y: 405, r: 16, id: 'g6', label: '✓',  color: 'var(--succ-c)' })}
+      <text x="500" y="425" text-anchor="start" fill="var(--succ-c)" font="600 11px ui-monospace, monospace">Q = ann  (via F2)</text>
+
+      ${Explain.glyph('arrow', { from: [510, 122], to: [510, 168], id: 'e1', label: 'apply R1' })}
+      ${Explain.glyph('arrow', { from: [495, 210], to: [392, 256], id: 'e2', label: 'try F1' })}
+      ${Explain.glyph('arrow', { from: [380, 286], to: [380, 315], id: 'e3' })}
+      ${Explain.glyph('arrow', { from: [368, 353], to: [273, 392], id: 'e4', label: 'F1 ✗', dashed: true })}
+      ${Explain.glyph('arrow', { from: [392, 353], to: [457, 392], id: 'e5', label: 'F2 ✓' })}
+
+      <text x="690" y="155" text-anchor="middle" fill="var(--bind-c)" font="600 10px ui-monospace, monospace" letter-spacing="0.08em">σ  SUBSTITUTION</text>
+      ${Explain.glyph('box',   { x: 690, y: 215, w: 160, h: 110, id: 'sigma', color: 'var(--bind-c)' })}
+      <text x="690" y="186" text-anchor="middle" fill="var(--bind-c)" font="600 12px ui-monospace, monospace">X = tom</text>
+      <text x="690" y="206" text-anchor="middle" fill="var(--bind-c)" font="600 12px ui-monospace, monospace">Z = Q</text>
+      <text x="690" y="226" text-anchor="middle" fill="var(--bind-c)" font="600 12px ui-monospace, monospace">Y = bob</text>
+      <text x="690" y="246" text-anchor="middle" fill="var(--bind-c)" font="600 12px ui-monospace, monospace">Q = ann</text>
+
+      <text class="answer-pill" id="answer" x="690" y="295">→  Q = ann</text>
+    </svg>`;
+
+  const code = `<pre>
+<span class="ln"><span class="c">% Facts — what is unconditionally true about the world.</span></span>
+<span class="ln">parent(tom, bob).</span>
+<span class="ln">parent(bob, ann).</span>
+<span class="ln">parent(ann, liz).</span>
+<span class="ln"></span>
+<span class="ln"><span class="c">% Rule — an implication. Read ":-" as "if".</span></span>
+<span class="ln">grandparent(<span class="n">X</span>, <span class="n">Z</span>) <span class="k">:-</span></span>
+<span class="ln">    parent(<span class="n">X</span>, <span class="n">Y</span>),         <span class="c">% "," = AND</span></span>
+<span class="ln">    parent(<span class="n">Y</span>, <span class="n">Z</span>).</span>
+<span class="ln"></span>
+<span class="ln"><span class="c">% Query — ask the engine for any Q such that grandparent(tom, Q) holds.</span></span>
+<span class="ln"><span class="k">?-</span> grandparent(tom, <span class="n">Q</span>).</span>
+<span class="ln"><span class="c">% Engine reply:</span></span>
+<span class="ln"><span class="n">Q</span> = ann.</span>
+<span class="ln"></span>
+<span class="ln"><span class="c">% Compare — same problem, imperative (Python):</span></span>
+<span class="ln"><span class="k">def</span> grandparent(x):</span>
+<span class="ln">    <span class="k">for</span> y <span class="k">in</span> children_of[x]:</span>
+<span class="ln">        <span class="k">for</span> z <span class="k">in</span> children_of[y]:</span>
+<span class="ln">            <span class="k">yield</span> z      <span class="c">% you write the loops, the order, the state.</span></span>
+</pre>`;
+
+  // ============================================================
+  // U — See (CAST): the visual taxonomy across Bloom layers.
+  // ============================================================
+  const uSee = [
+    {
+      layer: 'recognize',
+      title: 'The mental model',
+      narration:
+        'Imagine handing a librarian three index cards (<b>"Tom is Bob\'s parent," "Bob is Ann\'s parent," "Ann is Liz\'s parent"</b>) plus one rule card (<b>"X is Z\'s grandparent IF X is someone\'s parent AND that someone is Z\'s parent"</b>). You ask: <i>"who is Tom\'s grandchild?"</i> The librarian doesn\'t run your search loop — she <b>tries to prove the question true</b> by matching cards. That is logic programming in one sentence.',
+      codeLines: [2, 3, 4, 7, 8, 9, 12],
+      onEnter: (e) => { e.glow('f1'); e.glow('f2'); e.glow('f3'); e.glow('r1'); e.glow('g1'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Facts — declared truth',
+      narration:
+        'A <b>fact</b> is a card on the table: <span class="pill">parent(tom, bob).</span> It is asserted, not computed. Three facts here form the entire <b>knowledge base</b>. There is no order of evaluation, no return value — a fact <i>holds</i> the way a sentence in a textbook holds.',
+      codeLines: [1, 2, 3, 4],
+      onEnter: (e) => { e.glow('f1'); e.glow('f2'); e.glow('f3'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Rules — implications, not procedures',
+      narration:
+        'A <b>rule</b> is an "if-then" written backward: <span class="pill">head :- body</span> means <i>the head is true if the body is true</i>. Read <span class="pill">:-</span> as "if" and the comma as "and". The rule for <b>grandparent</b> does not <i>compute</i> grandparents — it <i>defines</i> what one is. The engine will figure out how to use it.',
+      codeLines: [6, 7, 8, 9],
+      onEnter: (e) => { e.glow('r1'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Unification — two-way pattern matching',
+      narration:
+        'A handshake between two terms: <span class="pill">grandparent(tom, Q)</span> meets the rule head <span class="pill">grandparent(X, Z)</span>. They <b>unify</b> by binding <span class="pill">X = tom</span> and <span class="pill">Z = Q</span> — <i>both sides</i> can have variables, and the binding flows both ways. The σ box on the right is the growing list of bindings the engine commits to.',
+      codeLines: [7, 12],
+      onEnter: (e) => { e.glow('g1'); e.glow('g2'); e.glow('sigma'); e.activate('e1'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Resolution — reduce goal to subgoals',
+      narration:
+        'After unification, the rule\'s body becomes the new goal: <span class="pill">parent(tom, Y) ∧ parent(Y, Q)</span>. The engine has not "called a function" — it has <b>rewritten the question</b> into smaller questions. Repeat until every subgoal is a fact, or fail.',
+      codeLines: [8, 9],
+      onEnter: (e) => { e.glow('g2'); e.glow('g3'); e.activate('e2'); },
+    },
+    {
+      layer: 'apply',
+      title: 'Backtracking — what does the engine do when a branch fails?',
+      narration:
+        'Y has been bound to <b>bob</b>. The next subgoal is <span class="pill">parent(bob, Q)</span>. The engine tries F1 = <span class="pill">parent(tom, bob)</span> — but <b>bob ≠ tom</b>, so unification fails. What happens next?',
+      codeLines: [2, 3, 9, 12],
+      choices: [
+        { label: 'Backtrack — undo, try F2',                  correct: true,
+          reason: 'Right. The engine pops back to the last choice point, restores σ to its state before the failed attempt, and tries the next clause. F2 = parent(bob, ann) unifies, so Q = ann.' },
+        { label: 'Stop and return failure',                   correct: false,
+          reason: 'Only after every alternative at every choice point has been tried. A single clause failing is not the end — it triggers backtracking, the engine\'s built-in search.' },
+        { label: 'Re-bind Y to a different value first',      correct: false,
+          reason: 'The engine only backtracks Y after exhausting every clause for the current subgoal. Outer bindings move only when inner search has nothing left.' },
+      ],
+      onEnter: (e) => { e.glow('g4'); e.glow('g5'); e.glow('g6'); e.activate('e4'); e.activate('e5'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Declarative vs imperative — pick the framing',
+      narration:
+        'Below the Prolog program in the code panel is an imperative version in Python. <b>One specifies what a grandparent <i>is</i>; the other specifies how to <i>find</i> one.</b> Which statement about the two paradigms is most accurate?',
+      codeLines: [6, 7, 8, 9, 16, 17, 18, 19, 20],
+      choices: [
+        { label: 'Declarative trades control for brevity — engine handles search, you give up step-ordering', correct: true,
+          reason: 'Exactly. You no longer write the loop order or the state machine. The engine\'s search strategy is what executes — Prolog uses depth-first with backtracking. This is liberating until you need to control it (cuts, indexing, mode declarations).' },
+        { label: 'Declarative is always shorter and faster',  correct: false,
+          reason: 'Shorter for relational problems, yes. Faster — no: the engine\'s general search can be wasteful where a hand-tuned imperative loop is direct. Prolog wins on <i>expressiveness per line</i>, not raw throughput.' },
+        { label: 'Imperative cannot express the same relations', correct: false,
+          reason: 'It absolutely can — every Turing-complete language can express anything. The difference is <i>which is natural</i>. Relations and search-with-backtracking are natural in Prolog and verbose in Python.' },
+      ],
+      onEnter: (e) => { e.glow('r1'); e.glow('g2'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Where this generalizes',
+      narration:
+        'Prolog\'s engine bundles three independent ideas — relational data, two-way pattern matching, and depth-first search with undo — and gives you the third for free. ' +
+        'The search itself is plain <span class="wikilink" data-wiki="programming/backtracking">[[backtracking]]</span> over <span class="wikilink" data-wiki="programming/dfs">[[dfs]]</span>, expressed through <span class="wikilink" data-wiki="programming/recursion">[[recursion]]</span> on the proof tree. ' +
+        'Once you see the shape, you find it everywhere: SQL\'s query planner, ML\'s type inference, constraint solvers, RDF/SPARQL, even git\'s three-way merge. The defining idea per paradigm: <i>OO = state owns behavior; functional = compose pure transforms; logic = declare relations, search for proof.</i>',
+      codeLines: [],
+      onEnter: (e) => { e.glow('g6'); document.getElementById('answer')?.classList.add('on'); },
+      onExit:  (e) => { document.getElementById('answer')?.classList.remove('on'); },
+    },
+  ];
+
+  // ============================================================
+  // D — Name (NEDF): identifier card.
+  // ============================================================
+  const dName = [
+    {
+      layer: 'recognize',
+      title: 'The identifier card',
+      narration:
+        '<b>Logic programming</b> = relational data + unification + automated search. ' +
+        'Canonical implementation: <b>Prolog</b> (1972, Colmerauer & Kowalski). ' +
+        'Family members: <b>Datalog</b> (Prolog minus recursion-through-negation and minus functors — used in static analysis and databases), <b>miniKanren</b> (logic engine embedded in Scheme/Clojure), <b>Mercury</b> (statically typed Prolog), <b>Answer-Set Programming</b> (Prolog with stable-model semantics).',
+      codeLines: [1, 6, 12],
+      onEnter: (e) => { e.glow('f1'); e.glow('r1'); e.glow('g1'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Distinguish the paradigm',
+      narration:
+        'A coworker says: <i>"my system declares the data and the engine figures out the answer — it\'s a logic program."</i> What\'s the cleanest test to confirm or deny that claim?',
+      codeLines: [6, 7, 8, 9, 12],
+      choices: [
+        { label: 'Check whether the engine performs unification and backtracking search',  correct: true,
+          reason: 'These two operations are the load-bearing distinguishers. A SQL engine does declarative-style queries but uses set algebra and join algorithms — not unification. A spreadsheet is declarative but performs dataflow, not search. Unification + backtracking = logic programming.' },
+        { label: 'Check whether the code is shorter than the imperative version',          correct: false,
+          reason: 'Brevity is a side-effect, not the definition. Many DSLs are short and declarative without being logic programs (regex, build files, CSS).' },
+        { label: 'Check whether variables can be unbound',                                  correct: false,
+          reason: 'Closer, but not sufficient: Excel formulas have "unfilled cells" too. The defining behavior is what the engine <i>does</i> with unbound variables — bind them through unification during search.' },
+      ],
+      onEnter: (e) => { e.glow('g2'); e.glow('sigma'); },
+    },
+  ];
+
+  // ============================================================
+  // F — Do (SPEAR): the action playbook.
+  // ============================================================
+  const fDo = [
+    {
+      layer: 'recognize',
+      title: 'How to write a Prolog program',
+      narration:
+        '<b>Step 1:</b> name the relations (predicates) — <span class="pill">parent/2</span>, <span class="pill">grandparent/2</span>. ' +
+        '<b>Step 2:</b> write the facts (the ground truth). ' +
+        '<b>Step 3:</b> write the rules (the implications). ' +
+        '<b>Step 4:</b> pose the query and let the engine search. ' +
+        '<b>Step 5:</b> if it loops or is slow, add a cut <span class="pill">!</span> or reorder clauses — but only as a last resort, since these break the declarative reading.',
+      codeLines: [1, 6, 12],
+      onEnter: (e) => { e.glow('f1'); e.glow('r1'); e.glow('g1'); },
+    },
+    {
+      layer: 'apply',
+      title: 'Decompose the problem',
+      narration:
+        'Problem: <i>"siblings share a parent but are not the same person."</i> Which predicate definition is correct?',
+      codeLines: [6, 7, 8],
+      choices: [
+        { label: 'sibling(A,B) :- parent(P,A), parent(P,B), A \\= B.', correct: true,
+          reason: 'Reads as the English does: both have the same parent P, and they are not equal. The \\= guard prevents self-sibling.' },
+        { label: 'sibling(A,B) :- parent(A,P), parent(B,P).',         correct: false,
+          reason: 'Argument order is wrong: parent(A,P) says "A is P\'s parent," not "P is A\'s parent." Result: this finds people who share children, not who share parents. Always re-read the predicate\'s mode out loud.' },
+        { label: 'sibling(A,B) :- parent(P,A); parent(P,B).',         correct: false,
+          reason: 'The ";" is OR. That defines "A and B who each have some parent" — i.e. almost everyone. Logic-programming bugs are usually one connective off.' },
+      ],
+      onEnter: (e) => { e.glow('r1'); e.glow('g2'); },
+    },
+  ];
+
+  // ============================================================
+  // B — Watch (HEART): the failure modes.
+  // ============================================================
+  const bWatch = [
+    {
+      layer: 'understand',
+      title: 'The two failure modes that dominate',
+      narration:
+        '<b>(1) Non-termination by left-recursion.</b> A rule whose first body atom calls the same predicate with no smaller argument (<span class="pill">ancestor(X,Z) :- ancestor(X,Y), parent(Y,Z).</span>) loops forever — Prolog\'s depth-first search dives left first. ' +
+        '<b>(2) Cut <span class="pill">!</span> overuse.</b> A cut commits to the current branch and forbids backtracking past it — fast, but it silently breaks the declarative reading and turns your program into a procedural one. Both failures look fine at first run on small inputs.',
+      codeLines: [6, 7, 8, 9],
+      onEnter: (e) => { e.glow('r1'); e.glow('g2'); e.activate('e4'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Diagnose the runaway query',
+      narration:
+        'Symptom: <span class="pill">?- ancestor(tom, X).</span> hangs the interpreter. The predicate is <span class="pill">ancestor(X,Y) :- ancestor(X,Z), parent(Z,Y).</span> followed by <span class="pill">ancestor(X,Y) :- parent(X,Y).</span> What\'s wrong?',
+      codeLines: [6, 7, 8],
+      choices: [
+        { label: 'Left-recursion + recursive clause listed first → infinite descent', correct: true,
+          reason: 'The engine tries the first clause; that subgoal is itself ancestor, which tries the first clause again — never reaching the base case. Two fixes: (a) put the base case first; (b) rewrite as right-recursion <span class="pill">ancestor(X,Y) :- parent(X,Z), ancestor(Z,Y).</span> which shrinks the search at each step.' },
+        { label: 'Missing cut',                                                        correct: false,
+          reason: 'A cut prunes alternatives but doesn\'t stop infinite recursion within a single branch — the engine still dives into the recursive call before it ever reaches the cut.' },
+        { label: 'parent/2 has no facts',                                              correct: false,
+          reason: 'If parent had no facts, the query would fail fast (no clauses match), not hang. The hang signature is "engine churning, no output" — characteristic of left-recursion.' },
+      ],
+      onEnter: (e) => { e.glow('r1'); e.glow('g4'); e.activate('e4'); },
+    },
+  ];
+
+  // ============================================================
+  // L — Predict (ORACLE): predict-from-input drills.
+  // ============================================================
+  const lPredict = [
+    {
+      layer: 'apply',
+      title: 'Predict the binding',
+      narration:
+        'Given the KB on the left, the engine receives the query <span class="pill">?- parent(X, ann).</span> What is the first value X gets bound to?',
+      codeLines: [2, 3, 4],
+      choices: [
+        { label: 'X = bob', correct: true,
+          reason: 'The engine scans facts top-down. F1 = parent(tom, bob) — second argument is bob, not ann; skip. F2 = parent(bob, ann) — second argument matches, so X unifies with bob. Result is the <i>first</i> answer; pressing ";" would force backtracking to find more.' },
+        { label: 'X = tom', correct: false,
+          reason: 'tom is the parent of bob, not of ann (per F1). The query asks "who is ann\'s parent," so we need a fact whose second argument is ann.' },
+        { label: 'X = ann', correct: false,
+          reason: 'ann is the child, not the parent, in the query. Logic-programming bugs are often "argument-position bugs" — the predicate parent(X,Y) means X is Y\'s parent, by convention.' },
+      ],
+      onEnter: (e) => { e.glow('f1'); e.glow('f2'); e.glow('f3'); e.glow('sigma'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Predict whether it terminates',
+      narration:
+        'Query: <span class="pill">?- grandparent(liz, X).</span> against the KB on the left. Will this terminate and what will it return?',
+      codeLines: [2, 3, 4, 6, 7, 8, 9],
+      choices: [
+        { label: 'Terminates with no answers (false)', correct: true,
+          reason: 'Engine applies R1 → tries parent(liz, Y). No fact has liz as the first argument (liz is only a second argument in F3). Unification fails immediately for all three facts → no Y → the whole goal fails. Returns false in finite time.' },
+        { label: 'Hangs in an infinite loop',          correct: false,
+          reason: 'The rule isn\'t left-recursive — its body calls parent/2, not grandparent/2. Without recursion-into-self, the search is bounded by the number of facts (3).' },
+        { label: 'Returns X = bob',                    correct: false,
+          reason: 'That would require liz to be someone\'s parent, but the KB never asserts that. The engine\'s answer is <i>"I cannot prove it"</i> — false — under the closed-world assumption that anything not provable is treated as false.' },
+      ],
+      onEnter: (e) => { e.glow('f3'); e.glow('r1'); },
+    },
+  ];
+
+  // ============================================================
+  // R — Act (GRACE): in-the-moment protocol.
+  // ============================================================
+  const rAct = [
+    {
+      layer: 'apply',
+      title: 'Protocol: a relational problem arrives',
+      narration:
+        '<b>Ground</b> the problem — is it really about <i>relations</i> between entities? (If "compute a number," reach for functional/imperative instead.) ' +
+        '<b>Relate</b> — name 2–4 predicates with clear modes. ' +
+        '<b>Assert</b> the facts — minimum sufficient ground truth. ' +
+        '<b>Connect</b> — rules as implications, base cases first to avoid left-recursion hangs. ' +
+        '<b>Execute</b> — pose the query as a question; if it loops, reorder before reaching for cut. What\'s the first thing to <i>not</i> do?',
+      codeLines: [1, 6, 12],
+      choices: [
+        { label: 'Don\'t encode the search algorithm yourself',           correct: true,
+          reason: 'That is the entire point of choosing logic programming. Writing the loop defeats the paradigm. If you find yourself thinking "first I scan, then I filter, then I recurse" — switch language.' },
+        { label: 'Don\'t use rules — only facts',                          correct: false,
+          reason: 'Facts-only is just a database. Rules are how you express derived relations like grandparent, ancestor, sibling — the whole expressive lift of logic programming.' },
+        { label: 'Don\'t name the predicates until coding is done',        correct: false,
+          reason: 'Predicate names + arity + mode (which arguments are in vs. out) are the design. Skipping them produces tangled clauses that work only for the one query you tested.' },
+      ],
+      onEnter: (e) => { e.glow('f1'); e.glow('r1'); e.glow('g1'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Logic programming in the wild',
+      narration:
+        'You will rarely write <i>pure</i> Prolog at work, but you will use logic-programming machinery often. ' +
+        'SQL\'s planner is a logic engine under the hood. Type inference in Haskell/Rust/ML runs <span class="wikilink" data-wiki="programming/recursion">[[recursion]]</span>-over-substitutions exactly like unification. ' +
+        'Datalog has come back as the query layer for static analyzers (Soufflé, CodeQL). Once you recognize <i>declare relations + let the engine search</i>, you spot it in build systems, configuration management, and even regex engines doing <span class="wikilink" data-wiki="programming/backtracking">[[backtracking]]</span> behind the scenes.',
+      codeLines: [],
+      onEnter: (e) => { e.glow('g6'); e.glow('sigma'); },
+    },
+  ];
+
+  // ============================================================
+  // BRIDGE: cross-domain analogies (candidates — curate or reject).
+  // ============================================================
+  const bridge = [
+    {
+      layer: 'synthesize',
+      title: 'Prolog ≈ SQL planner',
+      narration:
+        '<b>Prolog</b> and a <b>SQL query planner</b> share: <i>the user declares the answer\'s shape; the engine searches for execution.</i> ' +
+        'Term-by-term: <span class="pill">facts</span> ≈ rows in tables; ' +
+        '<span class="pill">rules</span> ≈ views (derived relations); ' +
+        '<span class="pill">unification</span> ≈ join condition matching; ' +
+        '<span class="pill">backtracking</span> ≈ nested-loop join with predicate pushdown; ' +
+        '<span class="pill">cut</span> ≈ <span class="pill">LIMIT 1</span> + index hints. ' +
+        'Same failure mode: a bad plan with miscalibrated cost estimates runs slow exactly as a Prolog program with clauses in the wrong order. The cure is the same: reorder, index, hint.' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [1, 6, 7, 8],
+      onEnter: (e) => { e.glow('f1'); e.glow('f2'); e.glow('r1'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Prolog ≈ ML/Rust type inference',
+      narration:
+        '<b>Prolog</b> and <b>Hindley-Milner type inference</b> share the same engine: <i>unify symbolic terms across constraints, propagate bindings, fail and backtrack on conflict.</i> ' +
+        'Term-by-term: <span class="pill">variables (X, Y)</span> ≈ unknown type vars (α, β); ' +
+        '<span class="pill">unification(X, foo(Y))</span> ≈ unifying α with <span class="pill">List<β></span>; ' +
+        '<span class="pill">substitution σ</span> ≈ the type substitution returned by the unifier; ' +
+        '<span class="pill">"clause does not match"</span> ≈ a type error. ' +
+        'When you see <i>"expected Int, found String"</i>, the compiler is reporting exactly the failure Prolog reports when two terms cannot unify — same algorithm, different surface syntax.' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [7, 8, 9],
+      onEnter: (e) => { e.glow('g2'); e.glow('sigma'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Prolog ≈ git three-way merge',
+      narration:
+        '<b>Prolog\'s proof search</b> and <b>git\'s three-way merge</b> share: <i>try to combine two structures into one consistent whole; bind unknowns where possible; emit a conflict (failure) when no consistent binding exists.</i> ' +
+        'Term-by-term: <span class="pill">two terms to unify</span> ≈ "ours" and "theirs" hunks; ' +
+        '<span class="pill">most-general unifier</span> ≈ the merged file when both sides agree; ' +
+        '<span class="pill">unification fails</span> ≈ &lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD conflict marker. ' +
+        'The cognitive load is identical: a merge conflict is asking <i>"under what binding could these two histories both be true?"</i> — and when none exists, you read the cards and decide manually, exactly like a Prolog user choosing a different clause ordering.' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [],
+      onEnter: (e) => { e.glow('sigma'); e.glow('g5'); e.activate('e4'); },
+    },
+  ];
+
+  Explain.init({
+    title:    'Logic Programming (Prolog)',
+    subtitle: 'a visual walkthrough — UMTF matrix',
+    created:  '2026-06-04',
+    svg, code,
+    matrix: {
+      'u-see':     { name: 'U — See',     framework: 'CAST',   steps: uSee },
+      'd-name':    { name: 'D — Name',    framework: 'NEDF',   steps: dName },
+      'f-do':      { name: 'F — Do',      framework: 'SPEAR',  steps: fDo },
+      'b-watch':   { name: 'B — Watch',   framework: 'HEART',  steps: bWatch },
+      'l-predict': { name: 'L — Predict', framework: 'ORACLE', steps: lPredict },
+      'r-act':     { name: 'R — Act',     framework: 'GRACE',  steps: rAct },
+      'bridge':    { name: 'BRIDGE',      framework: 'cross-domain', steps: bridge },
+    },
+  });
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

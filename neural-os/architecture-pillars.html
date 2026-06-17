@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AWS Well-Architected Pillars — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --resil: #7ee787;
+    --perf:  #79c0ff;
+    --sec:   #d2a8ff;
+    --cost:  #ffa657;
+    --warn:  #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .pillar { transition: opacity .35s, filter .35s, transform .35s; transform-origin: center bottom; transform-box: fill-box; }
+  .pillar.dim { opacity: 0.22; }
+  .pillar.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .pillar.up   { transform: scaleY(1.08); }
+  .pillar-name { font: 700 12px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .pillar-sub  { font: 600 9.5px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.85; }
+  .workload-frame { fill: var(--panel); stroke: var(--accent); stroke-width: 1.5; }
+  .workload-label { fill: var(--text); font: 700 13px sans-serif; text-anchor: middle; }
+  .workload-sub   { fill: var(--muted); font: 500 10px ui-monospace, monospace; text-anchor: middle; }
+  .lever { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .lever.on { opacity: 1; }
+  .trade { fill: var(--warn); font: 600 10.5px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .trade.on { opacity: 1; }
+  .caption { fill: var(--muted); font: 600 10.5px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>AWS Well-Architected Pillars <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 540 360" preserveAspectRatio="xMidYMid meet">
+
+        <!-- Workload "roof" sitting on top of the pillars -->
+        <g>
+          <rect class="workload-frame" x="120" y="40" width="300" height="44" rx="8"/>
+          <text class="workload-label" x="270" y="62">your workload</text>
+          <text class="workload-sub" x="270" y="76" id="workload-sub">a typical web app</text>
+        </g>
+
+        <!-- 4 pillars, side by side -->
+        <g class="pillar" id="p-resil" style="color: var(--resil)">
+          <rect x="50" y="100" width="100" height="180" rx="8" fill="var(--resil)"/>
+          <text class="pillar-name" x="100" y="130">Resilience</text>
+          <text class="pillar-sub" x="100" y="148">multi-AZ</text>
+          <text class="pillar-sub" x="100" y="164">backups</text>
+          <text class="pillar-sub" x="100" y="180">auto-recovery</text>
+          <text class="pillar-sub" x="100" y="196">failover</text>
+          <text class="pillar-sub" x="100" y="212">health checks</text>
+          <text class="pillar-sub" x="100" y="234" style="font-style: italic">survive failure</text>
+        </g>
+
+        <g class="pillar" id="p-perf" style="color: var(--perf)">
+          <rect x="166" y="100" width="100" height="180" rx="8" fill="var(--perf)"/>
+          <text class="pillar-name" x="216" y="130">Performance</text>
+          <text class="pillar-sub" x="216" y="148">right-size</text>
+          <text class="pillar-sub" x="216" y="164">caching</text>
+          <text class="pillar-sub" x="216" y="180">CDN</text>
+          <text class="pillar-sub" x="216" y="196">async / queues</text>
+          <text class="pillar-sub" x="216" y="212">elastic scale</text>
+          <text class="pillar-sub" x="216" y="234" style="font-style: italic">do it fast</text>
+        </g>
+
+        <g class="pillar" id="p-sec" style="color: var(--sec)">
+          <rect x="282" y="100" width="100" height="180" rx="8" fill="var(--sec)"/>
+          <text class="pillar-name" x="332" y="130">Security</text>
+          <text class="pillar-sub" x="332" y="148">least-priv IAM</text>
+          <text class="pillar-sub" x="332" y="164">encrypt at rest</text>
+          <text class="pillar-sub" x="332" y="180">encrypt in transit</text>
+          <text class="pillar-sub" x="332" y="196">VPC isolation</text>
+          <text class="pillar-sub" x="332" y="212">audit (CT/Config)</text>
+          <text class="pillar-sub" x="332" y="234" style="font-style: italic">deny-by-default</text>
+        </g>
+
+        <g class="pillar" id="p-cost" style="color: var(--cost)">
+          <rect x="398" y="100" width="100" height="180" rx="8" fill="var(--cost)"/>
+          <text class="pillar-name" x="448" y="130">Cost</text>
+          <text class="pillar-sub" x="448" y="148">RIs / Savings</text>
+          <text class="pillar-sub" x="448" y="164">spot for batch</text>
+          <text class="pillar-sub" x="448" y="180">lifecycle tiers</text>
+          <text class="pillar-sub" x="448" y="196">right-size down</text>
+          <text class="pillar-sub" x="448" y="212">delete unused</text>
+          <text class="pillar-sub" x="448" y="234" style="font-style: italic">pay for what works</text>
+        </g>
+
+        <!-- Levers (one per pillar, shown when its scenario is active) -->
+        <text id="lever-resil" class="lever" x="100" y="298" fill="var(--resil)">+ multi-AZ RDS  + ASG</text>
+        <text id="lever-perf"  class="lever" x="216" y="298" fill="var(--perf)">+ ElastiCache  + CloudFront</text>
+        <text id="lever-sec"   class="lever" x="332" y="298" fill="var(--sec)">+ KMS  + private subnets</text>
+        <text id="lever-cost"  class="lever" x="448" y="298" fill="var(--cost)">+ Reserved Instances  + Spot</text>
+
+        <!-- Trade-off callouts (when two pillars pull opposite directions) -->
+        <text id="trade" class="trade" x="270" y="324"></text>
+        <text id="caption" class="caption" x="270" y="346"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Detail</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL_PILLARS = ['p-resil','p-perf','p-sec','p-cost'];
+const ALL_LEVERS  = ['lever-resil','lever-perf','lever-sec','lever-cost'];
+
+const steps = [
+  {
+    title: "four pillars hold up one workload",
+    narration: `Every AWS architecture answer collapses to four questions: <b>Will it survive failure?</b> <b>Will it be fast?</b> <b>Will it stay private?</b> <b>Will it stay affordable?</b> The exam tests whether you can pick the pillar a scenario is really asking about.`,
+    code: [
+      '<span class="c">// the four Well-Architected pillars (compute-relevant subset):</span>',
+      '',
+      '  1. Reliability / Resilience    → survive failure',
+      '  2. Performance Efficiency      → meet latency + throughput',
+      '  3. Security                    → prevent + detect breach',
+      '  4. Cost Optimization           → pay only for delivered value',
+      '',
+      '<span class="c">// (the full WAF has 6 — Operational Excellence + Sustainability —</span>',
+      '<span class="c">//  but exam pressure lives in these four.)</span>',
+    ],
+    state: { dim: [], glow: [], up: [], levers: [], trade: '', subTitle: 'a typical web app', caption: "every question maps to one pillar" }
+  },
+  {
+    title: "Resilience — survive failure",
+    narration: `<b>Resilience</b> assumes things <i>will</i> break. The levers: <span class="pill">Multi-AZ</span> (spread across 3 AZs), <span class="pill">Auto Scaling</span> (replace dead instances), <span class="pill">backups</span> + tested restores, <span class="pill">health checks</span> + failover. Score: RTO (how fast to recover), RPO (how much data lost).`,
+    code: [
+      '<span class="c">// resilience checklist for a 3-tier web app:</span>',
+      '',
+      '  load balancer  → ALB across 3 AZs',
+      '  app tier       → ASG min=2, spread across AZs',
+      '  data tier      → RDS Multi-AZ (synchronous standby in 2nd AZ)',
+      '  backups        → automated snapshots, cross-region copy',
+      '  DNS            → Route 53 health-check + failover to DR region',
+      '',
+      '<span class="c">// "what happens if us-east-1a disappears?" → exam wants Resilience answer.</span>',
+    ],
+    state: { dim: ['p-perf','p-sec','p-cost'], glow: ['p-resil'], up: ['p-resil'], levers: ['lever-resil'], trade: '', subTitle: 'priority: stay up through AZ failure', caption: "Resilience = redundancy across AZs/regions" }
+  },
+  {
+    title: "Performance — do it fast",
+    narration: `<b>Performance</b> is about meeting latency and throughput targets without overpaying. Levers: <span class="pill">right-sized</span> instances, <span class="pill">caching</span> (ElastiCache), <span class="pill">CDN</span> (CloudFront), <span class="pill">async</span> via SQS/SNS, <span class="pill">elastic scale</span> matched to load shape.`,
+    code: [
+      '<span class="c">// "p99 latency &gt; 500ms" → Performance scenario:</span>',
+      '',
+      '  bottleneck       → lever',
+      '  ───────────────────────────────────────────',
+      '  DB read-heavy    → ElastiCache (Redis) in front',
+      '  global users     → CloudFront edge caching',
+      '  CPU saturated    → larger instance, or scale out',
+      '  bursty traffic   → ASG with predictive scaling',
+      '  slow API chain   → async via SQS, return 202 immediately',
+      '',
+      '<span class="c">// the test: identify which lever matches the bottleneck.</span>',
+    ],
+    state: { dim: ['p-resil','p-sec','p-cost'], glow: ['p-perf'], up: ['p-perf'], levers: ['lever-perf'], trade: '', subTitle: 'priority: p99 latency under 200ms', caption: "Performance = right tool for the bottleneck" }
+  },
+  {
+    title: "Security — deny by default",
+    narration: `<b>Security</b> starts from "nothing can reach anything" and opens narrow holes. Levers: least-privilege <span class="pill">IAM roles</span>, <span class="pill">KMS</span> encryption at rest, <span class="pill">TLS</span> in transit, <span class="pill">private subnets</span> for anything that doesn't need to face users, <span class="pill">CloudTrail + Config</span> for audit.`,
+    code: [
+      '<span class="c">// "must meet compliance / regulated data" → Security scenario:</span>',
+      '',
+      '  identity     → roles for services, MFA on humans',
+      '  network      → private subnets + SG allow-list + WAF on ALB',
+      '  data         → KMS-encrypt RDS + S3 + EBS; TLS everywhere',
+      '  audit        → CloudTrail to S3 (locked), Config rules',
+      '  secrets      → Secrets Manager (rotated), never in env vars',
+      '',
+      '<span class="c">// shared responsibility: AWS secures OF the cloud; you secure IN it.</span>',
+    ],
+    state: { dim: ['p-resil','p-perf','p-cost'], glow: ['p-sec'], up: ['p-sec'], levers: ['lever-sec'], trade: '', subTitle: 'priority: regulated data, deny-by-default', caption: "Security = defense in depth, every layer" }
+  },
+  {
+    title: "Cost — pay for what works",
+    narration: `<b>Cost</b> is the pillar that asks "could this run cheaper without losing the others?" Levers: <span class="pill">Reserved Instances</span> / <span class="pill">Savings Plans</span> for steady load, <span class="pill">Spot</span> for interruptible batch, <span class="pill">lifecycle</span> to colder storage, right-size <i>down</i>, delete unused resources (the silent budget killer).`,
+    code: [
+      '<span class="c">// "monthly bill keeps growing" → Cost scenario:</span>',
+      '',
+      '  steady 24/7 EC2     → buy 1-yr Reserved or Compute SP (-40%)',
+      '  batch ML training   → Spot instances (-70%, can be killed)',
+      '  cold storage        → S3 lifecycle → Glacier / Deep Archive',
+      '  oversized           → right-size from CloudWatch metrics',
+      '  unattached EBS / EIPs / idle ALBs → delete (constant drain)',
+      '',
+      '<span class="c">// tools: Cost Explorer, Budgets, Trusted Advisor, Compute Optimizer.</span>',
+    ],
+    state: { dim: ['p-resil','p-perf','p-sec'], glow: ['p-cost'], up: ['p-cost'], levers: ['lever-cost'], trade: '', subTitle: 'priority: same workload, lower bill', caption: "Cost = commitment + lifecycle + cleanup" }
+  },
+  {
+    title: "they fight each other",
+    narration: `Pillars pull in different directions. <b>Resilience</b> wants Multi-AZ (Cost says: 2× the bill). <b>Performance</b> wants larger caches (Cost says: smaller). <b>Security</b> wants every layer encrypted + audited (Performance says: extra latency). Good design names the trade-off, doesn't pretend it isn't there.`,
+    code: [
+      '<span class="c">// classic tensions:</span>',
+      '',
+      '  Resilience  ⇄  Cost         Multi-AZ doubles infra cost',
+      '  Performance ⇄  Cost         caches/CDN add fixed monthly $',
+      '  Security    ⇄  Performance  KMS + TLS adds per-call latency',
+      '  Security    ⇄  Resilience   strict SCPs can block DR failover',
+      '',
+      '<span class="c">// exam pattern: "which is MOST important?" → pick the pillar the scenario stresses.</span>',
+      '<span class="c">//   "cannot lose data"    → Resilience</span>',
+      '<span class="c">//   "lowest possible cost" → Cost</span>',
+      '<span class="c">//   "regulated PII"        → Security</span>',
+      '<span class="c">//   "sub-100ms global"     → Performance</span>',
+    ],
+    state: { dim: [], glow: ['p-resil','p-perf','p-sec','p-cost'], up: [], levers: [], trade: 'Resilience ⇄ Cost   ·   Security ⇄ Performance', subTitle: 'real systems pick which to favor', caption: "no design satisfies all four equally" }
+  },
+  {
+    title: "the exam move",
+    narration: `When a scenario question shows up, find the <b>single phrase</b> that names a pillar — "must survive AZ failure" (Resilience), "regulated data" (Security), "lowest cost" (Cost), "sub-100ms" (Performance). Then pick the lever from that pillar. <i>Don't</i> pick the answer that solves a pillar the question never mentioned.`,
+    code: [
+      '<span class="c">// pillar-keyword cheat sheet:</span>',
+      '',
+      '  → Resilience   "survive", "failover", "RPO/RTO", "highly available"',
+      '  → Performance  "latency", "throughput", "scale", "fast"',
+      '  → Security     "encrypt", "compliance", "audit", "least privilege"',
+      '  → Cost         "cheapest", "lowest cost", "reduce spend"',
+      '',
+      '<span class="c">// trap: answer that adds a fancy service the question never asked for.</span>',
+      '<span class="c">// e.g. question is about cost — wrong to pick Multi-Region (resilience).</span>',
+      '',
+      '<span class="c">// rule: match the lever to the keyword. resist over-engineering.</span>',
+    ],
+    state: { dim: [], glow: [], up: [], levers: [], trade: '', subTitle: 'find the keyword, pick the pillar, then the lever', caption: "scenario → pillar → lever" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_PILLARS.forEach(p => {
+    const el = $(p);
+    el.classList.toggle('dim', s.state.dim.includes(p));
+    el.classList.toggle('glow', s.state.glow.includes(p));
+    el.classList.toggle('up',   s.state.up.includes(p));
+  });
+
+  ALL_LEVERS.forEach(l => {
+    $(l).classList.toggle('on', s.state.levers.includes(l));
+  });
+
+  const t = $('trade');
+  t.textContent = s.state.trade || '';
+  t.classList.toggle('on', !!s.state.trade);
+
+  $('workload-sub').textContent = s.state.subTitle || '';
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>S3 Storage Classes — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --t-std:    #7ee787;
+    --t-ia:     #a5d6ff;
+    --t-onez:   #d2a8ff;
+    --t-glac:   #ffa657;
+    --t-deep:   #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .tier { transition: opacity .35s, filter .35s; }
+  .tier.dim { opacity: 0.28; }
+  .tier.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .tier-name { font: 700 12px sans-serif; text-anchor: start; fill: #0d1117; }
+  .tier-meta { font: 500 10px ui-monospace, monospace; text-anchor: end; fill: #0d1117; opacity: 0.8; }
+  .object { transition: transform .6s cubic-bezier(.4,.05,.2,1); }
+  .object rect { fill: var(--pick); stroke: var(--bg); stroke-width: 2; }
+  .object text { fill: #0d1117; font: 700 11px ui-monospace, monospace; text-anchor: middle; }
+  .axis-label { fill: var(--muted); font: 600 10px ui-monospace, monospace; }
+  .arrow { stroke: var(--muted); stroke-width: 1.2; fill: none; marker-end: url(#mk); }
+  .caption { fill: var(--muted); font: 600 10.5px ui-monospace, monospace; text-anchor: middle; }
+  /* icon ↔ glyph legend */
+  .legend { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .legend-title { margin: 0 0 10px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .legend-rows { display: flex; flex-direction: column; gap: 9px; }
+  .legend-row { display: flex; align-items: center; gap: 11px; }
+  .real-icon, .glyph-swatch { display: inline-flex; flex: 0 0 auto; }
+  .real-icon svg { border-radius: 5px; }
+  .map-arrow { color: var(--muted); font-size: 15px; flex: 0 0 auto; }
+  .legend-label { color: var(--text); font-size: 12.5px; }
+  .legend-label .svc { color: var(--accent); font-weight: 600; }
+  .legend-gloss { margin: 12px 0 0; font-size: 12.5px; color: var(--muted); font-style: italic; line-height: 1.55; }
+  .legend-gloss b { color: var(--accent); font-style: normal; font-weight: 600; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>S3 Storage Classes & Lifecycle <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 540 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"/>
+          </marker>
+        </defs>
+
+        <!-- Axis labels -->
+        <text class="axis-label" x="20" y="36">cost ↓</text>
+        <text class="axis-label" x="20" y="50">retrieval ↑</text>
+        <path class="arrow" d="M 30 60 L 30 290"/>
+
+        <!-- 5 tiers as horizontal bars, top = hot, bottom = cold -->
+        <g class="tier" id="tier-std" style="color: var(--t-std)">
+          <rect x="80" y="60" width="380" height="38" rx="6" fill="var(--t-std)"/>
+          <text class="tier-name" x="92" y="84">Standard</text>
+          <text class="tier-meta" x="448" y="78">$0.023/GB · ms retrieval</text>
+          <text class="tier-meta" x="448" y="92">frequent access</text>
+        </g>
+        <g class="tier" id="tier-ia" style="color: var(--t-ia)">
+          <rect x="80" y="108" width="380" height="38" rx="6" fill="var(--t-ia)"/>
+          <text class="tier-name" x="92" y="132">Standard-IA</text>
+          <text class="tier-meta" x="448" y="126">$0.0125/GB · ms retrieval</text>
+          <text class="tier-meta" x="448" y="140">infrequent · retrieval fee</text>
+        </g>
+        <g class="tier" id="tier-onez" style="color: var(--t-onez)">
+          <rect x="80" y="156" width="380" height="38" rx="6" fill="var(--t-onez)"/>
+          <text class="tier-name" x="92" y="180">One Zone-IA</text>
+          <text class="tier-meta" x="448" y="174">$0.01/GB · single AZ</text>
+          <text class="tier-meta" x="448" y="188">cheaper · re-creatable only</text>
+        </g>
+        <g class="tier" id="tier-glac" style="color: var(--t-glac)">
+          <rect x="80" y="204" width="380" height="38" rx="6" fill="var(--t-glac)"/>
+          <text class="tier-name" x="92" y="228">Glacier Instant / Flexible</text>
+          <text class="tier-meta" x="448" y="222">$0.004/GB · min–hrs</text>
+          <text class="tier-meta" x="448" y="236">archive · rare retrieval</text>
+        </g>
+        <g class="tier" id="tier-deep" style="color: var(--t-deep)">
+          <rect x="80" y="252" width="380" height="38" rx="6" fill="var(--t-deep)"/>
+          <text class="tier-name" x="92" y="276">Glacier Deep Archive</text>
+          <text class="tier-meta" x="448" y="270">$0.00099/GB · 12 hrs</text>
+          <text class="tier-meta" x="448" y="284">compliance · cold storage</text>
+        </g>
+
+        <!-- The object: a small pill that descends through tiers -->
+        <g class="object" id="obj" style="transform: translate(0px, 0px); opacity: 0">
+          <rect x="36" y="68" width="30" height="22" rx="4"/>
+          <text x="51" y="83">obj</text>
+        </g>
+
+        <text id="caption" class="caption" x="270" y="332"></text>
+      </svg>
+
+      <div class="legend" id="legend">
+        <p class="legend-title">Glyph ↔ real AWS icon</p>
+        <div class="legend-rows">
+          <div class="legend-row">
+            <span class="real-icon">
+              <svg viewBox="0 0 40 40" width="28" height="28" role="img" aria-label="Amazon S3">
+                <defs><linearGradient id="s3g" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#4DB33D"/><stop offset="1" stop-color="#1A7A2E"/>
+                </linearGradient></defs>
+                <rect width="40" height="40" rx="5" fill="url(#s3g)"/>
+                <path d="M12.5 13 H27.5 L25.5 28 Q20 30.5 14.5 28 Z" fill="#fff"/>
+                <ellipse cx="20" cy="13" rx="7.5" ry="2.3" fill="#fff" stroke="#1A7A2E" stroke-width="0.8"/>
+              </svg>
+            </span>
+            <span class="map-arrow">↔</span>
+            <span class="glyph-swatch">
+              <svg viewBox="0 0 40 24" width="34" height="20" role="img" aria-label="object-storage slab glyph">
+                <rect x="2" y="6" width="36" height="12" rx="3" fill="var(--t-std)"/>
+              </svg>
+            </span>
+            <span class="legend-label" data-row="s3"></span>
+          </div>
+          <div class="legend-row">
+            <span class="real-icon">
+              <svg viewBox="0 0 40 40" width="28" height="28" role="img" aria-label="Amazon S3 Glacier">
+                <defs><linearGradient id="glg" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#4DB33D"/><stop offset="1" stop-color="#1A7A2E"/>
+                </linearGradient></defs>
+                <rect width="40" height="40" rx="5" fill="url(#glg)"/>
+                <path d="M20 11 L28 22 L20 31 L12 22 Z" fill="#fff"/>
+                <path d="M20 11 L20 31 L12 22 Z" fill="#cfeede"/>
+              </svg>
+            </span>
+            <span class="map-arrow">↔</span>
+            <span class="glyph-swatch">
+              <svg viewBox="0 0 40 24" width="34" height="20" role="img" aria-label="object-storage slab glyph">
+                <rect x="2" y="6" width="36" height="12" rx="3" fill="var(--t-glac)"/>
+              </svg>
+            </span>
+            <span class="legend-label" data-row="glacier"></span>
+          </div>
+        </div>
+        <p class="legend-gloss" id="legend-gloss"></p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <p class="label">Detail</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+// y-offset for the object on each tier (relative to its starting y at the Standard row)
+const TIER_Y = { std: 0, ia: 48, onez: 96, glac: 144, deep: 192 };
+const ALL_TIERS = ['std','ia','onez','glac','deep'];
+
+// Copy for the icon↔glyph legend below the SVG. Both real AWS icons map to the
+// SAME object-storage slab glyph — that contrast is the lesson the legend teaches.
+// (Parked — optional cosmetic copy; fill when you want the legend captions to paint.)
+//   .s3      → label for the S3 row. Wrap the product name in <span class="svc">…</span>.
+//             Name which tiers this icon covers (Standard / IA / One Zone).
+//   .glacier → label for the Glacier row. Same <span class="svc"> treatment; name the
+//             archive tiers (Glacier Instant/Flexible, Deep Archive).
+//   .gloss   → the punchline (HTML ok, <b> for emphasis): why two different AWS products
+//             collapse to one glyph here — the role-vs-brand point. One or two sentences.
+const LEGEND_COPY = {
+  s3:      '',
+  glacier: '',
+  gloss:   '',
+};
+
+const steps = [
+  {
+    title: "bucket + object",
+    narration: `S3 is two things: a <b>bucket</b> (a globally-named container) and the <b>objects</b> inside it. Objects are immutable blobs with a key, metadata, and a chosen <b>storage class</b> — the storage class is what controls cost and retrieval speed.`,
+    code: [
+      '<span class="c">// the entire S3 model:</span>',
+      '',
+      '  bucket          → globally-unique name, region-bound',
+      '   ├ object       → key (path-like), bytes, metadata',
+      '   │   ├ key      → "<span class="s">photos/2026/sunset.jpg</span>"',
+      '   │   ├ size     → 1.2 MB',
+      '   │   └ class    → <span class="t">STANDARD</span> ← this is what we tune',
+      '   └ object       → ...',
+      '',
+      '<span class="c">// no folders. "/" in keys is purely cosmetic.</span>',
+    ],
+    state: { dim: [], glow: [], obj: 'std', objVisible: false, caption: "the storage class is a per-object knob" }
+  },
+  {
+    title: "Standard — the default",
+    narration: `Every object lands in <b>S3 Standard</b> unless you say otherwise. Replicated across <span class="pill">3+ AZs</span>, millisecond retrieval, no retrieval fee. The price you pay is the highest <b>$/GB</b> — only worth it for hot data.`,
+    code: [
+      '<span class="c">// upload — defaults to STANDARD</span>',
+      'aws s3 cp sunset.jpg s3://my-bucket/photos/2026/',
+      '',
+      '<span class="c">// explicit:</span>',
+      'aws s3 cp sunset.jpg s3://my-bucket/photos/2026/ \\',
+      '  --storage-class <span class="t">STANDARD</span>',
+      '',
+      '<span class="c">// durability: 11 nines (99.999999999%)</span>',
+      '<span class="c">// availability: 99.99% SLA</span>',
+      '<span class="c">// retrieval: synchronous, milliseconds, no extra fee</span>',
+    ],
+    state: { dim: ['ia','onez','glac','deep'], glow: ['std'], obj: 'std', objVisible: true, caption: "hot data lives here — and pays for it" }
+  },
+  {
+    title: "Standard-IA — infrequent",
+    narration: `When access drops to <i>once a month or less</i>, move to <b>Standard-IA</b>. Same durability and AZs, ~half the storage cost — but you pay a <b>per-GB retrieval fee</b> and a 30-day minimum storage charge. Wrong choice for hot data: retrievals will bury you.`,
+    code: [
+      '<span class="c">// good fit: backups, older logs, completed reports.</span>',
+      '<span class="c">// bad fit: data you actually read often.</span>',
+      '',
+      'aws s3 cp report.pdf s3://my-bucket/archive/ \\',
+      '  --storage-class <span class="t">STANDARD_IA</span>',
+      '',
+      '<span class="c">// pricing trap:</span>',
+      '<span class="c">//   storage:    ~$0.0125/GB-month   (cheaper)</span>',
+      '<span class="c">//   retrieval:  ~$0.01/GB           (extra)</span>',
+      '<span class="c">//   minimum:    30 days, 128 KB per object</span>',
+    ],
+    state: { dim: ['onez','glac','deep'], glow: ['ia'], obj: 'ia', objVisible: true, caption: "infrequent → cheaper, but reads cost extra" }
+  },
+  {
+    title: "One Zone-IA — cheaper, single AZ",
+    narration: `<b>One Zone-IA</b> drops the multi-AZ replication. ~20% cheaper than Standard-IA, but if that AZ goes down, your data is <i>gone</i>. Only use it for data you can <b>regenerate</b> — thumbnails, derived assets, secondary copies.`,
+    code: [
+      '<span class="c">// safe ONLY when you can recreate the object.</span>',
+      '<span class="c">// e.g. a thumbnail re-generatable from the original.</span>',
+      '',
+      'aws s3 cp thumb.jpg s3://my-bucket/thumbs/ \\',
+      '  --storage-class <span class="t">ONEZONE_IA</span>',
+      '',
+      '<span class="c">// durability still 11 nines… within that one AZ.</span>',
+      '<span class="c">// availability: 99.5% SLA (lower).</span>',
+      '<span class="c">// AZ failure = total loss.</span>',
+    ],
+    state: { dim: ['glac','deep'], glow: ['onez'], obj: 'onez', objVisible: true, caption: "single-AZ — only for re-creatable data" }
+  },
+  {
+    title: "Glacier — archives",
+    narration: `<b>Glacier</b> (Instant / Flexible / Deep) is for data you may <i>never</i> read but must <b>keep</b>. Storage cost drops 10–100×; retrieval moves from milliseconds (Instant) to minutes/hours (Flexible) to <b>12+ hours</b> (Deep Archive). Pick the variant by tolerable wait.`,
+    code: [
+      '<span class="c">// three Glacier flavors, by retrieval time:</span>',
+      '',
+      '  GLACIER_IR (Instant Retrieval)  → ms, ~$0.004/GB',
+      '  GLACIER    (Flexible Retrieval) → min-hrs, ~$0.0036/GB',
+      '  DEEP_ARCHIVE                    → 12+ hrs, ~$0.00099/GB',
+      '',
+      'aws s3 cp 2019-logs.tar s3://my-bucket/cold/ \\',
+      '  --storage-class <span class="t">DEEP_ARCHIVE</span>',
+      '',
+      '<span class="c">// retrieval fee is significant — design for "never read"</span>',
+    ],
+    state: { dim: ['std','ia','onez'], glow: ['glac','deep'], obj: 'deep', objVisible: true, caption: "archive: cheapest storage, slowest retrieval" }
+  },
+  {
+    title: "lifecycle: let S3 demote the object",
+    narration: `Don't hand-tier objects. Attach a <b>lifecycle rule</b> to the bucket: "after N days move to IA, after M days to Glacier, after K days expire." S3 walks objects down the ladder automatically as they cool off.`,
+    code: [
+      '<span class="c">// lifecycle policy (bucket-level, JSON):</span>',
+      '{',
+      '  <span class="s">"Rules"</span>: [{',
+      '    <span class="s">"ID"</span>: <span class="s">"age-out logs"</span>,',
+      '    <span class="s">"Filter"</span>: { <span class="s">"Prefix"</span>: <span class="s">"logs/"</span> },',
+      '    <span class="s">"Transitions"</span>: [',
+      '      { <span class="s">"Days"</span>: <span class="n">30</span>,  <span class="s">"StorageClass"</span>: <span class="s">"STANDARD_IA"</span> },',
+      '      { <span class="s">"Days"</span>: <span class="n">90</span>,  <span class="s">"StorageClass"</span>: <span class="s">"GLACIER"</span> },',
+      '      { <span class="s">"Days"</span>: <span class="n">365</span>, <span class="s">"StorageClass"</span>: <span class="s">"DEEP_ARCHIVE"</span> }',
+      '    ],',
+      '    <span class="s">"Expiration"</span>: { <span class="s">"Days"</span>: <span class="n">2555</span> }   <span class="c">// 7 years</span>',
+      '  }]',
+      '}',
+    ],
+    state: { dim: [], glow: ['std','ia','glac','deep'], obj: 'glac', objVisible: true, caption: "rule of thumb: tier on age, not on guess" }
+  },
+  {
+    title: "the choice",
+    narration: `Don't pick a class by name — pick by <b>access frequency</b>, <b>recreate-ability</b>, and <b>tolerable retrieval time</b>. For most apps: Standard for the live set, lifecycle the rest, and Deep Archive everything older than your compliance horizon.`,
+    code: [
+      '<span class="c">// decision questions, in order:</span>',
+      '',
+      '  Q1: Read it more than ~once a month?',
+      '       yes → <span class="t">STANDARD</span>',
+      '       no  → ↓',
+      '  Q2: Can you regenerate it if lost?',
+      '       yes → <span class="t">ONEZONE_IA</span>',
+      '       no  → ↓',
+      '  Q3: Retrieval tolerance?',
+      '       ms              → <span class="t">STANDARD_IA</span> / <span class="t">GLACIER_IR</span>',
+      '       minutes-hours   → <span class="t">GLACIER</span>',
+      '       half-day+ ok    → <span class="t">DEEP_ARCHIVE</span>',
+      '',
+      '<span class="c">// unsure access pattern? → INTELLIGENT_TIERING (S3 picks)</span>',
+    ],
+    state: { dim: [], glow: [], obj: 'std', objVisible: false, caption: "pick by behavior, not by name" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_TIERS.forEach(t => {
+    const el = $('tier-' + t);
+    el.classList.toggle('dim', s.state.dim.includes(t));
+    el.classList.toggle('glow', s.state.glow.includes(t));
+  });
+
+  const obj = $('obj');
+  const dy = TIER_Y[s.state.obj] || 0;
+  obj.style.transform = `translate(0px, ${dy}px)`;
+  obj.style.opacity = s.state.objVisible ? 1 : 0;
+
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+
+// paint the legend copy
+document.querySelector('[data-row="s3"]').innerHTML = LEGEND_COPY.s3;
+document.querySelector('[data-row="glacier"]').innerHTML = LEGEND_COPY.glacier;
+$('legend-gloss').innerHTML = LEGEND_COPY.gloss;
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+  <script src="tools/explain-viz/proficiency-data.js" defer></script>
+  <script src="tools/explain-viz/proficiency-check.js" defer></script>
+  <script src="tools/explain-viz/encoding-data.js" defer></script>
+  <script src="tools/explain-viz/encoding-check.js" defer></script>
+  <script src="tools/explain-viz/blocker-data.js" defer></script>
+  <script src="tools/explain-viz/blocker-check.js" defer></script>
+</body>
+</html>

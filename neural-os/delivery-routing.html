@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Route 53 vs CloudFront — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --user:   #ffa657;
+    --dns:    #7ee787;
+    --cdn:    #d2a8ff;
+    --origin: #a5d6ff;
+    --warn:   #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .node { transition: opacity .35s, filter .35s; }
+  .node.dim { opacity: 0.25; }
+  .node.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .node-label { font: 700 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .node-sub   { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.8; }
+  .flow { stroke: var(--pick); stroke-width: 2.5; fill: none; marker-end: url(#mk); opacity: 0; transition: opacity .35s; stroke-dasharray: 6 5; }
+  .flow.on { opacity: 1; animation: dash 1.2s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -22; } }
+  .annot { fill: var(--muted); font: 600 10px ui-monospace, monospace; opacity: 0; transition: opacity .35s; }
+  .annot.on { opacity: 1; }
+  .caption { fill: var(--muted); font: 600 10.5px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Route 53 vs CloudFront <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 540 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <!-- User -->
+        <g class="node" id="user" style="color: var(--user)">
+          <circle cx="50" cy="180" r="30" fill="var(--user)"/>
+          <text class="node-label" x="50" y="178">User</text>
+          <text class="node-sub" x="50" y="192">Tokyo</text>
+        </g>
+
+        <!-- Route 53 (DNS) -->
+        <g class="node" id="dns" style="color: var(--dns)">
+          <rect x="140" y="56" width="120" height="58" rx="10" fill="var(--dns)"/>
+          <text class="node-label" x="200" y="80">Route 53</text>
+          <text class="node-sub" x="200" y="96">DNS resolver</text>
+          <text class="node-sub" x="200" y="108">"where is X?"</text>
+        </g>
+
+        <!-- CloudFront (CDN edge) -->
+        <g class="node" id="cdn" style="color: var(--cdn)">
+          <rect x="140" y="158" width="120" height="58" rx="10" fill="var(--cdn)"/>
+          <text class="node-label" x="200" y="182">CloudFront</text>
+          <text class="node-sub" x="200" y="198">edge POP (Tokyo)</text>
+          <text class="node-sub" x="200" y="210">"give me X"</text>
+        </g>
+
+        <!-- Cache state -->
+        <g class="node" id="cache" style="color: var(--cdn); opacity: 0">
+          <rect x="150" y="232" width="100" height="22" rx="11" fill="none" stroke="var(--cdn)" stroke-width="1"/>
+          <text x="200" y="248" text-anchor="middle" font="600 10px ui-monospace" fill="var(--cdn)" id="cache-text">cache: empty</text>
+        </g>
+
+        <!-- Origin -->
+        <g class="node" id="origin" style="color: var(--origin)">
+          <rect x="380" y="158" width="120" height="58" rx="10" fill="var(--origin)"/>
+          <text class="node-label" x="440" y="182">Origin</text>
+          <text class="node-sub" x="440" y="198">ALB · S3 · API GW</text>
+          <text class="node-sub" x="440" y="210">us-east-1</text>
+        </g>
+
+        <!-- Health-check flag (Route 53 active-passive) -->
+        <g class="node" id="origin2" style="color: var(--origin); opacity: 0">
+          <rect x="380" y="60" width="120" height="50" rx="10" fill="var(--origin)" opacity="0.7"/>
+          <text class="node-label" x="440" y="80">Origin (failover)</text>
+          <text class="node-sub" x="440" y="96">eu-west-1</text>
+        </g>
+
+        <!-- Flows -->
+        <!-- F1: User → Route53 (DNS query) -->
+        <path id="flow-dns"      class="flow" d="M 80 170 L 140 90"/>
+        <!-- F2: Route53 → User (returns CloudFront edge IP) -->
+        <path id="flow-dns-back" class="flow" d="M 140 100 L 80 180"/>
+        <!-- F3: User → CloudFront (HTTPS request to edge) -->
+        <path id="flow-cdn"      class="flow" d="M 80 190 L 140 187"/>
+        <!-- F4: CloudFront → Origin (cache miss) -->
+        <path id="flow-origin"   class="flow" d="M 260 187 L 380 187"/>
+        <!-- F5: CloudFront → User (cached response) -->
+        <path id="flow-back"     class="flow" d="M 140 200 L 80 200"/>
+
+        <!-- Annotations -->
+        <text id="ann-1" class="annot" x="105" y="142" text-anchor="middle">"shop.com?"</text>
+        <text id="ann-2" class="annot" x="105" y="232" text-anchor="middle">"GET /logo.png"</text>
+        <text id="ann-3" class="annot" x="320" y="178" text-anchor="middle">cache MISS → fetch</text>
+        <text id="ann-4" class="annot" x="320" y="178" text-anchor="middle" id="ann-4t" fill="var(--dns)">cache HIT → return</text>
+
+        <text id="caption" class="caption" x="270" y="328"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Detail</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL_NODES = ['user','dns','cdn','cache','origin','origin2'];
+const ALL_FLOWS = ['flow-dns','flow-dns-back','flow-cdn','flow-origin','flow-back'];
+const ALL_ANNOTS = ['ann-1','ann-2','ann-3','ann-4'];
+
+const steps = [
+  {
+    title: "two different jobs",
+    narration: `<b>Route 53</b> answers "where is <span class="pill">shop.com</span>?" (DNS — a lookup service). <b>CloudFront</b> answers "give me <span class="pill">/logo.png</span> as fast as possible" (CDN — a caching service). The user hits both, in that order, on every cold request.`,
+    code: [
+      '<span class="c">// the order, every time:</span>',
+      '',
+      '  1. user types  https://shop.com/logo.png',
+      '  2. browser asks DNS                      ← Route 53',
+      '  3. DNS returns  d1234.cloudfront.net IP  ← Route 53 says "go here"',
+      '  4. browser opens TLS to that IP          ← CloudFront edge',
+      '  5. edge returns the bytes                ← CloudFront says "here"',
+      '',
+      '<span class="c">// Route 53: addresses.  CloudFront: content.</span>',
+    ],
+    state: { dim: ['cache','origin2'], glow: ['dns','cdn'], flows: [], annots: [], cacheText: '', caption: "DNS first, content second" }
+  },
+  {
+    title: "Route 53 — the lookup",
+    narration: `<b>Route 53</b> is a managed DNS service. You own the zone (<span class="pill">shop.com</span>), define records (A, AAAA, ALIAS, CNAME), and Route 53 answers queries from anywhere on earth in &lt;50ms. That's the whole job.`,
+    code: [
+      '<span class="c">// a Route 53 hosted zone has records:</span>',
+      '',
+      '  shop.com.        A      54.210.18.4      <span class="c">// direct IP</span>',
+      '  www.shop.com.    CNAME  shop.com',
+      '  cdn.shop.com.    ALIAS  d1234.cloudfront.net   <span class="c">// AWS-only</span>',
+      '  api.shop.com.    ALIAS  alb-prod.elb.amazonaws.com',
+      '',
+      '<span class="c">// ALIAS = a Route 53 special: free, follows AWS resource IPs, no extra hop.</span>',
+      '<span class="c">// CNAME = standard DNS, can\'t sit at zone apex.</span>',
+    ],
+    state: { dim: ['cdn','cache','origin','origin2'], glow: ['user','dns'], flows: ['flow-dns','flow-dns-back'], annots: ['ann-1'], cacheText: '', caption: "Route 53 returns: 'go to this IP'" }
+  },
+  {
+    title: "Route 53 — routing policies",
+    narration: `Route 53's superpower is in <b>which</b> IP it returns. Same DNS name can route by <b>latency</b> (nearest region), <b>geolocation</b> (country/continent), <b>weighted</b> (canary 10% / stable 90%), or <b>failover</b> (primary down → return secondary). The routing happens at <b>query time</b>.`,
+    code: [
+      '<span class="c">// example: latency-based routing</span>',
+      '',
+      '  shop.com (latency)',
+      '    └ us-east-1   → alb-us.elb.amazonaws.com',
+      '    └ eu-west-1   → alb-eu.elb.amazonaws.com',
+      '    └ ap-northeast-1 → alb-tokyo.elb.amazonaws.com',
+      '',
+      '<span class="c">// user in Tokyo → Route 53 returns the Tokyo ALB IP</span>',
+      '<span class="c">// user in Paris → returns the Frankfurt ALB IP</span>',
+      '',
+      '<span class="c">// + health checks: skip unhealthy targets automatically.</span>',
+    ],
+    state: { dim: ['cdn','cache','origin'], glow: ['user','dns','origin2'], flows: ['flow-dns','flow-dns-back'], annots: ['ann-1'], cacheText: '', caption: "policy decides WHICH IP gets returned" }
+  },
+  {
+    title: "CloudFront — the cache at the edge",
+    narration: `<b>CloudFront</b> is a global CDN. ~600+ <b>edge POPs</b> hold cached copies of your content. A Tokyo user gets bytes from a Tokyo edge — <i>not</i> from your origin in Virginia. First request fills the cache; subsequent requests are served in milliseconds.`,
+    code: [
+      '<span class="c">// CloudFront distribution: origin + behaviors</span>',
+      '',
+      '  distribution: d1234.cloudfront.net',
+      '    origin:  shop-origin.s3.amazonaws.com',
+      '    behaviors:',
+      '      "/static/*"   → cache 1 day',
+      '      "/api/*"      → no cache, pass through',
+      '      "*"           → cache 5 min, honor Cache-Control',
+      '',
+      '<span class="c">// edge servers around the globe pull from origin on miss,</span>',
+      '<span class="c">// serve from local SSD on hit.</span>',
+    ],
+    state: { dim: ['origin2'], glow: ['cdn','cache'], flows: ['flow-cdn'], annots: ['ann-2'], cacheText: 'cache: empty', caption: "edge POPs cache content near the user" }
+  },
+  {
+    title: "cache miss → fetch from origin",
+    narration: `First request for <span class="pill">/logo.png</span> at the Tokyo edge: <b>cache miss</b>. The edge fetches from origin (us-east-1), stores the response, and returns it. The user waits the trans-Pacific round trip — <i>once</i>.`,
+    code: [
+      '<span class="c">// first request, cache cold:</span>',
+      '',
+      '  Tokyo user → Tokyo edge          [~5ms]',
+      '  edge cache lookup → MISS',
+      '  edge → origin us-east-1          [~150ms RTT]',
+      '  origin returns bytes',
+      '  edge stores response (TTL=24h)',
+      '  edge → Tokyo user                [~5ms]',
+      '',
+      '<span class="c">// total: ~160ms.  the slow path — but only once per edge.</span>',
+    ],
+    state: { dim: ['origin2'], glow: ['cdn','cache','origin'], flows: ['flow-cdn','flow-origin','flow-back'], annots: ['ann-2','ann-3'], cacheText: 'cache: filling…', caption: "first request: full trip to origin" }
+  },
+  {
+    title: "cache hit — fast path",
+    narration: `Next user (or same user, refresh) at the Tokyo edge: <b>cache hit</b>. Bytes come from the edge's local SSD, no origin call. ~5ms to first byte. This is where the savings — both latency and origin load — live.`,
+    code: [
+      '<span class="c">// second request, cache warm:</span>',
+      '',
+      '  Tokyo user → Tokyo edge          [~5ms]',
+      '  edge cache lookup → HIT',
+      '  edge → Tokyo user                [~5ms]',
+      '',
+      '<span class="c">// total: ~10ms. origin not touched.</span>',
+      '',
+      '<span class="c">// cache key includes: URL + (configured) headers + query string.</span>',
+      '<span class="c">// invalidate via API when content changes:</span>',
+      'aws cloudfront create-invalidation --distribution-id ... \\',
+      '  --paths <span class="s">"/static/logo.png"</span>',
+    ],
+    state: { dim: ['origin','origin2'], glow: ['cdn','cache','user'], flows: ['flow-cdn','flow-back'], annots: ['ann-2','ann-4'], cacheText: 'cache: HIT (Tokyo)', caption: "warm cache: edge-only round trip" }
+  },
+  {
+    title: "they compose — and don't substitute",
+    narration: `Real setups use <b>both</b>. Route 53 ALIAS points <span class="pill">shop.com</span> at a CloudFront distribution; CloudFront serves from edge with origin = your ALB/S3. Route 53 ≠ CDN; CloudFront ≠ DNS. Mixing them up costs you exam points.`,
+    code: [
+      '<span class="c">// the standard stack:</span>',
+      '',
+      '  shop.com           ─Route53 ALIAS→ d1234.cloudfront.net',
+      '  d1234.cloudfront…  ─CloudFront→ edge POP near user',
+      '  edge POP           ─miss→ origin (ALB / S3 / API GW)',
+      '',
+      '<span class="c">// what each layer adds:</span>',
+      '<span class="c">//   Route 53    → custom domain, health-based routing, geo control</span>',
+      '<span class="c">//   CloudFront  → latency drop, origin offload, TLS termination, WAF</span>',
+      '<span class="c">//   Origin      → actual compute / storage</span>',
+      '',
+      '<span class="c">// exam tip: "which AWS service to bring my content closer to users?"</span>',
+      '<span class="c">// → CloudFront. Always. Never Route 53.</span>',
+    ],
+    state: { dim: [], glow: ['user','dns','cdn','origin'], flows: ['flow-dns','flow-cdn','flow-back'], annots: [], cacheText: '', caption: "DNS chooses the address, CDN delivers the bytes" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_NODES.forEach(n => {
+    const el = $(n);
+    el.classList.toggle('dim', s.state.dim.includes(n));
+    el.classList.toggle('glow', s.state.glow.includes(n));
+  });
+
+  // cache box visible when glowed, with dynamic text
+  if (s.state.glow.includes('cache')) {
+    $('cache').style.opacity = 1;
+    if (s.state.cacheText) $('cache-text').textContent = s.state.cacheText;
+  } else {
+    $('cache').style.opacity = 0;
+  }
+
+  // failover origin visible when glowed
+  $('origin2').style.opacity = s.state.glow.includes('origin2') ? 1 : 0;
+
+  ALL_FLOWS.forEach(f => {
+    $(f).classList.toggle('on', s.state.flows.includes(f));
+  });
+  ALL_ANNOTS.forEach(a => {
+    $(a).classList.toggle('on', s.state.annots.includes(a));
+  });
+
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

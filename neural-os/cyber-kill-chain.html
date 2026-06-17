@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-16">
+<head>
+<meta charset="utf-8">
+<title>Cyber Kill Chain — Visual Walkthrough</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  /* topic flavor only — accent vars for the cybersec dialect's threat coloring */
+  :root { --cw: #f85149; --safe: #7ee787; }
+  .bridge-candidate { color: var(--muted); font-style: italic; font-size: 0.82em; }
+</style>
+</head>
+<body>
+<!-- spine -->
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<!-- dialect: the only extra file beyond the spine — this is the whole point -->
+<script src="tools/explain-viz/dialects/cybersec.js"></script>
+<script>
+  // METER: a dialect-using walkthrough announces itself on load.
+  try { (window.Cybersec && console.info('[meter]', JSON.stringify(Cybersec.meter))); } catch (e) {}
+
+  const svg = `
+    <svg viewBox="0 0 860 320">
+      ${Explain.svgDefs()}
+
+      <!-- the story row: dialect glyphs the spine could not supply -->
+      ${Explain.glyph('attacker', { x: 56,  y: 64, id: 'g-att',     label: 'Adversary' })}
+      ${Explain.glyph('firewall', { x: 300, y: 64, id: 'g-fw',      label: 'Perimeter' })}
+      ${Explain.glyph('vuln',     { x: 432, y: 64, id: 'g-vuln', r: 15, label: 'CVE' })}
+      ${Explain.glyph('target',   { x: 600, y: 60, id: 'g-target',  label: 'App host' })}
+      ${Explain.glyph('c2',       { x: 792, y: 64, id: 'g-c2',      label: 'C2' })}
+      ${Explain.glyph('payload',  { x: 500, y: 64, id: 'g-payload', label: 'EXP' })}
+
+      <!-- the load-bearing domain idiom: the REX-PV kill chain -->
+      ${Cybersec.killChain({ x: 96, y: 232, gap: 168 })}
+    </svg>`;
+
+  const code = `<pre>
+<span class="ln"><span class="k">import</span> subprocess, requests</span>
+<span class="ln"></span>
+<span class="ln"><span class="k">class</span> KillChain:                          <span class="c"># REX-PV as an orchestrator</span></span>
+<span class="ln">    <span class="k">def</span> recon(self, target):              <span class="c"># 1. map the surface</span></span>
+<span class="ln">        out = subprocess.run([<span class="s">"nmap"</span>,<span class="s">"-sV"</span>,<span class="s">"-Pn"</span>,target],</span>
+<span class="ln">                             capture_output=<span class="k">True</span>, text=<span class="k">True</span>)</span>
+<span class="ln">        <span class="k">return</span> parse_services(out.stdout)</span>
+<span class="ln">    <span class="k">def</span> enumerate(self, services):        <span class="c"># 2. reachable AND weak only</span></span>
+<span class="ln">        <span class="k">return</span> [s <span class="k">for</span> s <span class="k">in</span> services <span class="k">if</span> s.cve_score >= 7.0]</span>
+<span class="ln">    <span class="k">def</span> exploit(self, vuln, payload):     <span class="c"># 3. land initial access</span></span>
+<span class="ln">        r = requests.post(vuln.url, data=payload, timeout=5)</span>
+<span class="ln">        <span class="k">return</span> Session(r) <span class="k">if</span> r.ok <span class="k">else</span> <span class="k">None</span></span>
+<span class="ln">    <span class="k">def</span> persist(self, sess):              <span class="c"># 4. durable, asset-reaching</span></span>
+<span class="ln">        sess.run(<span class="s">"echo $KEY >> ~/.ssh/authorized_keys"</span>)</span>
+<span class="ln">        <span class="k">return</span> sess.escalate()</span>
+<span class="ln">    <span class="k">def</span> evade(self, sess):                <span class="c"># 5. cut the signature</span></span>
+<span class="ln">        sess.run(<span class="s">"sed -i /attacker_ip/d /var/log/auth.log"</span>)</span>
+<span class="ln"></span>
+<span class="ln">    <span class="k">def</span> run(self, target, payload):</span>
+<span class="ln">        vulns = self.enumerate(self.recon(target))</span>
+<span class="ln">        sess  = self.exploit(vulns[0], payload)</span>
+<span class="ln">        <span class="k">if</span> <span class="k">not</span> sess: <span class="k">raise</span> StuckPhase(<span class="s">"exploit"</span>)   <span class="c"># payload didn't land</span></span>
+<span class="ln">        self.evade(self.persist(sess))</span>
+</pre>`;
+
+  Explain.init({
+    title:    'Cyber Kill Chain',
+    subtitle: 'REX-PV · built with the cybersec dialect',
+    created:  '2026-06-16',
+    svg, code,
+    matrix: {
+
+      // ── U — See (CAST): the dense anchor row ──────────────────────────
+      'u-see': { name: 'U — See', framework: 'CAST', steps: [
+        { layer: 'recognize', title: 'The five-door corridor',
+          narration: 'A burglar always does the same five things in order: case the house, find the unlocked window, climb in, copy a key, wipe prints. <b>Every</b> intrusion — silicon, network, or human — walks that same corridor: <span class="pill">R → E → X → P → V</span> (Recon · Enumerate · eXploit · Persist · eVade).',
+          codeLines: [3],
+          onEnter: e => { e.glow('g-att'); e.glow('kc-recon'); } },
+
+        { layer: 'understand', title: 'Five phases, one shape',
+          narration: 'Each door asks one question. <b>Recon</b>: what surface exists? <b>Enumerate</b>: which of it is reachable <i>and</i> weak? <b>eXploit</b>: turn a weakness into a foothold. <b>Persist</b>: make the foothold durable and asset-reaching. <b>eVade</b>: cut the detection signature.',
+          codeLines: [4, 8, 10, 13, 16],
+          onEnter: e => { ['recon','enum','exploit','persist','evade'].forEach(k => e.glow('kc-' + k)); } },
+
+        { layer: 'understand', title: 'Same shape, any substrate',
+          narration: 'The vocabulary changes with the substrate; the shape does not. <b>Recon</b> is <span class="pill">nmap + whois</span> on a host, <b>OSINT</b> on a person, <b>passive DNS</b> on a network — but it is the same phase. Naming the shared loop is what lets one mental model route Metasploit, OSCP labs, and a phishing pretext into the same five slots.',
+          codeLines: [],
+          onEnter: e => { e.glow('g-att'); } },
+
+        { layer: 'apply', title: 'Predict the skipped phase',
+          narration: 'An operator fires a known CVE exploit at a host they never scanned — and the host was patched last week. The payload bounces. <b>Which phase did they skip?</b>',
+          codeLines: [8, 9],
+          choices: [
+            { label: 'Recon',     correct: false, reason: 'Recon asks "what exists" — they knew the host. The miss was deeper in.' },
+            { label: 'Enumerate', correct: true,  reason: 'Right — Enumerate is "which targets are actually vulnerable". Skipping it = burning a 0-day on a patched binary.' },
+            { label: 'Exploit',   correct: false, reason: 'The exploit ran fine; it had nothing to land on. The gap was upstream.' },
+          ],
+          onEnter: e => { e.glow('kc-enum'); e.glow('g-vuln'); } },
+
+        { layer: 'analyze', title: 'Where the time actually goes',
+          narration: 'You have one day on an engagement. Real-world success splits roughly <b>70% recon + escalation / 30% exploit-craft</b> — but most learners invert it, polishing the exploit (the fun part). <b>Which investment wins?</b>',
+          codeLines: [19, 20, 21],
+          choices: [
+            { label: 'Hand-roll a custom exploit', correct: false, reason: 'Exploit-craft is the over-invested 30%. A perfect exploit with nowhere to land is wasted.' },
+            { label: 'Deepen recon + plan escalation', correct: true, reason: 'Right — the under-invested 70%. Most engagements are won by knowing the surface and the path to the asset, not by exploit novelty.' },
+            { label: 'Throw more public modules at it', correct: false, reason: 'That is phase-skipping with extra steps — noise, not coverage.' },
+          ],
+          onEnter: e => { e.glow('kc-recon'); e.glow('kc-persist'); } },
+
+        { layer: 'synthesize', title: 'Where this generalizes',
+          narration: 'The phase-3 weakness this chain turns on is itself a cross-domain unlock — see <span class="wikilink" data-wiki="cybersec/trust-boundary-overflow">[[trust-boundary-overflow]]</span>. And the whole substrate-agnostic loop has its own home: <span class="wikilink" data-wiki="cybersec/hacking-kill-chain">[[hacking-kill-chain]]</span>. Once you see REX-PV, you start spotting it everywhere — which is exactly the BRIDGE row below.',
+          codeLines: [],
+          onEnter: e => { e.glow('kc-recon'); } },
+      ]},
+
+      // ── D — Name (NEDF): the identifier card ──────────────────────────
+      'd-name': { name: 'D — Name', framework: 'NEDF', steps: [
+        { layer: 'understand', title: 'REX-PV, and why only five',
+          narration: 'The chain has a verbal handle: <b>REX-PV</b> — said "REX PV", a crowned thief walking five steps. It compresses Lockheed\'s 7-stage chain: <b>Weaponization + Delivery</b> fold into eXploit (you can\'t build a payload you can\'t deliver), and <b>Installation + C2 + Actions</b> fold into Persist (all three are "convert access into durable, asset-reaching access").',
+          codeLines: [3],
+          onEnter: e => { e.glow('kc-exploit'); e.glow('kc-persist'); } },
+      ]},
+
+      // ── F — Do (SPEAR): the action playbook ───────────────────────────
+      'f-do': { name: 'F — Do', framework: 'SPEAR', steps: [
+        { layer: 'apply', title: 'Diagnose a stuck operation',
+          narration: '"I\'m stuck" is useless; <b>"stuck <i>where</i> in the loop"</b> is a fix. Your shell connects, you get a prompt — then it dies on the next reboot and you\'re locked out again. <b>Which phase is failing?</b>',
+          codeLines: [22],
+          choices: [
+            { label: 'Exploit', correct: false, reason: 'Exploit succeeded — you got a shell. The loss came after access.' },
+            { label: 'Persist', correct: true,  reason: 'Right — a foothold that evaporates on reboot is a Persist failure. You have access but not durable access.' },
+            { label: 'Evade',   correct: false, reason: 'Evade is about detection, not durability. You weren\'t caught — you were dropped.' },
+          ],
+          onEnter: e => { e.glow('kc-persist'); e.glow('g-target'); } },
+      ]},
+
+      // ── B — Watch (HEART): the failure-mode monitor ───────────────────
+      'b-watch': { name: 'B — Watch', framework: 'HEART', steps: [
+        { layer: 'analyze', title: 'The phase-skip smell',
+          narration: 'A teammate reports: <i>high effort, low yield, and they can\'t explain <b>why</b> any given attempt failed.</i> That exact triad has one usual root cause. <b>Which?</b>',
+          codeLines: [],
+          choices: [
+            { label: 'Weak exploit code', correct: false, reason: 'If they could name "the exploit is weak" they\'d have a why. The "can\'t explain why" is the tell.' },
+            { label: 'Skipping recon / enumerate', correct: true, reason: 'Right — phase-skipping produces effort without a diagnosis, because you never built the map that explains failures.' },
+            { label: 'Bad luck', correct: false, reason: '"Bad luck" is what phase-skipping feels like from the inside. It is a process gap, not variance.' },
+          ],
+          onEnter: e => { e.glow('kc-recon'); e.glow('kc-enum'); } },
+
+        { layer: 'understand', title: 'Evade is not optional',
+          narration: 'The seductive lie is <i>"it\'s just a lab, I won\'t bother cleaning up."</i> The trace-leaving <b>habit</b> transfers to real engagements, where one stray log line burns the operation and hardens the target. Train eVade discipline from the first box.',
+          codeLines: [16, 17],
+          onEnter: e => { e.glow('kc-evade'); e.glow('g-c2'); } },
+      ]},
+
+      // ── L — Predict (ORACLE): predict-from-input ──────────────────────
+      'l-predict': { name: 'L — Predict', framework: 'ORACLE', steps: [
+        { layer: 'apply', title: 'Name the active phase',
+          narration: 'You watch an operator run <span class="pill">whois</span>, pull passive DNS, and look the host up on Shodan — <b>touching the target with nothing</b>. <b>Which phase is live?</b>',
+          codeLines: [4, 5, 6, 7],
+          choices: [
+            { label: 'Recon',     correct: true,  reason: 'Right — all passive, no contact with the target: that is Recon, mapping the surface from the outside.' },
+            { label: 'Enumerate', correct: false, reason: 'Enumerate touches the target (banner-grab, version scan). Nothing here sends a packet at it.' },
+            { label: 'Exploit',   correct: false, reason: 'No payload, no access attempt — far too early in the loop.' },
+          ],
+          onEnter: e => { e.glow('kc-recon'); e.glow('g-att'); } },
+      ]},
+
+      // ── R — Act (GRACE): the in-the-moment reflex (defensive mirror) ───
+      'r-act': { name: 'R — Act', framework: 'GRACE', steps: [
+        { layer: 'apply', title: 'Blue-team reflex: read the phase, name the counter',
+          narration: 'Defenders walk the loop in reverse. Your SIEM lights up: a host beacons every 60s to a freshly-registered domain. <b>Which phase is live — and therefore which counter do you reach for?</b>',
+          codeLines: [13, 14, 15],
+          choices: [
+            { label: 'Persist / C2 → egress-filter the beacon', correct: true, reason: 'Right — regular beaconing to a rare domain is C2 keeping a foothold alive. Same-layer counter: block / sinkhole egress, kill persistence.' },
+            { label: 'Recon → tighten OSINT hygiene', correct: false, reason: 'Recon is silent and external; it does not beacon out of your network. Wrong phase, wrong counter.' },
+            { label: 'Exploit → patch the CVE', correct: false, reason: 'Patching matters, but the exploit already succeeded — the beacon is post-access. You\'d be defending a door that\'s already open.' },
+          ],
+          onEnter: e => { e.glow('kc-persist'); e.glow('g-c2'); } },
+      ]},
+
+      // ── BRIDGE: cross-domain analogies (propose-then-curate) ──────────
+      // Candidates are mechanism-matches, not theme-matches. David curates:
+      // keep / edit / reorder / delete, and add his own in the TODO slot.
+      'bridge': { name: 'BRIDGE', framework: 'cross-domain', steps: [
+        { layer: 'synthesize', title: 'Kill chain ≈ the immune system',
+          narration: '<b>REX-PV</b> is the same shape as an <b>infection</b> — both <i>stage an escalation against a defender that learns</i>. Term-by-term: Recon ≈ antigen recognition · Enumerate ≈ clonal selection (which antibody matches) · eXploit ≈ infection foothold · Persist ≈ viral latency / reservoir · eVade ≈ antigenic variation. The shared mechanism is a detection gate plus an evasion arms race. <span class="bridge-candidate">candidate — curate or reject</span>',
+          codeLines: [] },
+
+        { layer: 'synthesize', title: 'Kill chain ≈ the military targeting loop (OODA / F2T2EA)',
+          narration: '<b>REX-PV</b> rhymes with <b>Find · Fix · Track · Target · Engage · Assess</b> — both are <i>ordered sense-then-act pipelines where skipping a stage degrades the whole kill</i>. The dashed "next target" return edge is OODA\'s re-observe: assess feeds the next recon. <span class="bridge-candidate">candidate — curate or reject</span>',
+          codeLines: [] },
+
+        { layer: 'synthesize', title: 'Kill chain ≈ a sales funnel',
+          narration: '<b>REX-PV</b> is a <b>conversion funnel</b> — both are <i>staged pipelines with per-stage drop-off, where the weakest stage caps total yield</i>. Lead-gen ≈ Recon · qualification ≈ Enumerate · conversion ≈ eXploit · retention/upsell ≈ Persist · churn-hygiene ≈ eVade. The "70/30 effort" lesson is the funnel truism that the bottleneck stage, not the flashy one, governs throughput. <span class="bridge-candidate">candidate — curate or reject</span>',
+          codeLines: [] },
+
+        // TODO(human): add your strongest bridge from a domain you actually hold.
+        // The wiki already has a covenant-substrate instance ([[seduction-kill-chain]])
+        // and an epidemiology angle (R0 / reservoir) — or bridge somewhere new.
+        { layer: 'synthesize', title: 'Your bridge →',
+          narration: 'This slot is yours. The dialect proposed three above; the highest-leverage bridge is usually the one from a domain <i>you</i> already hold deeply. Add it here (edit this step), or delete this slot if the three above suffice. <span class="bridge-candidate">TODO(human) — author or remove</span>',
+          codeLines: [] },
+      ]},
+    },
+  });
+</script>
+</body>
+</html>

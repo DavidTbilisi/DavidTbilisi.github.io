@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-07">
+<head>
+<meta charset="utf-8">
+<title>How Claude (an LLM) Works — Visual Walkthrough</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  :root {
+    --tok-c:    #7ee787;  /* input / tokens   */
+    --emb-c:    #79c0ff;  /* embeddings       */
+    --qkv-c:    #d2a8ff;  /* Q · K · V        */
+    --attn-c:   #f78166;  /* self-attention   */
+    --logit-c:  #ffa657;  /* logits           */
+    --sample-c: #56d364;  /* sampling         */
+  }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+  // The pipeline diagram — built once, re-lit from every matrix row.
+  // Flow: prompt → tokenize → tokens → embeddings → [Q K V] → self-attention(×N)
+  //       → logits → sample → (append token, loop back)  == autoregressive.
+  const svg = `
+    <svg viewBox="0 0 900 380">
+      ${Explain.svgDefs()}
+      ${Explain.glyph('box',      { x: 58,  y: 150, w: 64, h: 54, label: 'Prompt', sub: '"the cat"', id: 'prompt', color: 'var(--tok-c)' })}
+      ${Explain.glyph('gear',     { x: 172, y: 150, label: 'Tokenize', id: 'tok', color: 'var(--tok-c)' })}
+      ${Explain.glyph('stack',    { x: 292, y: 150, w: 74, layers: ['the','cat','sat'], label: 'tokens', id: 'tokens', color: 'var(--tok-c)' })}
+      ${Explain.glyph('box',      { x: 432, y: 150, w: 84, h: 54, label: 'Embeddings', sub: 'vectors', id: 'embed', color: 'var(--emb-c)' })}
+      ${Explain.glyph('node',     { x: 566, y: 80,  r: 15, label: 'Q', id: 'q', color: 'var(--qkv-c)' })}
+      ${Explain.glyph('node',     { x: 566, y: 150, r: 15, label: 'K', id: 'k', color: 'var(--qkv-c)' })}
+      ${Explain.glyph('node',     { x: 566, y: 220, r: 15, label: 'V', id: 'v', color: 'var(--qkv-c)' })}
+      ${Explain.glyph('gear',     { x: 688, y: 150, label: 'Self-Attn', id: 'attn', color: 'var(--attn-c)' })}
+      ${Explain.glyph('caption',  { x: 688, y: 198, label: '× N layers' })}
+      ${Explain.glyph('box',      { x: 818, y: 96,  w: 74, h: 38, label: 'logits', sub: '|vocab|', id: 'logits', color: 'var(--logit-c)' })}
+      ${Explain.glyph('gear',     { x: 818, y: 214, label: 'Sample', id: 'sample', color: 'var(--sample-c)' })}
+      ${Explain.glyph('caption',  { x: 818, y: 252, label: 'softmax · 🎲' })}
+
+      ${Explain.glyph('arrow',    { from: [90, 150],  to: [151, 150], id: 'e-prompt-tok', label: 'text' })}
+      ${Explain.glyph('arrow',    { from: [193, 150], to: [253, 150], id: 'e-tok-tokens' })}
+      ${Explain.glyph('arrow',    { from: [331, 150], to: [388, 150], id: 'e-tokens-embed', label: 'ids' })}
+      ${Explain.glyph('arrow',    { from: [476, 138], to: [553, 86],  id: 'e-embed-q' })}
+      ${Explain.glyph('arrow',    { from: [476, 150], to: [549, 150], id: 'e-embed-k' })}
+      ${Explain.glyph('arrow',    { from: [476, 162], to: [553, 214], id: 'e-embed-v' })}
+      ${Explain.glyph('arrow',    { from: [580, 84],  to: [670, 142], id: 'e-q-attn' })}
+      ${Explain.glyph('arrow',    { from: [582, 150], to: [668, 150], id: 'e-k-attn' })}
+      ${Explain.glyph('arrow',    { from: [580, 216], to: [670, 158], id: 'e-v-attn' })}
+      ${Explain.glyph('arrow',    { from: [704, 140], to: [784, 102], id: 'e-attn-logits', label: 'scores' })}
+      ${Explain.glyph('arrow',    { from: [818, 116], to: [818, 192], id: 'e-logits-sample', label: 'softmax' })}
+      ${Explain.glyph('arrow',    { from: [806, 236], to: [62, 180], curve: -0.8, id: 'e-loop', label: 'append token → repeat (autoregressive)' })}
+    </svg>`;
+
+  const code = `<pre>
+<span class="ln"><span class="k">import</span> torch, torch.nn.functional <span class="k">as</span> F      <span class="c"># PyTorch</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="k">def</span> <span class="n">generate</span>(model, tok, prompt, n=<span class="s">40</span>):</span>
+<span class="ln">  ids = tok.<span class="n">encode</span>(prompt)            <span class="c"># text → token ids</span></span>
+<span class="ln">  <span class="k">for</span> _ <span class="k">in</span> <span class="n">range</span>(n):                  <span class="c"># autoregressive loop</span></span>
+<span class="ln">    x = model.<span class="n">embed</span>(ids)            <span class="c"># ids → vectors [T,d]</span></span>
+<span class="ln">    <span class="k">for</span> layer <span class="k">in</span> model.layers:     <span class="c"># N transformer blocks</span></span>
+<span class="ln">      q, k, v = layer.<span class="n">qkv</span>(x)        <span class="c"># 3 projections</span></span>
+<span class="ln">      a = q @ k.<span class="n">transpose</span>(-<span class="s">1</span>,-<span class="s">2</span>)   <span class="c"># token ↔ token scores</span></span>
+<span class="ln">      a = (a / d**<span class="s">0.5</span>).<span class="n">softmax</span>(-<span class="s">1</span>)  <span class="c"># scale → weights sum to 1</span></span>
+<span class="ln">      x = x + a @ v               <span class="c"># mix values + residual</span></span>
+<span class="ln">    logits = model.<span class="n">head</span>(x[-<span class="s">1</span>])       <span class="c"># last pos → vocab scores</span></span>
+<span class="ln">    p = (logits / temp).<span class="n">softmax</span>(-<span class="s">1</span>)  <span class="c"># temperature shapes it</span></span>
+<span class="ln">    nxt = torch.<span class="n">multinomial</span>(p, <span class="s">1</span>)   <span class="c"># sample ONE token</span></span>
+<span class="ln">    ids.<span class="n">append</span>(nxt)               <span class="c"># append → repeat</span></span>
+<span class="ln">  <span class="k">return</span> tok.<span class="n">decode</span>(ids)            <span class="c"># ids → text</span></span>
+</pre>`;
+
+  // ============================================================
+  // U — See (CAST): the inference pipeline, walked across Bloom layers.
+  // ============================================================
+  const uSee = [
+    {
+      layer: 'recognize',
+      title: 'The one-sentence model',
+      narration:
+        'Picture autocomplete that has read a library and never stops at one word — it finishes your sentence, feeds its own word back in, and finishes again. ' +
+        '<b>Claude is a next-token predictor run in a loop</b>: it turns text into <span class="pill">tokens</span>, predicts the most likely next token, appends it, and repeats. ' +
+        'Everything below is detail on those two moves — <i>predict</i> and <i>append</i>.',
+      codeLines: [3, 5, 15],
+      onEnter: (e) => { e.glow('prompt'); e.glow('sample'); e.glow('e-loop'); e.activate('e-loop'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Tokenizer — chopping into known bricks',
+      narration:
+        'A child reads by syllables, not single letters; the model reads by <b>tokens</b>, not characters. ' +
+        'The <span class="pill">tokenizer</span> (byte-pair encoding) splits text into sub-word chunks it has a fixed vocabulary for — <i>"tokenizer" → "token" + "izer"</i>. ' +
+        'The model never sees your letters; it sees integer IDs into that vocabulary.',
+      codeLines: [4],
+      onEnter: (e) => { e.glow('tok'); e.glow('tokens'); e.activate('e-prompt-tok'); e.activate('e-tok-tokens'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Embeddings — coordinates in meaning-space',
+      narration:
+        'Give every town GPS coordinates and nearby towns land near each other; <b>embeddings</b> do that for tokens. ' +
+        'Each token ID becomes a <span class="pill">vector</span> of thousands of numbers, positioned so that <i>king</i> and <i>queen</i> sit close and <i>king − man + woman ≈ queen</i>. ' +
+        'Meaning becomes geometry the network can do arithmetic on.',
+      codeLines: [6],
+      onEnter: (e) => { e.glow('embed'); e.activate('e-tokens-embed'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Attention — who listens to whom',
+      narration:
+        'At a loud party you decide, person by person, how much to listen; <b>self-attention</b> lets each token decide how much to draw from every other token. ' +
+        'Each token emits a <span class="pill">Q</span> (what I am looking for), a <span class="pill">K</span> (what I offer), and a <span class="pill">V</span> (my actual content); the Q·K match becomes a softmax weight that mixes everyone\'s V. ' +
+        'Stack this <span class="pill">× N layers</span> and context flows — <i>"it"</i> learns to point back at <i>"the cat."</i>',
+      codeLines: [8, 9, 10, 11],
+      onEnter: (e) => {
+        e.glow('q'); e.glow('k'); e.glow('v'); e.glow('attn');
+        e.activate('e-embed-q'); e.activate('e-embed-k'); e.activate('e-embed-v');
+        e.activate('e-q-attn'); e.activate('e-k-attn'); e.activate('e-v-attn');
+      },
+    },
+    {
+      layer: 'apply',
+      title: 'Predict the next token',
+      narration:
+        'Greedy decoding means: emit the single highest-probability token. ' +
+        'Context so far: <span class="pill">"The cat sat on the"</span>. The model has produced logits over the whole vocabulary. ' +
+        'Which token gets the highest probability?',
+      codeLines: [12, 14],
+      choices: [
+        { label: 'mat', correct: true,
+          reason: 'Right — training saw "sat on the mat" countless times, so that continuation carries the highest logit. This is pattern frequency, not understanding.' },
+        { label: 'running', correct: false,
+          reason: '"running" is grammatical but rare after "sat on the" — its logit sits far below "mat". The model ranks by learned likelihood, not by what is merely possible.' },
+        { label: 'the', correct: false,
+          reason: 'Repeating "the the" is almost never seen in training, so it gets a very low probability. Degenerate repetition comes from broken sampling, not the top logit.' },
+      ],
+      onEnter: (e) => { e.glow('logits'); e.glow('sample'); e.activate('e-attn-logits'); e.activate('e-logits-sample'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Temperature — the one knob',
+      narration:
+        '<b>Temperature</b> divides the logits before softmax: low temp sharpens the distribution toward the top token, high temp flattens it toward a coin-flip. ' +
+        'Scenario: you are drafting a <b>legal contract clause</b> where one wrong word is a lawsuit. Which setting?',
+      codeLines: [13],
+      choices: [
+        { label: 'temp ≈ 0 (near-greedy)', correct: true,
+          reason: 'Correct — a contract wants the single safest, most-expected wording every time. temp → 0 makes decoding near-deterministic and conservative.' },
+        { label: 'temp ≈ 1.5 (high)', correct: false,
+          reason: 'High temp flattens the distribution so unlikely tokens can win — great for brainstorming, dangerous for legal text where novelty equals risk.' },
+        { label: 'temp = 1.0, sample many, keep longest', correct: false,
+          reason: 'Length is not correctness. Sampling at temp 1 reintroduces the very variance you want suppressed in a contract; longest ≠ safest.' },
+      ],
+      onEnter: (e) => { e.glow('sample'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Where this generalizes',
+      narration:
+        'Two moves — <i>predict, append</i> — explain the magic and the failure modes alike: fluency, hallucination, and the context window all fall out of next-token prediction in a loop. ' +
+        'Note the wiki\'s <span class="wikilink" data-wiki="cross-cutting/attention-framework">[[attention-framework]]</span> is <b>human</b> attention (a focus-budget model) — same word, a completely different mechanism, worth holding side by side. ' +
+        'The tool you are reading this in runs on exactly this loop — <span class="wikilink" data-wiki="career-mission/claude-code-tool">[[claude-code-tool]]</span> — and where it fits the larger project is <span class="wikilink" data-wiki="meta-wiki/neural-os-research-thesis">[[neural-os-research-thesis]]</span>.',
+      codeLines: [],
+      onEnter: (e) => { e.glow('prompt'); e.glow('sample'); e.activate('e-loop'); },
+    },
+  ];
+
+  // ============================================================
+  // D — Name (NEDF): name, distinguish, failure-mode identity card.
+  // ============================================================
+  const dName = [
+    {
+      layer: 'understand',
+      title: 'The identifier card',
+      narration:
+        '<b>Large Language Model</b> = an <b>autoregressive transformer decoder</b>. ' +
+        'You name it by what its output commits to: a <span class="pill">probability distribution over the next token</span> — nothing more. ' +
+        'Siblings by output shape: <i>encoders</i> (BERT — read, don\'t generate), <i>diffusion models</i> (denoise pixels, not tokens), classic <i>seq2seq</i> (encode then decode a fixed translation).',
+      codeLines: [4, 12, 16],
+      onEnter: (e) => { e.glow('logits'); e.glow('sample'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Spot the misnamed system',
+      narration:
+        'A vendor says: <i>"our chatbot looks up the answer in its knowledge and tells you."</i> ' +
+        'What is the base model literally doing when it answers?',
+      codeLines: [12],
+      choices: [
+        { label: 'Sampling likely tokens from learned weights', correct: true,
+          reason: 'Correct — there is no lookup; it generates the most probable continuation given its weights. That is exactly why it can state a false fact as confidently as a true one (hallucination).' },
+        { label: 'Querying a fact database', correct: false,
+          reason: 'A bare LLM has no database and no retrieval step. That only exists if you bolt on RAG — a separate system around the model, not the model itself.' },
+        { label: 'Symbolic logical inference', correct: false,
+          reason: 'No theorem prover runs inside. Any "reasoning" is itself more token prediction — which is why chained arithmetic can silently go wrong.' },
+      ],
+      onEnter: (e) => { e.glow('logits'); },
+    },
+  ];
+
+  // ============================================================
+  // F — Do (SPEAR): the action playbook.
+  // ============================================================
+  const fDo = [
+    {
+      layer: 'apply',
+      title: 'Why it miscounts letters',
+      narration:
+        'Classic gotcha: ask how many <i>r</i>\'s are in <span class="pill">"strawberry"</span> and the model can stumble. ' +
+        'Before blaming reasoning, run the decision tree — <i>tokenization, context window, sampling, or knowledge gap?</i> Which is it here?',
+      codeLines: [4],
+      choices: [
+        { label: 'Tokenization — it sees tokens, not letters', correct: true,
+          reason: 'Correct — "strawberry" is a couple of tokens, not 10 characters. The model has no direct view of individual letters, so character-counting is a blind spot, not stupidity.' },
+        { label: 'The model just is not smart enough', correct: false,
+          reason: 'Capability is not the issue — the same model writes correct code. The letters are simply not present in its input representation.' },
+        { label: 'Needs a bigger context window', correct: false,
+          reason: 'The whole word fits in context trivially. Window size is irrelevant when the unit of perception — the token — is the problem.' },
+      ],
+      onEnter: (e) => { e.glow('tok'); e.glow('tokens'); },
+    },
+  ];
+
+  // ============================================================
+  // B — Watch (HEART): the failure modes to monitor.
+  // ============================================================
+  const bWatch = [
+    {
+      layer: 'understand',
+      title: 'Two failure modes that dominate',
+      narration:
+        'Most production surprises are two shapes. ' +
+        '<b>(1) Hallucination</b> — the loop always emits <i>some</i> high-probability token, even when the truth is unknown, so it invents fluent, confident, false detail. ' +
+        '<b>(2) Context overflow</b> — past the window, the earliest tokens fall out of attention and the model "forgets" the start of the conversation. ' +
+        'Both are silent: the output still reads perfectly.',
+      codeLines: [12, 14],
+      onEnter: (e) => { e.glow('logits'); e.glow('sample'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Diagnose the confident citation',
+      narration:
+        'Symptom: Claude cites <i>"Smith et al., 2019, Nature"</i> for your claim — but no such paper exists. ' +
+        'Root cause?',
+      codeLines: [12, 14],
+      choices: [
+        { label: 'Hallucination — plausible tokens, no ground-truth retrieval', correct: true,
+          reason: 'Correct — a citation is just a high-probability token pattern (Name + et al. + year + venue). With no retrieval grounding it, the model fills the slot with something that looks right.' },
+        { label: 'Context window overflowed', correct: false,
+          reason: 'Overflow makes it forget earlier turns, not fabricate brand-new specific references. The citation is invented, not dropped.' },
+        { label: 'Tokenizer corrupted the title', correct: false,
+          reason: 'Tokenization is a lossless round-trip on text; it does not mint fake authors and years. This is generation filling a gap, not encoding damage.' },
+      ],
+      onEnter: (e) => { e.glow('logits'); },
+    },
+  ];
+
+  // ============================================================
+  // L — Predict (ORACLE): predict-from-input drills.
+  // ============================================================
+  const lPredict = [
+    {
+      layer: 'apply',
+      title: 'Predict: same prompt, twice, temp 0',
+      narration:
+        'You send the identical prompt to the model twice with <span class="pill">temperature = 0</span>. ' +
+        'Predict the two outputs.',
+      codeLines: [13, 14],
+      choices: [
+        { label: 'Essentially identical', correct: true,
+          reason: 'Correct — temp 0 is greedy decoding: always take the argmax token. Same weights + same input + no sampling randomness → the same path (tiny float/hardware nondeterminism aside).' },
+        { label: 'Different every time', correct: false,
+          reason: 'Variety comes from sampling at temp > 0. At temp 0 there is no dice roll to differ on.' },
+        { label: 'It errors on the repeat', correct: false,
+          reason: 'The model is stateless across calls — a second identical request is just re-run from scratch, not rejected.' },
+      ],
+      onEnter: (e) => { e.glow('sample'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Predict: the 500-page paste',
+      narration:
+        'You paste a document far larger than the context window, then ask about page 1. ' +
+        'Predict the behavior.',
+      codeLines: [9],
+      choices: [
+        { label: 'Earliest tokens truncated / attention degrades', correct: true,
+          reason: 'Correct — only the most recent window of tokens survives; content past the limit is dropped or its influence decays, so page-1 detail is gone or fuzzy.' },
+        { label: 'The model gets proportionally smarter', correct: false,
+          reason: 'Tokens past the limit add no capacity — beyond the window they cannot be attended to at all. Bigger input ≠ more understanding.' },
+        { label: 'It reads all of it, just slower', correct: false,
+          reason: 'The window is a hard architectural bound, not a speed setting. What exceeds it is not read slowly — it is not read.' },
+      ],
+      onEnter: (e) => { e.glow('q'); e.glow('k'); e.glow('v'); e.glow('attn'); },
+    },
+  ];
+
+  // ============================================================
+  // R — Act (GRACE): in-the-moment protocol.
+  // ============================================================
+  const rAct = [
+    {
+      layer: 'apply',
+      title: 'Protocol: the output is wrong',
+      narration:
+        '<b>Ground</b> — which layer failed: tokenization, context, sampling, or knowledge? ' +
+        '<b>Reduce</b> temperature for anything factual. <b>Add</b> grounding — paste the source, don\'t trust recall. ' +
+        '<b>Check</b> the answer against truth before shipping. <b>Engage.</b> Which move comes first?',
+      codeLines: [4, 9, 13],
+      choices: [
+        { label: 'Ground — locate which layer failed', correct: true,
+          reason: 'Correct — diagnosis precedes fix. "Miscounts letters" (tokenization) and "invents a citation" (knowledge) need opposite responses; guessing the layer wastes the next move.' },
+        { label: 'Just lower the temperature', correct: false,
+          reason: 'Temp helps factual variance, but does nothing for a tokenization blind spot or a missing-source gap. Fixing before diagnosing is the common trap.' },
+        { label: 'Switch to a bigger model immediately', correct: false,
+          reason: 'A bigger model cannot letter-count either, and will not un-invent a fact it was never given. Escalate only after grounding says capability is the limit.' },
+      ],
+      onEnter: (e) => { e.glow('prompt'); e.glow('attn'); e.glow('sample'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'The reflex you want',
+      narration:
+        'When an LLM answer looks off, the reflex is <i>which of the two moves broke — the predict, or the loop\'s context?</i> ' +
+        'For the everyday operating surface this runs on, see <span class="wikilink" data-wiki="career-mission/claude-code-nedf">[[claude-code-nedf]]</span>; ' +
+        'and run any new model behavior through <span class="wikilink" data-wiki="meta-wiki/5-gates-of-comprehension">[[5-gates-of-comprehension]]</span> before you trust it.',
+      codeLines: [],
+      onEnter: (e) => { e.glow('e-loop'); e.activate('e-loop'); },
+    },
+  ];
+
+  // ============================================================
+  // BRIDGE: cross-domain analogies — curated 2026-06-07.
+  //   Kept: attention≈DB-query, autoregressive≈control-loop.
+  //   Dropped: temperature≈Boltzmann.  Added: softmax≈market price signal.
+  // ============================================================
+  const bridge = [
+    {
+      layer: 'synthesize',
+      title: 'Self-attention ≈ a content-addressable database query',
+      narration:
+        '<b>Self-attention</b> is the same shape as a <b>database lookup by content</b>: both <i>match a query against keys, then return a blend of values weighted by match strength.</i> ' +
+        'Term-by-term: <span class="pill">Q</span> ≈ the query you issue; <span class="pill">K</span> ≈ the indexed keys of every row; ' +
+        '<span class="pill">Q·K softmax</span> ≈ a fuzzy WHERE that <i>scores</i> every row instead of returning a hard match; <span class="pill">V</span> ≈ the row contents you read back. ' +
+        'A hash index returns one exact row; attention returns a soft, weighted mixture of all of them.',
+      codeLines: [8, 9, 10],
+      onEnter: (e) => { e.glow('q'); e.glow('k'); e.glow('v'); e.glow('attn'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Softmax over logits ≈ a market clearing prices',
+      narration:
+        'The <b>softmax over logits</b> is the same shape as a <b>market clearing prices over goods</b>: both <i>convert raw competing signals into a normalized allocation of one finite resource.</i> ' +
+        'Term-by-term: each token\'s <span class="pill">logit</span> ≈ a good\'s relative demand/bid; <span class="pill">softmax</span> ≈ the clearing rule that turns bids into market shares; ' +
+        'the <span class="pill">probability mass</span> (always sums to 1) ≈ the fixed supply being allocated; <span class="pill">temperature</span> ≈ how much noise/irrationality is in the market — high T is a frothy market where long-shots still get bought, T → 0 is a perfectly rational market pouring everything into the single best bet. ' +
+        'Raise one token\'s logit and, exactly like a bid war, it steals share from every competitor.',
+      codeLines: [12, 13],
+      onEnter: (e) => { e.glow('logits'); e.glow('sample'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Autoregressive decoding ≈ a feedback control loop',
+      narration:
+        '<b>Autoregressive generation</b> shares its skeleton with a <b>feedback control loop / iterated dynamical system</b>: ' +
+        '<i>the output is appended to the input, so each step\'s state is the previous state plus its own last action.</i> ' +
+        'Term-by-term: <span class="pill">append token → repeat</span> ≈ feeding a plant\'s output back as its next input; small biases <i>compound</i> step over step ≈ drift in an uncorrected loop (the model\'s "exposure bias"). ' +
+        'Same cure, too: inject a correcting signal — a human edit, a tool result, a retrieved fact — to pull the trajectory back.',
+      codeLines: [5, 15],
+      onEnter: (e) => { e.glow('e-loop'); e.activate('e-loop'); },
+    },
+  ];
+
+  Explain.init({
+    title:    'How Claude (an LLM) Works',
+    subtitle: 'a visual walkthrough — UMTF matrix',
+    created:  '2026-06-07',
+    svg, code,
+    matrix: {
+      'u-see':     { name: 'U — See',     framework: 'CAST',   steps: uSee },
+      'd-name':    { name: 'D — Name',    framework: 'NEDF',   steps: dName },
+      'f-do':      { name: 'F — Do',      framework: 'SPEAR',  steps: fDo },
+      'b-watch':   { name: 'B — Watch',   framework: 'HEART',  steps: bWatch },
+      'l-predict': { name: 'L — Predict', framework: 'ORACLE', steps: lPredict },
+      'r-act':     { name: 'R — Act',     framework: 'GRACE',  steps: rAct },
+      'bridge':    { name: 'BRIDGE',      framework: 'cross-domain', steps: bridge },
+    },
+  });
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

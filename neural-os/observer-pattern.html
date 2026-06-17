@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Observer Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --o1: #ffa657; --o2: #7ee787; --o3: #d2a8ff; --o4: #f7b3c4;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .obs { transition: opacity .35s, filter .35s, transform .35s; transform-origin: center; transform-box: fill-box; }
+  .obs.dim { opacity: 0.25; }
+  .obs.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .obs-label { font: 600 12px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .obs-sub { font: 500 9px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.7; }
+  .subject-box { fill: var(--panel); stroke: var(--accent); stroke-width: 2; }
+  .subject-label { fill: var(--text); font: 700 14px sans-serif; text-anchor: middle; }
+  .subject-sub { fill: var(--muted); font: 11px ui-monospace, monospace; text-anchor: middle; }
+  .wire { stroke: var(--muted); stroke-width: 2; fill: none; opacity: 0.4; transition: opacity .3s, stroke .3s; stroke-dasharray: 4 3; }
+  .wire.live { opacity: 1; stroke: var(--pick); animation: dash 0.8s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -14; } }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .badge { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .badge.on { opacity: 1; }
+  .pulse { fill: var(--pick); opacity: 0; }
+  .pulse.on { animation: pulse 0.9s ease-out 1; }
+  @keyframes pulse { 0% { opacity: 0.9; r: 6; } 100% { opacity: 0; r: 40; } }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Observer Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <text id="poll-1" class="badge" x="260" y="30">while (true) { check(o1); check(o2); … }</text>
+
+        <g id="subject">
+          <rect class="subject-box" x="200" y="60" width="120" height="68" rx="8"/>
+          <text class="subject-label" x="260" y="88">Subject</text>
+          <text class="subject-sub" x="260" y="108">state = "v1"</text>
+          <circle id="pulse" class="pulse" cx="260" cy="94" r="6"/>
+        </g>
+
+        <line id="w-1" class="wire" x1="260" y1="128" x2="80"  y2="240"/>
+        <line id="w-2" class="wire" x1="260" y1="128" x2="210" y2="240"/>
+        <line id="w-3" class="wire" x1="260" y1="128" x2="340" y2="240"/>
+        <line id="w-4" class="wire" x1="260" y1="128" x2="470" y2="240"/>
+
+        <g id="obs-1" class="obs" style="color: var(--o1)">
+          <rect x="30" y="240" width="100" height="60" rx="8" fill="var(--o1)" opacity="0.9"/>
+          <text class="obs-label" x="80" y="268">UIView</text>
+          <text class="obs-sub" x="80" y="285">redraw</text>
+        </g>
+        <g id="obs-2" class="obs" style="color: var(--o2)">
+          <rect x="160" y="240" width="100" height="60" rx="8" fill="var(--o2)" opacity="0.9"/>
+          <text class="obs-label" x="210" y="268">Logger</text>
+          <text class="obs-sub" x="210" y="285">append</text>
+        </g>
+        <g id="obs-3" class="obs" style="color: var(--o3)">
+          <rect x="290" y="240" width="100" height="60" rx="8" fill="var(--o3)" opacity="0.9"/>
+          <text class="obs-label" x="340" y="268">Cache</text>
+          <text class="obs-sub" x="340" y="285">invalidate</text>
+        </g>
+        <g id="obs-4" class="obs" style="color: var(--o4)">
+          <rect x="420" y="240" width="100" height="60" rx="8" fill="var(--o4)" opacity="0.9"/>
+          <text class="obs-label" x="470" y="268">Mailer</text>
+          <text class="obs-sub" x="470" y="285">send</text>
+        </g>
+
+        <text id="caption" class="caption" x="260" y="340"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const steps = [
+  {
+    title: "the problem",
+    narration: `Several modules need to react when one piece of state changes. Without a pattern, the state owner ends up <span class="pill">poll</span>-ing each consumer — or every consumer reaches in and pokes the owner. Coupling grows quadratically.`,
+    code: [
+      '<span class="c">// every tick, the loop manually checks each consumer</span>',
+      '<span class="k">while</span> (running) {',
+      '  ui.maybeRedraw(state)',
+      '  logger.maybeAppend(state)',
+      '  cache.maybeInvalidate(state)',
+      '  mailer.maybeSend(state)',
+      '}',
+      '<span class="c">// add a 5th consumer → edit this loop again.</span>',
+    ],
+    state: { dim: [], glow: [], live: [], poll: true, pulse: false, caption: "owner pulls from every consumer; every new one is a code edit" }
+  },
+  {
+    title: "invert the direction",
+    narration: `Flip the dependency. The <b>Subject</b> exposes <span class="pill">subscribe(obs)</span>. Consumers ("Observers") register themselves. The Subject never names them.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">Observer</span> {',
+      '  update(state: <span class="t">State</span>): <span class="t">void</span>',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">Subject</span> {',
+      '  <span class="k">private</span> obs: <span class="t">Observer</span>[] = []',
+      '  subscribe(o: <span class="t">Observer</span>) { <span class="k">this</span>.obs.push(o) }',
+      '  unsubscribe(o: <span class="t">Observer</span>) {',
+      '    <span class="k">this</span>.obs = <span class="k">this</span>.obs.filter(x =&gt; x !== o)',
+      '  }',
+      '}',
+    ],
+    state: { dim: ['o1','o2','o3','o4'], glow: [], live: [], poll: false, pulse: false, caption: "the Subject owns a list of Observers" }
+  },
+  {
+    title: "subscribers register",
+    narration: `At wire-up time each Observer calls <span class="pill">subject.subscribe(self)</span>. The Subject's list grows. Nothing else changes about the Subject's body.`,
+    code: [
+      '<span class="k">const</span> subject = <span class="k">new</span> Subject()',
+      '',
+      'subject.subscribe(<span class="k">new</span> UIView())',
+      'subject.subscribe(<span class="k">new</span> Logger())',
+      'subject.subscribe(<span class="k">new</span> Cache())',
+      'subject.subscribe(<span class="k">new</span> Mailer())',
+      '',
+      '<span class="c">// Subject didn\'t need to know any of these types.</span>',
+    ],
+    state: { dim: [], glow: ['o1','o2','o3','o4'], live: [], poll: false, pulse: false, caption: "Observers attach themselves; Subject stays generic" }
+  },
+  {
+    title: "notify fans out",
+    narration: `When state changes, the Subject calls <span class="pill">notify()</span>. One method, one loop — every Observer's <span class="pill">update()</span> fires. The Subject still doesn't know who's listening.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Subject</span> {',
+      '  <span class="k">private</span> state: <span class="t">State</span>',
+      '  <span class="k">set</span>(s: <span class="t">State</span>) {',
+      '    <span class="k">this</span>.state = s',
+      '    <span class="k">this</span>.notify()    <span class="c">// ← the broadcast</span>',
+      '  }',
+      '  <span class="k">private</span> notify() {',
+      '    <span class="k">for</span> (<span class="k">const</span> o <span class="k">of</span> <span class="k">this</span>.obs) o.update(<span class="k">this</span>.state)',
+      '  }',
+      '}',
+    ],
+    state: { dim: [], glow: ['o1','o2','o3','o4'], live: ['w-1','w-2','w-3','w-4'], poll: false, pulse: true, caption: "one set() → every Observer's update() runs" }
+  },
+  {
+    title: "subscribe / unsubscribe at runtime",
+    narration: `The list is mutable. New listeners join at any time; old ones drop off. The Subject's <span class="pill">notify()</span> body doesn't change as the audience changes.`,
+    code: [
+      '<span class="c">// runtime hot-swap of listeners:</span>',
+      'subject.unsubscribe(mailer)         <span class="c">// stop emailing in dev</span>',
+      'subject.subscribe(<span class="k">new</span> Metrics())     <span class="c">// add a new sink</span>',
+      '',
+      'subject.set({ user: <span class="s">"alice"</span> })',
+      '<span class="c">// UI + Logger + Cache + Metrics fire. Mailer is silent.</span>',
+    ],
+    state: { dim: ['o4'], glow: ['o1','o2','o3'], live: ['w-1','w-2','w-3'], poll: false, pulse: true, caption: "drop one, add one — Subject stays unchanged" }
+  },
+  {
+    title: "push vs pull",
+    narration: `Two flavors. <b>Push</b>: notify carries the new state as an argument (cheap, opinionated). <b>Pull</b>: notify is a signal — observers read <span class="pill">subject.state</span> if they want (decoupled, more calls). Pick by who owns the change schema.`,
+    code: [
+      '<span class="c">// push: subject hands the new state to each observer</span>',
+      '<span class="k">interface</span> <span class="t">Push</span> { update(s: <span class="t">State</span>): <span class="t">void</span> }',
+      '',
+      '<span class="c">// pull: subject says "something changed", observer pulls what it needs</span>',
+      '<span class="k">interface</span> <span class="t">Pull</span> { update(src: <span class="t">Subject</span>): <span class="t">void</span> }',
+      '<span class="k">class</span> <span class="t">UIView</span> <span class="k">implements</span> <span class="t">Pull</span> {',
+      '  update(src) { <span class="k">this</span>.redraw(src.theme()) }   <span class="c">// only fetch theme</span>',
+      '}',
+    ],
+    state: { dim: ['o3','o4'], glow: ['o1','o2'], live: ['w-1','w-2'], poll: false, pulse: true, caption: "push delivers, pull invites — pick per consumer" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Observer decouples the producer from N consumers — the foundation under <b>event buses, reactive streams, pub/sub, DOM events, React's useState</b>. The cost: order of notification is implicit, removal-during-notify is a footgun, and silent listeners drift out of memory. Close cousin of <b>[[command-pattern]]</b> (each notification is effectively a command) and <b>[[mediator-pattern]]</b> (centralizes many-to-many where Observer centralizes one-to-many).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - UI follows model (MVC)</span>',
+      '<span class="c">//   - log/audit on every state change</span>',
+      '<span class="c">//   - cache invalidation</span>',
+      '<span class="c">//   - event bus across modules</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - order-sensitive chains (use [[chain-of-responsibility-pattern]])</span>',
+      '<span class="c">//   - request/reply (you want a return value, not a fan-out)</span>',
+      '<span class="c">//   - cross-module mediation (use [[mediator-pattern]])</span>',
+    ],
+    state: { dim: [], glow: ['o1','o2','o3','o4'], live: [], poll: false, pulse: false, caption: "use it when many things must react to one source" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ['o1','o2','o3','o4'].forEach((n,i) => {
+    const el = $('obs-' + (i+1));
+    el.classList.toggle('dim', s.state.dim.includes(n));
+    el.classList.toggle('glow', s.state.glow.includes(n));
+  });
+  ['w-1','w-2','w-3','w-4'].forEach(id => $(id).classList.toggle('live', s.state.live.includes(id)));
+  $('poll-1').classList.toggle('on', s.state.poll);
+  $('caption').textContent = s.state.caption || '';
+
+  const p = $('pulse');
+  p.classList.remove('on');
+  if (s.state.pulse) { void p.offsetWidth; p.classList.add('on'); }
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

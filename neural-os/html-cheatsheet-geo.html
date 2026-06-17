@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML — ქართული სახელმძღვანელო</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    padding: 2rem;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    color: #f8fafc;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: #1e2130;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #2d3148;
+  }
+
+  .card-header {
+    padding: 0.6rem 1rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .card-body { padding: 0.75rem 1rem 1rem; }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #2a2f47;
+    gap: 1rem;
+  }
+  .row:last-child { border-bottom: none; }
+
+  .label {
+    color: #94a3b8;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+  }
+
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.8rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: #111827;
+    white-space: nowrap;
+  }
+
+  .block-code {
+    background: #111827;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    line-height: 1.7;
+    color: #e2e8f0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* Color themes per section */
+  .blue  .card-header { background: #1e3a5f; color: #60a5fa; }
+  .green .card-header { background: #14402a; color: #4ade80; }
+  .purple .card-header { background: #2d1f4e; color: #c084fc; }
+  .orange .card-header { background: #3d2200; color: #fb923c; }
+  .red   .card-header { background: #3b1010; color: #f87171; }
+  .teal  .card-header { background: #0f3033; color: #2dd4bf; }
+  .yellow .card-header { background: #3d2e00; color: #fbbf24; }
+  .pink  .card-header { background: #3b1a2e; color: #f472b6; }
+
+  .blue  code { color: #93c5fd; }
+  .green code { color: #86efac; }
+  .purple code { color: #d8b4fe; }
+  .orange code { color: #fdba74; }
+  .red   code { color: #fca5a5; }
+  .teal  code { color: #5eead4; }
+  .yellow code { color: #fcd34d; }
+  .pink  code { color: #f9a8d4; }
+
+  .note {
+    background: #1e2130;
+    border-left: 3px solid #475569;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .tag { color: #60a5fa; }
+  .attr { color: #fbbf24; }
+  .val  { color: #86efac; }
+  .comment { color: #4b5563; font-style: italic; }
+</style>
+</head>
+<body>
+
+<h1>HTML სახელმძღვანელო</h1>
+<p class="subtitle">სრული სწრაფი მიმოხილვა — ქართულ ენაზე</p>
+
+<div class="grid">
+
+  <!-- STRUCTURE -->
+  <div class="card blue">
+    <div class="card-header">დოკუმენტის სტრუქტურა</div>
+    <div class="card-body">
+      <div class="block-code"><span class="tag">&lt;!DOCTYPE html&gt;</span>
+<span class="tag">&lt;html</span> <span class="attr">lang</span>=<span class="val">"ka"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;head&gt;</span>
+    <span class="tag">&lt;meta</span> <span class="attr">charset</span>=<span class="val">"UTF-8"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"viewport"</span>
+          <span class="attr">content</span>=<span class="val">"width=device-width"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;title&gt;</span>გვერდის სათაური<span class="tag">&lt;/title&gt;</span>
+    <span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"stylesheet"</span> <span class="attr">href</span>=<span class="val">"style.css"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;/head&gt;</span>
+  <span class="tag">&lt;body&gt;</span>
+    <span class="comment">&lt;!-- შინაარსი აქ --&gt;</span>
+  <span class="tag">&lt;/body&gt;</span>
+<span class="tag">&lt;/html&gt;</span></div>
+      <div class="note">lang="ka" — ქართული ენა. charset="UTF-8" — ქართული ასოების მხარდაჭერა.</div>
+    </div>
+  </div>
+
+  <!-- TEXT FORMATTING -->
+  <div class="card green">
+    <div class="card-header">ტექსტის ფორმატირება</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სათაური 1–6</span><code>&lt;h1&gt; … &lt;h6&gt;</code></div>
+      <div class="row"><span class="label">აბზაცი</span><code>&lt;p&gt;</code></div>
+      <div class="row"><span class="label">მუქი (სემანტიკური)</span><code>&lt;strong&gt;</code></div>
+      <div class="row"><span class="label">მუქი (ვიზუალური)</span><code>&lt;b&gt;</code></div>
+      <div class="row"><span class="label">დახრილი (სემანტიკური)</span><code>&lt;em&gt;</code></div>
+      <div class="row"><span class="label">დახრილი (ვიზუალური)</span><code>&lt;i&gt;</code></div>
+      <div class="row"><span class="label">ხაზგასმული</span><code>&lt;u&gt;</code></div>
+      <div class="row"><span class="label">გადახაზული</span><code>&lt;s&gt;</code></div>
+      <div class="row"><span class="label">სტრიქონის გადატანა</span><code>&lt;br&gt;</code></div>
+      <div class="row"><span class="label">ჰორიზონტალური ხაზი</span><code>&lt;hr&gt;</code></div>
+      <div class="row"><span class="label">ქვედა ინდექსი</span><code>&lt;sub&gt;</code></div>
+      <div class="row"><span class="label">ზედა ინდექსი</span><code>&lt;sup&gt;</code></div>
+      <div class="row"><span class="label">მონოშრიფტი</span><code>&lt;code&gt;</code></div>
+      <div class="row"><span class="label">ციტატა</span><code>&lt;blockquote&gt;</code></div>
+      <div class="row"><span class="label">მოკლე ციტატა</span><code>&lt;q&gt;</code></div>
+      <div class="row"><span class="label">ხაზგამოყოფა</span><code>&lt;mark&gt;</code></div>
+    </div>
+  </div>
+
+  <!-- LINKS -->
+  <div class="card purple">
+    <div class="card-header">ბმულები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ჰიპერბმული</span><code>&lt;a href="URL"&gt;</code></div>
+      <div class="row"><span class="label">ახალ ჩანართში გახსნა</span><code>target="_blank"</code></div>
+      <div class="row"><span class="label">ამავე ჩანართში</span><code>target="_self"</code></div>
+      <div class="row"><span class="label">ელ-ფოსტა</span><code>href="mailto:x@x.ge"</code></div>
+      <div class="row"><span class="label">ტელეფონი</span><code>href="tel:+995…"</code></div>
+      <div class="row"><span class="label">გვერდის განყოფილება</span><code>href="#section-id"</code></div>
+      <div class="row"><span class="label">ნიშნული (anchor)</span><code>id="section-id"</code></div>
+      <div class="row"><span class="label">ჩამოტვირთვა</span><code>download="სახელი"</code></div>
+    </div>
+  </div>
+
+  <!-- IMAGES & MEDIA -->
+  <div class="card orange">
+    <div class="card-header">სურათები და მედია</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სურათი</span><code>&lt;img src="…" alt="…"&gt;</code></div>
+      <div class="row"><span class="label">სიგანე / სიმაღლე</span><code>width="…" height="…"</code></div>
+      <div class="row"><span class="label">ვიდეო</span><code>&lt;video controls&gt;</code></div>
+      <div class="row"><span class="label">ვიდეო წყარო</span><code>&lt;source src="…" type="video/mp4"&gt;</code></div>
+      <div class="row"><span class="label">აუდიო</span><code>&lt;audio controls&gt;</code></div>
+      <div class="row"><span class="label">ჩასმული გვერდი</span><code>&lt;iframe src="…"&gt;</code></div>
+      <div class="row"><span class="label">ფიგურა + წარწერა</span><code>&lt;figure&gt; &lt;figcaption&gt;</code></div>
+      <div class="row"><span class="label">ადაპტური სურათი</span><code>&lt;picture&gt; &lt;source&gt;</code></div>
+    </div>
+  </div>
+
+  <!-- LISTS -->
+  <div class="card teal">
+    <div class="card-header">სიები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">დაუნომრავი სია</span><code>&lt;ul&gt;</code></div>
+      <div class="row"><span class="label">დანომრილი სია</span><code>&lt;ol&gt;</code></div>
+      <div class="row"><span class="label">სიის ელემენტი</span><code>&lt;li&gt;</code></div>
+      <div class="row"><span class="label">აღწერილობითი სია</span><code>&lt;dl&gt;</code></div>
+      <div class="row"><span class="label">ტერმინი</span><code>&lt;dt&gt;</code></div>
+      <div class="row"><span class="label">განმარტება</span><code>&lt;dd&gt;</code></div>
+      <div class="row"><span class="label">დამოყვნება (type)</span><code>type="a" / "A" / "i"</code></div>
+      <div class="row"><span class="label">ნომრის დაწყება</span><code>start="5"</code></div>
+    </div>
+  </div>
+
+  <!-- TABLES -->
+  <div class="card red">
+    <div class="card-header">ცხრილები</div>
+    <div class="card-body">
+      <div class="block-code"><span class="tag">&lt;table&gt;</span>
+  <span class="tag">&lt;thead&gt;</span>
+    <span class="tag">&lt;tr&gt;</span>
+      <span class="tag">&lt;th&gt;</span>სვეტი 1<span class="tag">&lt;/th&gt;</span>
+      <span class="tag">&lt;th&gt;</span>სვეტი 2<span class="tag">&lt;/th&gt;</span>
+    <span class="tag">&lt;/tr&gt;</span>
+  <span class="tag">&lt;/thead&gt;</span>
+  <span class="tag">&lt;tbody&gt;</span>
+    <span class="tag">&lt;tr&gt;</span>
+      <span class="tag">&lt;td&gt;</span>მონაცემი<span class="tag">&lt;/td&gt;</span>
+      <span class="tag">&lt;td</span> <span class="attr">colspan</span>=<span class="val">"2"</span><span class="tag">&gt;</span>გაერთიანება<span class="tag">&lt;/td&gt;</span>
+    <span class="tag">&lt;/tr&gt;</span>
+  <span class="tag">&lt;/tbody&gt;</span>
+  <span class="tag">&lt;tfoot&gt;</span>…<span class="tag">&lt;/tfoot&gt;</span>
+<span class="tag">&lt;/table&gt;</span></div>
+      <div class="note">colspan — სვეტების გაერთიანება. rowspan — მწკრივების გაერთიანება.</div>
+    </div>
+  </div>
+
+  <!-- FORMS -->
+  <div class="card yellow">
+    <div class="card-header">ფორმები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ფორმა</span><code>&lt;form action="…" method="post"&gt;</code></div>
+      <div class="row"><span class="label">ტექსტის ველი</span><code>&lt;input type="text"&gt;</code></div>
+      <div class="row"><span class="label">პაროლი</span><code>&lt;input type="password"&gt;</code></div>
+      <div class="row"><span class="label">ელ-ფოსტა</span><code>&lt;input type="email"&gt;</code></div>
+      <div class="row"><span class="label">რიცხვი</span><code>&lt;input type="number"&gt;</code></div>
+      <div class="row"><span class="label">სლაიდერი</span><code>&lt;input type="range"&gt;</code></div>
+      <div class="row"><span class="label">ფაილი</span><code>&lt;input type="file"&gt;</code></div>
+      <div class="row"><span class="label">თარიღი</span><code>&lt;input type="date"&gt;</code></div>
+      <div class="row"><span class="label">მოსანიშნი ველი</span><code>&lt;input type="checkbox"&gt;</code></div>
+      <div class="row"><span class="label">რადიო ღილაკი</span><code>&lt;input type="radio"&gt;</code></div>
+      <div class="row"><span class="label">ჩამოსაშლელი</span><code>&lt;select&gt; &lt;option&gt;</code></div>
+      <div class="row"><span class="label">ტექსტური არე</span><code>&lt;textarea rows="4"&gt;</code></div>
+      <div class="row"><span class="label">ეტიკეტი</span><code>&lt;label for="id"&gt;</code></div>
+      <div class="row"><span class="label">გაგზავნა</span><code>&lt;input type="submit"&gt;</code></div>
+      <div class="row"><span class="label">ღილაკი</span><code>&lt;button type="button"&gt;</code></div>
+      <div class="row"><span class="label">სავალდებულო</span><code>required</code></div>
+      <div class="row"><span class="label">გამორთული</span><code>disabled</code></div>
+      <div class="row"><span class="label">შაბლონი</span><code>placeholder="მაგ: გიორგი"</code></div>
+    </div>
+  </div>
+
+  <!-- SEMANTIC HTML5 -->
+  <div class="card pink">
+    <div class="card-header">სემანტიკური თეგები (HTML5)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სათაური (ზედა)</span><code>&lt;header&gt;</code></div>
+      <div class="row"><span class="label">ნავიგაცია</span><code>&lt;nav&gt;</code></div>
+      <div class="row"><span class="label">მთავარი შინაარსი</span><code>&lt;main&gt;</code></div>
+      <div class="row"><span class="label">სტატია</span><code>&lt;article&gt;</code></div>
+      <div class="row"><span class="label">სექცია</span><code>&lt;section&gt;</code></div>
+      <div class="row"><span class="label">გვერდითა პანელი</span><code>&lt;aside&gt;</code></div>
+      <div class="row"><span class="label">ქვედა კოლონტიტული</span><code>&lt;footer&gt;</code></div>
+      <div class="row"><span class="label">დეტალები / შეჯამება</span><code>&lt;details&gt; &lt;summary&gt;</code></div>
+      <div class="row"><span class="label">დროის ეტიკეტი</span><code>&lt;time datetime="2024-01-01"&gt;</code></div>
+      <div class="row"><span class="label">განსაზღვრება</span><code>&lt;dfn&gt;</code></div>
+      <div class="row"><span class="label">კლავიშის კომბინაცია</span><code>&lt;kbd&gt;</code></div>
+      <div class="row"><span class="label">ვარიანტი (progress)</span><code>&lt;progress max="100" value="70"&gt;</code></div>
+      <div class="row"><span class="label">ბლოკი (გენ.)</span><code>&lt;div&gt;</code></div>
+      <div class="row"><span class="label">ინლაინი (გენ.)</span><code>&lt;span&gt;</code></div>
+    </div>
+  </div>
+
+  <!-- ATTRIBUTES -->
+  <div class="card blue">
+    <div class="card-header">ატრიბუტები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">იდენტიფიკატორი</span><code>id="unique-name"</code></div>
+      <div class="row"><span class="label">კლასი</span><code>class="my-class"</code></div>
+      <div class="row"><span class="label">ჩაშენებული სტილი</span><code>style="color:red"</code></div>
+      <div class="row"><span class="label">ენა</span><code>lang="ka"</code></div>
+      <div class="row"><span class="label">მიმართულება</span><code>dir="ltr" / "rtl"</code></div>
+      <div class="row"><span class="label">tooltip</span><code>title="ახსნა"</code></div>
+      <div class="row"><span class="label">რედაქტირებადი</span><code>contenteditable="true"</code></div>
+      <div class="row"><span class="label">tab-ის თანმიმდევრობა</span><code>tabindex="1"</code></div>
+      <div class="row"><span class="label">მალსახმობი</span><code>accesskey="h"</code></div>
+      <div class="row"><span class="label">data ატრიბუტი</span><code>data-myval="123"</code></div>
+      <div class="row"><span class="label">ARIA ეტიკეტი</span><code>aria-label="დახმარება"</code></div>
+      <div class="row"><span class="label">ARIA დამალვა</span><code>aria-hidden="true"</code></div>
+    </div>
+  </div>
+
+  <!-- META TAGS -->
+  <div class="card green">
+    <div class="card-header">Meta თეგები (head-ში)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სიმბოლოთა კოდირება</span><code>&lt;meta charset="UTF-8"&gt;</code></div>
+      <div class="row"><span class="label">რეაგირებადი ეკრანი</span><code>name="viewport"</code></div>
+      <div class="row"><span class="label">აღწერა (SEO)</span><code>name="description"</code></div>
+      <div class="row"><span class="label">საკვანძო სიტყვები</span><code>name="keywords"</code></div>
+      <div class="row"><span class="label">ავტორი</span><code>name="author"</code></div>
+      <div class="row"><span class="label">განახლება</span><code>http-equiv="refresh" content="5"</code></div>
+      <div class="row"><span class="label">OG სათაური</span><code>property="og:title"</code></div>
+      <div class="row"><span class="label">OG სურათი</span><code>property="og:image"</code></div>
+    </div>
+  </div>
+
+  <!-- SPECIAL CHARS -->
+  <div class="card teal">
+    <div class="card-header">სპეციალური სიმბოლოები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">გამტყვეული სივრცე</span><code>&amp;nbsp;</code></div>
+      <div class="row"><span class="label">ნაკლებია (&lt;)</span><code>&amp;lt;</code></div>
+      <div class="row"><span class="label">მეტია (&gt;)</span><code>&amp;gt;</code></div>
+      <div class="row"><span class="label">ამპერსანდი (&amp;)</span><code>&amp;amp;</code></div>
+      <div class="row"><span class="label">ბრჭყალი (")</span><code>&amp;quot;</code></div>
+      <div class="row"><span class="label">აპოსტროფი (')</span><code>&amp;apos;</code></div>
+      <div class="row"><span class="label">საავტ. უფლება (©)</span><code>&amp;copy;</code></div>
+      <div class="row"><span class="label">სავაჭრო ნიშანი (®)</span><code>&amp;reg;</code></div>
+      <div class="row"><span class="label">ვალუტა (€)</span><code>&amp;euro;</code></div>
+      <div class="row"><span class="label">ლარი (₾)</span><code>&amp;#x20BE;</code></div>
+      <div class="row"><span class="label">გამყოფი (—)</span><code>&amp;mdash;</code></div>
+      <div class="row"><span class="label">arrow (→)</span><code>&amp;rarr;</code></div>
+    </div>
+  </div>
+
+  <!-- COMMENTS + SCRIPT + LINK -->
+  <div class="card purple">
+    <div class="card-header">სკრიპტი, სტილი, კომენტარი</div>
+    <div class="card-body">
+      <div class="block-code"><span class="comment">&lt;!-- ეს კომენტარია --&gt;</span>
+
+<span class="comment">&lt;!-- CSS — head-ში --&gt;</span>
+<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"stylesheet"</span> <span class="attr">href</span>=<span class="val">"style.css"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;style&gt;</span>
+  p { color: red; }
+<span class="tag">&lt;/style&gt;</span>
+
+<span class="comment">&lt;!-- JS — body-ს ბოლოს --&gt;</span>
+<span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="val">"app.js"</span><span class="tag">&gt;&lt;/script&gt;</span>
+<span class="tag">&lt;script&gt;</span>
+  console.log(<span class="val">"გამარჯობა!"</span>);
+<span class="tag">&lt;/script&gt;</span></div>
+    </div>
+  </div>
+
+</div>
+
+<p style="text-align:center; margin-top:2rem; color:#4b5563; font-size:0.75rem;">
+  HTML5 · ქართული სახელმძღვანელო · Neural OS
+</p>
+
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

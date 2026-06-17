@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-03">
+<head>
+<meta charset="utf-8">
+<title>AI Vision Object Detection — Visual Walkthrough</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  :root {
+    --img-c: #7ee787;
+    --feat-c: #79c0ff;
+    --anc-c: #d2a8ff;
+    --head-c: #f78166;
+    --out-c: #ffa657;
+  }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+  const svg = `
+    <svg viewBox="0 0 760 320">
+      ${Explain.svgDefs()}
+      ${Explain.glyph('box',      { x: 70,  y: 160, w: 70, h: 80, label: 'Image',    id: 'img',   color: 'var(--img-c)' })}
+      ${Explain.glyph('gear',     { x: 190, y: 160,        label: 'CNN', sub: 'backbone', id: 'cnn', color: 'var(--feat-c)' })}
+      ${Explain.glyph('stack',    { x: 320, y: 160, w: 80, layers: ['7×7','14×14'], label: 'features', id: 'fmap', color: 'var(--feat-c)' })}
+      ${Explain.glyph('node',     { x: 450, y: 110, r: 16, label: 'A₁', id: 'anc-1', color: 'var(--anc-c)' })}
+      ${Explain.glyph('node',     { x: 450, y: 160, r: 16, label: 'A₂', id: 'anc-2', color: 'var(--anc-c)' })}
+      ${Explain.glyph('node',     { x: 450, y: 210, r: 16, label: 'A₃', id: 'anc-3', color: 'var(--anc-c)' })}
+      ${Explain.glyph('box',      { x: 610, y: 130, w: 90, h: 34, label: 'cls head', id: 'cls', color: 'var(--head-c)' })}
+      ${Explain.glyph('box',      { x: 610, y: 200, w: 90, h: 34, label: 'reg head', id: 'reg', color: 'var(--head-c)' })}
+      ${Explain.glyph('box',      { x: 710, y: 160, w: 60, h: 80, label: 'boxes',    id: 'out', color: 'var(--out-c)' })}
+
+      ${Explain.glyph('arrow',    { from: [105, 160], to: [173, 160], id: 'e-img-cnn',  label: 'pixels' })}
+      ${Explain.glyph('arrow',    { from: [207, 160], to: [285, 160], id: 'e-cnn-fmap' })}
+      ${Explain.glyph('arrow',    { from: [360, 160], to: [432, 110], id: 'e-fmap-a1' })}
+      ${Explain.glyph('arrow',    { from: [360, 160], to: [432, 160], id: 'e-fmap-a2' })}
+      ${Explain.glyph('arrow',    { from: [360, 160], to: [432, 210], id: 'e-fmap-a3' })}
+      ${Explain.glyph('arrow',    { from: [468, 152], to: [565, 132], id: 'e-anc-cls' })}
+      ${Explain.glyph('arrow',    { from: [468, 170], to: [565, 198], id: 'e-anc-reg' })}
+      ${Explain.glyph('arrow',    { from: [655, 132], to: [685, 152], id: 'e-cls-out', label: 'what' })}
+      ${Explain.glyph('arrow',    { from: [655, 198], to: [685, 170], id: 'e-reg-out', label: 'where' })}
+    </svg>`;
+
+  const code = `<pre>
+<span class="ln"><span class="k">class</span> <span class="t">Detector</span>(<span class="t">nn.Module</span>):</span>
+<span class="ln">  <span class="k">def</span> <span class="n">__init__</span>(<span class="n">self</span>):</span>
+<span class="ln">    <span class="n">self</span>.backbone = <span class="t">ResNet</span>()                <span class="c"># feature extractor</span></span>
+<span class="ln">    <span class="n">self</span>.cls_head = <span class="t">nn.Conv2d</span>(<span class="s">512</span>, <span class="s">80</span>, <span class="s">1</span>)   <span class="c"># class scores</span></span>
+<span class="ln">    <span class="n">self</span>.reg_head = <span class="t">nn.Conv2d</span>(<span class="s">512</span>, <span class="s">4</span>, <span class="s">1</span>)    <span class="c"># box deltas</span></span>
+<span class="ln">    <span class="n">self</span>.anchors  = <span class="n">generate_anchors</span>(</span>
+<span class="ln">      grid=(<span class="s">14</span>,<span class="s">14</span>), scales=[<span class="s">1</span>,<span class="s">2</span>,<span class="s">4</span>])    <span class="c"># pre-positioned</span></span>
+<span class="ln"></span>
+<span class="ln">  <span class="k">def</span> <span class="n">forward</span>(<span class="n">self</span>, img):</span>
+<span class="ln">    feat = <span class="n">self</span>.backbone(img)                <span class="c"># B×512×14×14</span></span>
+<span class="ln">    cls_logits = <span class="n">self</span>.cls_head(feat)         <span class="c"># what  at each cell</span></span>
+<span class="ln">    box_deltas = <span class="n">self</span>.reg_head(feat)         <span class="c"># where at each cell</span></span>
+<span class="ln">    boxes  = <span class="n">decode</span>(<span class="n">self</span>.anchors, box_deltas)</span>
+<span class="ln">    scores = cls_logits.<span class="n">sigmoid</span>()</span>
+<span class="ln">    keep   = <span class="n">nms</span>(boxes, scores, iou=<span class="s">0.5</span>)     <span class="c"># dedupe overlaps</span></span>
+<span class="ln">    <span class="k">return</span> boxes[keep], scores[keep]</span>
+</pre>`;
+
+  // ============================================================
+  // U — See (CAST): the visual taxonomy, walked across Bloom layers.
+  // ============================================================
+  const uSee = [
+    {
+      layer: 'recognize',
+      title: 'The mental model',
+      narration:
+        'Imagine running your finger across a contact sheet of photos — at every cell you point and say <b>"dog,"</b> <b>"cat,"</b> or <b>"nothing,"</b> then trace the exact outline. ' +
+        'Object detection is <b>image classification done at every spatial location</b>, with a box-refinement head bolted alongside the classifier.',
+      codeLines: [1, 9],
+      onEnter: (e) => { e.glow('img'); e.glow('out'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Backbone — the photographer\'s eye',
+      narration:
+        'A photographer zooms and re-focuses through optical layers; a <b>backbone CNN</b> does the same through dozens of convolutional filters. ' +
+        'Each layer condenses the picture and pulls out more abstract patterns — <span class="pill">edges → textures → object parts → objects</span>.',
+      codeLines: [3, 10],
+      onEnter: (e) => { e.glow('cnn'); e.glow('fmap'); e.activate('e-img-cnn'); e.activate('e-cnn-fmap'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Anchors — a printer\'s grid over the photo',
+      narration:
+        'Imagine a printer\'s grid laid over the photo, every cell pre-stamped with 3 candidate boxes (short-and-wide, square, tall-and-narrow). ' +
+        'The network <b>does not predict boxes from scratch</b>; it scores <span class="pill">anchor boxes</span> that are already there. Cheaper, more stable.',
+      codeLines: [6, 7],
+      onEnter: (e) => { e.glow('fmap'); e.glow('anc-1'); e.glow('anc-2'); e.glow('anc-3'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Two heads — what and where',
+      narration:
+        'Two parallel readers stamp every anchor. The <b>classifier</b> asks <span class="pill">"is this a dog, a cat, or nothing?"</span>; the <b>regressor</b> asks <span class="pill">"how much do I shift and stretch this anchor to fit perfectly?"</span> ' +
+        'Both run on every cell in parallel — one forward pass, every prediction.',
+      codeLines: [4, 5, 11, 12],
+      onEnter: (e) => {
+        e.glow('cls'); e.glow('reg'); e.glow('anc-2');
+        e.activate('e-anc-cls'); e.activate('e-anc-reg');
+      },
+    },
+    {
+      layer: 'apply',
+      title: 'Label this anchor',
+      narration:
+        'During training, anchor A₂ has been measured to cover <b>70%</b> of a ground-truth dog box (<span class="pill">IoU = 0.7</span>). ' +
+        'What label does the classifier head get trained to output for this anchor?',
+      codeLines: [11, 13],
+      choices: [
+        { label: 'Positive (dog)',          correct: true,
+          reason: 'IoU 0.7 is well above the 0.5 positive threshold — A₂ is treated as a confirmed dog sample for the classifier loss.' },
+        { label: 'Negative (background)',   correct: false,
+          reason: 'Background anchors have IoU < 0.3 with every ground-truth box. 0.7 is far too high to be background.' },
+        { label: 'Ignore',                  correct: false,
+          reason: 'Anchors in the 0.3–0.5 "ignore band" contribute no loss, but 0.7 sits firmly in the positive zone.' },
+      ],
+      onEnter: (e) => { e.glow('anc-2'); e.glow('cls'); e.activate('e-anc-cls'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'NMS — collapsing the redundancy',
+      narration:
+        'The classifier fires <span class="pill">"dog 0.92"</span> on anchor A₁ and <span class="pill">"dog 0.87"</span> on anchor A₂, and their boxes overlap by IoU 0.8. ' +
+        'The pipeline must collapse this. What does <b>non-maximum suppression</b> do?',
+      codeLines: [15],
+      choices: [
+        { label: 'Keep the highest-confidence box, drop A₂',  correct: true,
+          reason: 'NMS sorts by score, keeps the top, then suppresses every box overlapping it by > threshold. A₁ wins; A₂ is dropped.' },
+        { label: 'Keep both — they might be two dogs',        correct: false,
+          reason: 'IoU 0.8 means the boxes are nearly identical — same object. Two real dogs side-by-side would overlap far less.' },
+        { label: 'Average their coordinates into one box',    correct: false,
+          reason: 'Coordinate averaging is "box voting" (a different technique). NMS *selects* — it never blends boxes together.' },
+      ],
+      onEnter: (e) => { e.glow('out'); e.activate('e-cls-out'); e.activate('e-reg-out'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Where this generalizes',
+      narration:
+        'Object detection is the middle of a spectrum: <b>image classification</b> answers "what" for a whole image; <b>semantic segmentation</b> answers "what" at every pixel; detection answers <span class="pill">what + where</span> for each <i>object</i>. ' +
+        'The wiki\'s topic-owner page is <span class="wikilink" data-wiki="career-mission/object-detection-stack">[[object-detection-stack]]</span> — it covers IoU, NMS, anchors, YOLO/R-CNN families, Siamese-with-triplet-loss, and the advanced architectures. ' +
+        'Every Apply/Analyze step here was a small <span class="wikilink" data-wiki="learning-systems/active-recall">[[active-recall]]</span> gate. ' +
+        'Next vision topic? Run it through <span class="wikilink" data-wiki="meta-wiki/5-gates-of-comprehension">[[5-gates-of-comprehension]]</span>.',
+      codeLines: [],
+      onEnter: (e) => { e.glow('out'); },
+    },
+  ];
+
+  // ============================================================
+  // D — Name (NEDF): name, distinguish, failure-mode identity card.
+  // ============================================================
+  const dName = [
+    {
+      layer: 'recognize',
+      title: 'The identifier card',
+      narration:
+        '<b>Object Detection Stack</b> = the task family that outputs <span class="pill">{class, box}</span> pairs per object. ' +
+        'Sibling families: <i>classification</i> (one label, no box), <i>segmentation</i> (per-pixel label, no object identity). ' +
+        'You name a system by what its <b>output shape</b> commits to.',
+      codeLines: [4, 5, 16],
+      onEnter: (e) => { e.glow('cls'); e.glow('reg'); e.glow('out'); },
+    },
+    {
+      layer: 'understand',
+      title: 'Distinguishers',
+      narration:
+        'Three crisp distinguishers: ' +
+        '<b>(1)</b> output cardinality — detection emits <i>many</i> boxes per image, classification emits one label; ' +
+        '<b>(2)</b> spatial commitment — detection commits to coordinates, segmentation commits to pixels, classification commits to neither; ' +
+        '<b>(3)</b> training signal — detection needs box+class pairs, segmentation needs masks, classification needs only labels.',
+      codeLines: [11, 12, 16],
+      onEnter: (e) => { e.glow('cls'); e.glow('reg'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Spot the misnamed system',
+      narration:
+        'A team claims: <i>"our model does object detection — it tells us whether each photo contains a person."</i> ' +
+        'What\'s actually being described?',
+      codeLines: [4],
+      choices: [
+        { label: 'Image classification (binary)', correct: true,
+          reason: 'Output is one boolean per image — no boxes, no per-object identity. That\'s classification. Naming mistake locks the team into the wrong eval metric (accuracy vs mAP).' },
+        { label: 'Object detection', correct: false,
+          reason: 'Detection requires per-object boxes. A single "person/no-person" answer per image lacks the spatial commitment.' },
+        { label: 'Semantic segmentation', correct: false,
+          reason: 'Segmentation labels every pixel. No pixel-level output here.' },
+      ],
+      onEnter: (e) => { e.glow('cls'); },
+    },
+  ];
+
+  // ============================================================
+  // F — Do (SPEAR): the action playbook.
+  // ============================================================
+  const fDo = [
+    {
+      layer: 'recognize',
+      title: 'The decision tree',
+      narration:
+        '<b>Step 1:</b> read the output shape the problem demands. ' +
+        '<b>Step 2:</b> map output shape → task family. ' +
+        '<b>Step 3:</b> pick algorithm by family + constraint (speed vs accuracy). ' +
+        '<b>Step 4:</b> bolt on the standard accessories (NMS, IoU-matched training, anchor tuning).',
+      codeLines: [1, 9, 15],
+      onEnter: (e) => { e.glow('img'); e.glow('out'); e.activate('e-img-cnn'); e.activate('e-cnn-fmap'); },
+    },
+    {
+      layer: 'apply',
+      title: 'Pick the algorithm',
+      narration:
+        'Scenario: <i>real-time pedestrian detection on a self-driving car (30 fps budget, accuracy can be okay-not-perfect).</i> ' +
+        'Which algorithm family fits?',
+      codeLines: [9, 13, 14],
+      choices: [
+        { label: 'YOLO (single-shot)', correct: true,
+          reason: 'One forward pass per frame → real-time. Accuracy trades off slightly vs. Faster R-CNN, but 30 fps wins under a hard latency budget.' },
+        { label: 'Faster R-CNN (two-stage)', correct: false,
+          reason: 'Two-stage = highest accuracy historically, but latency is the killer. Not your tool when you have a frame budget.' },
+        { label: 'Mask R-CNN', correct: false,
+          reason: 'Mask R-CNN extends detection with per-pixel masks — overkill for pedestrian boxes and even slower.' },
+      ],
+      onEnter: (e) => { e.glow('cls'); e.glow('reg'); e.glow('out'); },
+    },
+  ];
+
+  // ============================================================
+  // B — Watch (HEART): the failure modes to monitor.
+  // ============================================================
+  const bWatch = [
+    {
+      layer: 'understand',
+      title: 'Two failure modes that dominate',
+      narration:
+        'Detection systems fail in two stereotyped ways: ' +
+        '<b>(1) detection/classification confusion</b> — the team evaluates with classification accuracy, missing that boxes are systematically wrong; ' +
+        '<b>(2) missing/misconfigured NMS</b> — output explodes with duplicate boxes per object, every metric looks broken. ' +
+        'Both are <i>silent</i>: training loss looks fine.',
+      codeLines: [15],
+      onEnter: (e) => { e.glow('cls'); e.glow('reg'); e.glow('out'); e.activate('e-cls-out'); e.activate('e-reg-out'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Diagnose the broken pipeline',
+      narration:
+        'Symptoms: <i>accuracy looks great on the dev set, but the demo shows <b>12 overlapping boxes</b> on a single dog.</i> ' +
+        'What\'s the root cause?',
+      codeLines: [15],
+      choices: [
+        { label: 'NMS missing or threshold too high', correct: true,
+          reason: 'Multiple overlapping high-confidence boxes per object is the canonical NMS failure. If IoU threshold is too high (e.g. 0.9), almost nothing gets suppressed.' },
+        { label: 'Backbone undertrained', correct: false,
+          reason: 'An undertrained backbone gives low confidence everywhere, not 12 high-confidence boxes on one object.' },
+        { label: 'Wrong anchor scales', correct: false,
+          reason: 'Bad anchors hurt recall (missed objects), not duplicate detections.' },
+      ],
+      onEnter: (e) => { e.glow('out'); },
+    },
+  ];
+
+  // ============================================================
+  // L — Predict (ORACLE): predict-from-input drills.
+  // ============================================================
+  const lPredict = [
+    {
+      layer: 'apply',
+      title: 'Predict the algorithm family',
+      narration:
+        'Input: <i>medical X-rays, need to locate every nodule with maximum precision; latency irrelevant.</i> ' +
+        'Predict what the senior engineer will reach for.',
+      codeLines: [3, 9],
+      choices: [
+        { label: 'Faster R-CNN with FPN', correct: true,
+          reason: 'Accuracy >> speed → two-stage detector. FPN (feature pyramid) helps with small objects (nodules). This is the canonical medical-imaging stack.' },
+        { label: 'YOLO-v3', correct: false,
+          reason: 'YOLO trades accuracy for speed — wrong tradeoff for a no-latency-constraint diagnostic task.' },
+        { label: 'Image classifier', correct: false,
+          reason: 'No per-nodule location, no clinical utility. Wrong task family.' },
+      ],
+      onEnter: (e) => { e.glow('cnn'); e.glow('fmap'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'Predict the failure mode',
+      narration:
+        'Setup: <i>a team uses Faster R-CNN out of the box for satellite-image car detection. Validation mAP = 0.78. Production mAP = 0.31.</i> ' +
+        'What failure mode do you predict?',
+      codeLines: [6, 7],
+      choices: [
+        { label: 'Anchor scale mismatch (cars too small for default anchors)', correct: true,
+          reason: 'Satellite cars are tiny relative to ImageNet objects. Default anchor scales (1×, 2×, 4×) miss them entirely. Production data has different size distribution than validation.' },
+        { label: 'NMS over-suppression', correct: false,
+          reason: 'NMS would only hurt recall on overlapping cars (parked lots). It doesn\'t explain a uniform 47-point drop.' },
+        { label: 'Backbone needs more layers', correct: false,
+          reason: 'A deeper backbone wouldn\'t fix anchors mismatched to object scale.' },
+      ],
+      onEnter: (e) => { e.glow('anc-1'); e.glow('anc-2'); e.glow('anc-3'); },
+    },
+  ];
+
+  // ============================================================
+  // R — Act (GRACE): in-the-moment protocol.
+  // ============================================================
+  const rAct = [
+    {
+      layer: 'apply',
+      title: 'Protocol: vision task arrives',
+      narration:
+        '<b>Receive</b> the spec. ' +
+        '<b>Ground</b> in the task taxonomy — what output shape is being asked for? ' +
+        '<b>Refine</b> to algorithm family — speed vs accuracy budget? ' +
+        '<b>Audit</b> the accessory stack — anchors, IoU thresholds, NMS. ' +
+        '<b>Check</b> with one real image end-to-end before claiming the system works. ' +
+        '<b>Engage</b> only after that loop closes.',
+      codeLines: [9, 10, 11, 12, 13, 14, 15],
+      choices: [
+        { label: 'Run the protocol exactly as written', correct: true,
+          reason: 'Step ordering matters: skipping "Ground in taxonomy" is the most common Junior-Engineer trap (mid-implementation realization that the task was actually segmentation).' },
+        { label: 'Skip "Ground" — jump to algorithm pick', correct: false,
+          reason: 'This is the #1 way to ship the wrong system. Twenty-percent of "detection" projects on intake are actually segmentation or classification.' },
+        { label: 'Train first, audit after', correct: false,
+          reason: 'Auditing anchors and NMS thresholds <i>after</i> training wastes the run. These are pre-training decisions.' },
+      ],
+      onEnter: (e) => { e.glow('img'); e.glow('cnn'); e.glow('out'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Detection problem in the wild',
+      narration:
+        'GRACE folds into the wiki: when you next encounter a real detection problem, the entry point is <span class="wikilink" data-wiki="career-mission/object-detection-stack">[[object-detection-stack]]</span>\'s decision tree. ' +
+        'For the operating protocol itself, see <span class="wikilink" data-wiki="meta-wiki/5-gates-of-comprehension">[[5-gates-of-comprehension]]</span>. ' +
+        'The reflex you want: <i>output shape → task family → algorithm → accessories → check.</i>',
+      codeLines: [],
+      onEnter: (e) => { e.glow('out'); },
+    },
+  ];
+
+  // ============================================================
+  // BRIDGE: cross-domain analogies — candidates for curation.
+  // Keep / edit / reorder / delete the ones that don't click for you.
+  // ============================================================
+  const bridge = [
+    {
+      layer: 'synthesize',
+      title: 'Object detection ≈ search-engine ranking',
+      narration:
+        '<b>Object detection</b> and <b>web-search ranking</b> share one mechanism: <i>propose a fixed candidate set, score each in parallel, suppress redundancy before output.</i> ' +
+        'Term-by-term: <span class="pill">anchor boxes</span> ≈ candidate documents retrieved from the inverted index; ' +
+        '<span class="pill">classifier head</span> ≈ relevance scorer (BM25, learned ranker); ' +
+        '<span class="pill">regressor head</span> ≈ snippet refinement; ' +
+        '<span class="pill">NMS</span> ≈ MMR / diversity filter (don\'t show 10 near-duplicate results at positions 1–10). ' +
+        'Both pipelines fail the same way: dial NMS / MMR too low and you ship duplicates; too high and you ship one good result with diverse junk around it.' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [6, 13, 15],
+      onEnter: (e) => { e.glow('anc-1'); e.glow('anc-2'); e.glow('anc-3'); e.glow('cls'); e.glow('out'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Object detection ≈ DB query optimizer',
+      narration:
+        '<b>Object detection</b> and a <b>database query planner</b> share: <i>enumerate candidate plans, score by cost, prune dominated alternatives.</i> ' +
+        'Term-by-term: <span class="pill">anchor scales (1×, 2×, 4×)</span> ≈ index choices (hash, btree, GiST) the planner considers; ' +
+        '<span class="pill">classifier head</span> ≈ cost estimator (which plan is cheapest); ' +
+        '<span class="pill">regressor head</span> ≈ predicate refinement and parameter binding; ' +
+        '<span class="pill">NMS</span> ≈ subsumed-plan pruning (drop plan B if plan A dominates it on every axis). ' +
+        'Same failure mode: a planner with bad cost estimates picks the wrong plan exactly as a detector with miscalibrated cls scores picks the wrong box.' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [6, 7, 13, 15],
+      onEnter: (e) => { e.glow('anc-1'); e.glow('anc-2'); e.glow('anc-3'); e.glow('reg'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'Object detection ≈ thought-suppression in cognition',
+      narration:
+        '<b>Object detection</b> and the brain\'s <b>candidate-hypothesis pipeline</b> share: <i>generate many proposals in parallel, attach confidences, suppress near-duplicates before committing to action.</i> ' +
+        'Term-by-term: <span class="pill">anchor boxes</span> ≈ candidate hypotheses your prefrontal cortex spawns when you encounter a situation; ' +
+        '<span class="pill">classifier head</span> ≈ the confidence each hypothesis gets ("how sure am I this is the right move?"); ' +
+        '<span class="pill">NMS</span> ≈ the "I already thought of that" suppression that keeps duplicate ideas from clogging working memory. ' +
+        'Therapy-relevant: <b>rumination</b> is NMS failure — duplicate near-identical thoughts firing repeatedly because the suppression threshold is broken.' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [13, 14, 15],
+      onEnter: (e) => { e.glow('cls'); e.glow('out'); },
+    },
+  ];
+
+  Explain.init({
+    title:    'AI Vision Object Detection',
+    subtitle: 'a visual walkthrough — UMTF matrix',
+    created:  '2026-06-03',
+    svg, code,
+    matrix: {
+      'u-see':     { name: 'U — See',     framework: 'CAST',   steps: uSee },
+      'd-name':    { name: 'D — Name',    framework: 'NEDF',   steps: dName },
+      'f-do':      { name: 'F — Do',      framework: 'SPEAR',  steps: fDo },
+      'b-watch':   { name: 'B — Watch',   framework: 'HEART',  steps: bWatch },
+      'l-predict': { name: 'L — Predict', framework: 'ORACLE', steps: lPredict },
+      'r-act':     { name: 'R — Act',     framework: 'GRACE',  steps: rAct },
+      'bridge':    { name: 'BRIDGE',      framework: 'cross-domain', steps: bridge },
+    },
+  });
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

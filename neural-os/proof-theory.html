@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-10">
+<head>
+<meta charset="utf-8">
+<title>Proof Theory — Representations</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<link rel="stylesheet" href="tools/explain-viz/explain-forms.css">
+<style>
+  /* topic flavor — scholarly serif display (macOS-native, offline-safe) */
+  :root { --font-display: "Hoefler Text", "Iowan Old Style", Palatino, Georgia, serif; }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-forms.js"></script>
+<script>
+ExplainPack.init({
+  title:    'Proof Theory',
+  kicker:   'Formal Systems · Proof Theory',
+  subtitle: 'one topic, several representations',
+  created:  '2026-06-10',
+  model:
+    'A proof is something you can <b>tidy</b>: find a build-then-use <b>detour</b> and cut it, ' +
+    'until every line is <b>on-topic</b>. Each view below encodes that same idea for a different job — ' +
+    'pick the lens that fits what you\'re doing.',
+
+  forms: [
+    { key: 'diagram', name: 'Diagram', sub: 'see the mechanism', kind: 'diagram',
+      src: 'proof-theory-diagram.html',
+      why: '<b>See the mechanism.</b> Watch a detour get cut and the proof tidy itself, climbing ' +
+           'Recognize → Synthesize. Best for <b>first contact</b> and for the active-recall drills.' },
+
+    { key: 'table', name: 'Table', sub: 'logic ↔ computation', kind: 'table',
+      why: '<b>Read it as a dictionary.</b> Every proof-theory word has an exact programming twin. ' +
+           'Best for <b>transfer</b> — if you know one column, you already know the other.',
+      table: {
+        cols: ['Logic — proof theory', 'Computation — programming'],
+        rows: [
+          ['Proposition',               'Type',                     'A claim to be justified ↔ a spec a value must meet.'],
+          ['Proof of A',                'Program / term : A',       'Evidence for A ↔ a value that inhabits the type A.'],
+          ['Implication  A → B',        'Function type  A → B',     '"A yields B" ↔ "a machine that turns an A into a B".'],
+          ['→-intro (assume A, get B)', 'λ-abstraction  λx.M',      'Discharge the temporary assumption ↔ bind the parameter.'],
+          ['→-elim (modus ponens)',     'Application  f(a)',        'Use the implication on a proof of A ↔ call the function.'],
+          ['Conjunction  A ∧ B',        'Product / pair  (A, B)',   'Both hold at once ↔ one value carries both fields.'],
+          ['Disjunction  A ∨ B',        'Sum  Either⟨A,B⟩',         'One of two ↔ a tagged choice you must pattern-match.'],
+          ['Detour (build-then-use)',   'β-redex  (λx.M)(a)',       'THE keystone: a removable round-trip — built only to be used on the spot.', true],
+          ['Cut-elimination / normalize','Evaluation (run it)',     'Tidying the proof ↔ computing the value. Same operation.'],
+          ['Normal form (detour-free)', 'Value (fully evaluated)',  'Nothing left to simplify — on either side of the bridge.'],
+          ['Sub-formula property',      'No junk in the result',    'Every line is a piece of the goal ↔ the output has exactly the expected type.'],
+        ],
+        quiz: {
+          prompt: 'Running <b>cut-elimination</b> on a proof corresponds to which computational act?',
+          options: [
+            { label: 'Type-checking it',    correct: false, reason: 'Type-checking asks "is this proof well-formed?" — checking the proposition holds, not simplifying it.' },
+            { label: 'Running the program', correct: true,  reason: 'Right. Removing a detour is literally evaluating (λx.M)(a) → M[a/x]. Cut-elimination = execution.' },
+            { label: 'Writing the program', correct: false, reason: 'Writing the program is building the proof. Cut-elimination happens after, when you simplify it.' },
+          ],
+        },
+      } },
+
+    { key: 'graph', name: 'Graph', sub: 'where it sits', kind: 'graph',
+      why: '<b>See where it sits.</b> The neighbouring ideas and how they wire together. ' +
+           'Best for <b>orientation and review</b>; each node opens its wiki page.',
+      graph: {
+        viewBox: '0 0 980 500',
+        wikiBase: 'wiki/logic/',
+        nodes: [
+          { id: 'nd',      x: 110, y: 70,  w: 168, label: 'Natural Deduction',     gloss: 'One of the two proof systems. Its simplifier is normalization.' },
+          { id: 'sc',      x: 110, y: 215, w: 168, label: 'Sequent Calculus',      gloss: 'The other proof system. Its simplifier is cut-elimination.' },
+          { id: 'detour',  x: 110, y: 395, w: 168, label: 'Detour / Cut',          wiki: 'gentzens-proof-theory', gloss: 'A build-then-use round-trip. The thing both simplifiers remove — and a β-redex under Curry–Howard.' },
+          { id: 'norm',    x: 345, y: 90,  w: 160, label: 'Normalization',         wiki: 'normalization-theorem', gloss: 'Removes detours from natural-deduction proofs until none remain.' },
+          { id: 'cutelim', x: 345, y: 215, w: 160, label: 'Cut-elimination',       wiki: 'cut-elimination-hauptsatz', gloss: "Gentzen's Hauptsatz: every sequent proof can be rewritten cut-free." },
+          { id: 'ch',      x: 345, y: 395, w: 160, label: 'Curry–Howard',          wiki: 'curry-howard-correspondence', gloss: 'Proofs are programs; simplifying a proof is running a program. The same mathematics.' },
+          { id: 'subf',    x: 575, y: 150, w: 176, label: 'Sub-formula property',  wiki: 'sub-formula-property', gloss: 'In a tidy proof every line is a sub-formula of the goal — nothing off-topic. This is what the payoffs rest on.' },
+          { id: 'pa',      x: 575, y: 360, w: 196, label: 'Consistency of PA (ε₀)', wiki: 'consistency-of-peano-arithmetic', gloss: 'Gentzen ranked every proof and showed the simplifier always walks the ranking down to a stop — proving arithmetic consistent, using reach just past arithmetic (ε₀).' },
+          { id: 'consist', x: 820, y: 70,  w: 130, label: 'Consistency',           gloss: 'A cut-free system cannot prove a contradiction — there is no detour-free proof of falsehood.' },
+          { id: 'decid',   x: 820, y: 160, w: 130, label: 'Decidability',          gloss: 'The sub-formula property bounds the search space, so provability becomes checkable.' },
+          { id: 'witness', x: 820, y: 250, w: 130, label: 'Witnesses',             gloss: 'A detour-free existence proof exposes an actual example — it is constructive.' },
+          { id: 'godel',   x: 820, y: 430, w: 130, label: 'Gödel limits',          wiki: 'godels-incompleteness', gloss: "Arithmetic cannot prove its own consistency from within — which is why Gentzen needed ε₀, one step beyond." },
+        ],
+        edges: [
+          { a: 'nd',      b: 'norm',    label: 'simplifier' },
+          { a: 'sc',      b: 'cutelim', label: 'simplifier' },
+          { a: 'detour',  b: 'norm',    label: 'removes' },
+          { a: 'detour',  b: 'ch',      label: '= β-redex' },
+          { a: 'ch',      b: 'norm',    label: 'same math', dashed: true },
+          { a: 'norm',    b: 'subf' },
+          { a: 'cutelim', b: 'subf' },
+          { a: 'subf',    b: 'consist' },
+          { a: 'subf',    b: 'decid' },
+          { a: 'subf',    b: 'witness' },
+          { a: 'cutelim', b: 'pa',      label: 'Gentzen' },
+          { a: 'godel',   b: 'pa',      label: "can't from within", dashed: true },
+        ],
+      } },
+  ],
+
+  heavy: [
+    { name: 'Cut Simulator ↗', sub: 'run it yourself · heavy', href: 'proof-theory-cut.html' },
+  ],
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-08">
+<head>
+<meta charset="utf-8">
+<title>AWS Midterm 2 — Visual Walkthrough</title>
+<link rel="stylesheet" href="tools/explain-viz/explain-viz.css">
+<style>
+  /* topic accent colors — one per band/service family */
+  :root {
+    --cw:  #7ee787; /* CloudWatch — WATCH   */
+    --ct:  #ffa657; /* CloudTrail — TRAIL   */
+    --cfg: #d2a8ff; /* AWS Config — INSPECT */
+    --net: #79c0ff; /* VPC Flow Logs        */
+    --sec: #f85149; /* Macie / data security*/
+    --evt: #f78166; /* event-driven (S3→λ)  */
+    --ctr: #56d4dd; /* containers (ECR/ECS) */
+  }
+  .band-label { fill: var(--muted); font: 600 11px ui-monospace, monospace; letter-spacing: 0.06em; }
+</style>
+</head>
+<body>
+<script src="tools/explain-viz/explain-viz.js"></script>
+<script src="tools/explain-viz/explain-glyphs.js"></script>
+<script>
+  // ============================================================
+  // The scene — every midterm-2 service, grouped into 3 bands.
+  // Steps glow/dim subsets; this single map anchors the model.
+  // ============================================================
+  const svg = `
+    <svg viewBox="0 0 780 470">
+      ${Explain.svgDefs()}
+
+      <text class="band-label" x="22" y="34">OBSERVABILITY — watch · trail · inspect</text>
+      ${Explain.glyph('server',   { x: 150, y: 95,  label: 'CloudWatch', sub: 'WATCH',   id: 'g-cw',  color: 'var(--cw)' })}
+      ${Explain.glyph('document', { x: 380, y: 90,  label: 'CloudTrail', sub: 'TRAIL',   id: 'g-ct',  color: 'var(--ct)' })}
+      ${Explain.glyph('gear',     { x: 600, y: 95,  label: 'AWS Config', sub: 'INSPECT', id: 'g-cfg', color: 'var(--cfg)' })}
+
+      <text class="band-label" x="22" y="190">NETWORK + DATA SECURITY</text>
+      ${Explain.glyph('cloud',    { x: 150, y: 250, w: 140, label: 'VPC', sub: 'Flow Logs', id: 'g-vpc',   color: 'var(--net)' })}
+      ${Explain.glyph('shield',   { x: 390, y: 245, label: 'Macie', sub: 'find PII',        id: 'g-macie', color: 'var(--sec)' })}
+      ${Explain.glyph('bucket',   { x: 575, y: 245, label: 'S3 data',                        id: 'g-s3sec', color: 'var(--sec)' })}
+      ${Explain.glyph('arrow',    { from: [415, 245], to: [543, 245], id: 'e-macie-s3', label: 'scan' })}
+
+      <text class="band-label" x="22" y="345">EVENT-DRIVEN + CONTAINERS</text>
+      ${Explain.glyph('bucket',   { x: 110, y: 405, label: 'S3 src',  id: 'g-s3src', color: 'var(--evt)' })}
+      ${Explain.glyph('gear',     { x: 270, y: 405, label: 'Lambda',  id: 'g-lambda', color: 'var(--evt)' })}
+      ${Explain.glyph('bucket',   { x: 430, y: 405, label: 'S3 dst',  id: 'g-s3dst', color: 'var(--evt)' })}
+      ${Explain.glyph('box',      { x: 600, y: 400, w: 80, h: 50, label: 'ECR', sub: 'images', id: 'g-ecr', color: 'var(--ctr)' })}
+      ${Explain.glyph('server',   { x: 715, y: 405, label: 'ECS', sub: 'run', id: 'g-ecs', color: 'var(--ctr)' })}
+      ${Explain.glyph('arrow',    { from: [138, 403], to: [248, 403], id: 'e-s3-lambda', label: 'ObjectCreated' })}
+      ${Explain.glyph('arrow',    { from: [292, 403], to: [402, 403], id: 'e-lambda-s3', label: 'resize()' })}
+      ${Explain.glyph('arrow',    { from: [640, 401], to: [684, 403], id: 'e-ecr-ecs', label: 'pull' })}
+    </svg>`;
+
+  // ============================================================
+  // Single CLI reference — doubles as an exam cheat-sheet.
+  // Each step highlights only its service's lines (codeLines).
+  // ============================================================
+  const code = `<pre>
+<span class="ln"><span class="c"># ═══ OBSERVABILITY — watch · trail · inspect ═══</span></span>
+<span class="ln"><span class="c"># CloudWatch (WATCH): metrics, logs, alarms, dashboards</span></span>
+<span class="ln">aws cloudwatch put-metric-alarm \\</span>
+<span class="ln">  --alarm-name HighCPU --metric-name CPUUtilization \\</span>
+<span class="ln">  --threshold <span class="n">80</span> --comparison-operator GreaterThanThreshold \\</span>
+<span class="ln">  --alarm-actions <span class="s">arn:aws:sns:...:notify-team</span></span>
+<span class="ln"><span class="c"># CloudTrail (TRAIL): who called which API, when, from where</span></span>
+<span class="ln">aws cloudtrail lookup-events \\</span>
+<span class="ln">  --lookup-attributes \\</span>
+<span class="ln">    AttributeKey=EventName,AttributeValue=<span class="s">DeleteBucket</span></span>
+<span class="ln"><span class="c"># -> userIdentity="alice"  sourceIP=203.0.113.42  time=14:22</span></span>
+<span class="ln"><span class="c"># AWS Config (INSPECT): resource state vs your rules</span></span>
+<span class="ln">aws configservice put-config-rule --config-rule <span class="s">'{</span></span>
+<span class="ln">  <span class="s">"ConfigRuleName": "s3-bucket-public-read-prohibited",</span></span>
+<span class="ln">  <span class="s">"Source": { "Owner": "AWS",</span></span>
+<span class="ln">    <span class="s">"SourceIdentifier": "S3_BUCKET_PUBLIC_READ_PROHIBITED" } }'</span></span>
+<span class="ln"><span class="c"># -> any public bucket flagged NON_COMPLIANT (+ auto-remediate)</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="c"># ═══ NETWORK + DATA SECURITY ═══</span></span>
+<span class="ln"><span class="c"># VPC Flow Logs: capture IP traffic metadata in a VPC</span></span>
+<span class="ln">aws ec2 create-flow-logs --resource-type VPC \\</span>
+<span class="ln">  --resource-ids vpc-0abc123 --traffic-type ALL \\</span>
+<span class="ln">  --log-destination-type cloud-watch-logs \\</span>
+<span class="ln">  --log-group-name <span class="s">/vpc/flowlogs</span></span>
+<span class="ln"><span class="c"># record: srcaddr dstaddr srcport dstport protocol ACCEPT/REJECT</span></span>
+<span class="ln"><span class="c"># Amazon Macie: ML scan for sensitive data inside S3</span></span>
+<span class="ln">aws macie2 create-classification-job --job-type ONE_TIME \\</span>
+<span class="ln">  --s3-job-definition <span class="s">'{ "bucketDefinitions": [</span></span>
+<span class="ln">    <span class="s">{ "accountId": "111122223333",</span></span>
+<span class="ln">      <span class="s">"buckets": ["customer-uploads"] } ] }'</span></span>
+<span class="ln"><span class="c"># -> finds credit-card / SSN / PII  -> raises a finding</span></span>
+<span class="ln"></span>
+<span class="ln"><span class="c"># ═══ EVENT-DRIVEN + CONTAINERS ═══</span></span>
+<span class="ln"><span class="c"># S3 -> Lambda: an upload event triggers serverless compute</span></span>
+<span class="ln">aws s3api put-bucket-notification-configuration \\</span>
+<span class="ln">  --bucket source-images --notification-configuration <span class="s">'{</span></span>
+<span class="ln">  <span class="s">"LambdaFunctionConfigurations": [ {</span></span>
+<span class="ln">    <span class="s">"LambdaFunctionArn": "arn:aws:lambda:...:resize",</span></span>
+<span class="ln">    <span class="s">"Events": ["s3:ObjectCreated:*"] } ] }'</span></span>
+<span class="ln"><span class="c"># upload -> Lambda runs resize() -> writes to dest bucket</span></span>
+<span class="ln"><span class="c"># ECR stores images; ECS runs containers from them</span></span>
+<span class="ln">docker tag myapp:latest \\</span>
+<span class="ln">  &lt;acct&gt;.dkr.ecr.&lt;region&gt;.amazonaws.com/myapp:latest</span>
+<span class="ln">docker push &lt;acct&gt;.dkr.ecr.&lt;region&gt;.amazonaws.com/myapp:latest</span>
+<span class="ln">aws ecs update-service --cluster prod \\</span>
+<span class="ln">  --service web --force-new-deployment  <span class="c"># pulls image, runs task</span></span>
+</pre>`;
+
+  const ALL_DIM = ['g-cw','g-ct','g-cfg','g-vpc','g-macie','g-s3sec','g-s3src','g-lambda','g-s3dst','g-ecr','g-ecs'];
+  const focus = (e, keep) => { ALL_DIM.forEach(id => { if (!keep.includes(id)) e.dim(id); }); keep.forEach(id => e.glow(id)); };
+
+  // ============================================================
+  // U — See (CAST): the visual taxonomy across Bloom layers.
+  // ============================================================
+  const uSee = [
+    {
+      layer: 'recognize',
+      title: 'The whole midterm in one map',
+      narration:
+        'Think of your AWS account as a warehouse you cannot see inside. Midterm 2 is one question asked from three angles: ' +
+        '<b>observe</b> what is happening, <b>secure</b> the network and the data, and <b>wire it together</b> with events and containers. ' +
+        'Every service on this map is one answer to "how do I know / protect / automate?"',
+      codeLines: [1],
+      onEnter: (e) => { e.glow('g-cw'); e.glow('g-macie'); e.glow('g-lambda'); },
+    },
+    {
+      layer: 'understand',
+      title: 'WATCH · TRAIL · INSPECT',
+      narration:
+        'A big building runs three separate observation systems: <b>security cameras</b> (live feed), the <b>front-desk sign-in book</b> (who came through), and the <b>building inspector</b> (is everything up to code?). ' +
+        'That is exactly <span class="pill">CloudWatch</span> (metrics/logs/alarms), <span class="pill">CloudTrail</span> (every API call + who made it), and <span class="pill">AWS Config</span> (resource state vs rules). Confusing two of these is the #1 points-loss on this exam.',
+      codeLines: [2, 7, 12],
+      onEnter: (e) => focus(e, ['g-cw','g-ct','g-cfg']),
+    },
+    {
+      layer: 'understand',
+      title: 'VPC Flow Logs — the traffic camera',
+      narration:
+        'A traffic camera at an intersection does not see what is inside each car — it logs <i>plate, direction, time, allowed-or-blocked</i>. ' +
+        '<b>VPC Flow Logs</b> capture the metadata of every packet in a VPC: <span class="pill">srcaddr dstaddr srcport dstport protocol ACCEPT/REJECT</span>. ' +
+        '"Network monitoring" is just this feeding CloudWatch Logs — Flow Logs for traffic, CloudWatch for metrics, CloudTrail for config changes.',
+      codeLines: [20, 21, 25],
+      onEnter: (e) => focus(e, ['g-vpc']),
+    },
+    {
+      layer: 'understand',
+      title: 'Macie — the sniffer dog in the file room',
+      narration:
+        'A trained dog walks the records room and sits next to any folder holding a passport or a credit-card slip. ' +
+        '<b>Amazon Macie</b> uses ML to walk your <b>S3</b> buckets and flag <span class="pill">credit-card numbers, SSNs, PII</span>. ' +
+        'It does not move or fix the data — it raises a <i>finding</i> so a human (or an EventBridge rule) can act.',
+      codeLines: [26, 27, 31],
+      onEnter: (e) => { focus(e, ['g-macie','g-s3sec']); e.activate('e-macie-s3'); },
+    },
+    {
+      layer: 'apply',
+      title: 'Predict: who deleted the bucket?',
+      narration:
+        'Production bucket <span class="pill">prod-data</span> vanished at 14:22. The question is literally <i>"WHO did it?"</i> — which service names the human behind the API call?',
+      codeLines: [7, 8, 10, 11],
+      choices: [
+        { label: 'CloudWatch', correct: false,
+          reason: 'CloudWatch records numbers and logs — a vanished bucket is not a metric. It can show a downstream symptom, never the principal.' },
+        { label: 'CloudTrail', correct: true,
+          reason: 'Correct — CloudTrail logs every API call with userIdentity, sourceIP and time. "Who/when/which API" is its one true job.' },
+        { label: 'VPC Flow Logs', correct: false,
+          reason: 'Flow Logs capture network traffic (IPs/ports), not control-plane API actions like DeleteBucket.' },
+      ],
+      onEnter: (e) => focus(e, ['g-ct']),
+    },
+    {
+      layer: 'apply',
+      title: 'Predict: the upload fires what?',
+      narration:
+        'You drop a photo into the <span class="pill">S3 src</span> bucket. The bucket has an event notification wired to a Lambda. What happens next, with no server running and nobody clicking anything?',
+      codeLines: [34, 35, 39, 40],
+      choices: [
+        { label: 'Nothing until polled', correct: false,
+          reason: 'Event-driven means push, not poll. S3 emits the event immediately — no one has to check for new files.' },
+        { label: 'S3 invokes Lambda, which writes the dst bucket', correct: true,
+          reason: 'Correct — s3:ObjectCreated:* pushes an event that invokes Lambda; resize() runs and writes the result to the destination bucket.' },
+        { label: 'ECS spins up a container', correct: false,
+          reason: 'No container here — Lambda is serverless. ECS/ECR are a separate path for long-running containerized workloads.' },
+      ],
+      onEnter: (e) => { focus(e, ['g-s3src','g-lambda','g-s3dst']); e.activate('e-s3-lambda'); e.activate('e-lambda-s3'); },
+    },
+    {
+      layer: 'analyze',
+      title: 'ECR vs ECS — which stores, which runs?',
+      narration:
+        'You have built a Docker image of your app. Two AWS services are involved before it serves traffic — but they play opposite roles. ' +
+        'Where does the <i>image</i> live, and what actually <i>runs the container</i>?',
+      codeLines: [41, 42, 44, 46],
+      choices: [
+        { label: 'ECR stores the image; ECS runs the container', correct: true,
+          reason: 'Correct — ECR is the registry (like a private Docker Hub); ECS is the orchestrator that pulls the image and runs the task.' },
+        { label: 'ECS stores the image; ECR runs it', correct: false,
+          reason: 'Reversed. ECS never stores images — it pulls them. ECR never runs anything — it is just a registry.' },
+        { label: 'Both store and both run', correct: false,
+          reason: 'They are deliberately split: registry (ECR) vs runtime/orchestrator (ECS). Separation of concerns is the whole point.' },
+      ],
+      onEnter: (e) => { focus(e, ['g-ecr','g-ecs']); e.activate('e-ecr-ecs'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'See the whole machine',
+      narration:
+        'Three angles, one account: observe (CloudWatch/CloudTrail/Config + Flow Logs), secure (Macie), automate (S3→Lambda, ECR→ECS). ' +
+        'The deep owner page for the observability trio is <span class="wikilink" data-wiki="career-mission/aws-monitoring-config-room">[[aws-monitoring-config-room]]</span>; the exam hub is <span class="wikilink" data-wiki="career-mission/aws-midterm2-overview">[[aws-midterm2-overview]]</span>. ' +
+        'When a scenario lands, the lookup is <span class="wikilink" data-wiki="career-mission/aws-scenario-keywords">[[aws-scenario-keywords]]</span>.',
+      codeLines: [],
+      onEnter: (e) => { ALL_DIM.forEach(id => e.glow(id)); },
+    },
+  ];
+
+  // ============================================================
+  // D — Name (NEDF): identity cards + nearest-neighbor traps.
+  // ============================================================
+  const dName = [
+    {
+      layer: 'understand',
+      title: 'The verb anchors each name',
+      narration:
+        'Burn in three verbs: <b>WATCH</b> the numbers (Cloud<b>W</b>atch), <b>TRAIL</b> the calls (Cloud<b>T</b>rail), <b>INSPECT</b> the state (Config = "check"). ' +
+        'The name almost spells the job — only Config needs the association. Say <i>"watch the numbers, trail the calls, inspect the state"</i> once and the trio is sorted.',
+      codeLines: [2, 7, 12],
+      onEnter: (e) => focus(e, ['g-cw','g-ct','g-cfg']),
+    },
+    {
+      layer: 'analyze',
+      title: 'Nearest-neighbor: which "logs"?',
+      narration:
+        'A scenario says "search the <i>logs</i> for the cause." Two stores both call themselves logs. The grader wants the right one. ' +
+        'Pick the store that holds <b>your application output</b> (stdout/stderr, custom messages):',
+      codeLines: [2, 11, 20],
+      choices: [
+        { label: 'CloudWatch Logs', correct: true,
+          reason: 'Correct — CloudWatch Logs holds free-form app/system output you emit. CloudTrail logs are AWS-structured API audit records, not your app text.' },
+        { label: 'CloudTrail logs', correct: false,
+          reason: 'CloudTrail logs are the API audit trail (who called what). They never contain your application stdout — wrong store for "search the logs for the bug".' },
+      ],
+      onEnter: (e) => focus(e, ['g-cw','g-ct']),
+    },
+  ];
+
+  // ============================================================
+  // F — Do (SPEAR): the action playbooks.
+  // ============================================================
+  const fDo = [
+    {
+      layer: 'apply',
+      title: 'Wire S3 → Lambda — spot the gotcha',
+      narration:
+        'Steps: (1) create source + dest buckets, (2) write the Lambda, (3) add the S3 trigger, (4) ... upload and watch it run. ' +
+        'Beginners wire the trigger and the function but the invocation still fails. What is the missing fourth step?',
+      codeLines: [35, 38, 39],
+      choices: [
+        { label: 'Give Lambda IAM permission to read src + write dst', correct: true,
+          reason: 'Correct — the trigger fires, but without an execution role allowing s3:GetObject on src and s3:PutObject on dst, resize() throws AccessDenied.' },
+        { label: 'Put both buckets in the same region', correct: false,
+          reason: 'Cross-region works fine for S3→Lambda; it is not what blocks the invocation. Permissions are the classic miss.' },
+        { label: 'Enable CloudTrail data events', correct: false,
+          reason: 'Data events only add an audit record — they are not required for the trigger to invoke Lambda.' },
+      ],
+      onEnter: (e) => { focus(e, ['g-s3src','g-lambda']); e.activate('e-s3-lambda'); },
+    },
+    {
+      layer: 'apply',
+      title: 'Alarm when "ERROR" floods the log',
+      narration:
+        'You want a CloudWatch alarm to fire when your app log shows a spike of <span class="pill">ERROR</span> lines. ' +
+        'Can you point an alarm straight at the log group?',
+      codeLines: [2, 3, 6],
+      choices: [
+        { label: 'No — add a metric filter first, then alarm on that metric', correct: true,
+          reason: 'Correct — alarms only watch metrics. A metric filter scans incoming log lines, turns "ERROR" counts into a custom metric, then the alarm watches it.' },
+        { label: 'Yes — alarms read log groups directly', correct: false,
+          reason: 'Alarms cannot read raw logs. You must convert the log pattern into a metric (metric filter) before an alarm can evaluate it.' },
+      ],
+      onEnter: (e) => focus(e, ['g-cw']),
+    },
+  ];
+
+  // ============================================================
+  // B — Watch (HEART): the failure-mode monitor.
+  // ============================================================
+  const bWatch = [
+    {
+      layer: 'understand',
+      title: 'The default-OFF traps',
+      narration:
+        'Two facts the exam loves because most people assume the opposite: CloudTrail <b>data events</b> (S3 GetObject, Lambda Invoke) are <i>opt-in and paid</i> — only management events are default-on. ' +
+        'And the free <b>Event History</b> retains just <span class="pill">90 days</span> of management events. Want more? Create a trail shipping to S3.',
+      codeLines: [7, 27],
+      onEnter: (e) => focus(e, ['g-ct','g-macie']),
+    },
+    {
+      layer: 'analyze',
+      title: 'Which choice quietly runs up the bill?',
+      narration:
+        'Two engineers each flip one switch "to be safe." One bill barely moves; the other explodes. Which switch is the cost trap?',
+      codeLines: [12, 27],
+      choices: [
+        { label: 'Enabling Config recording on a churny, huge account', correct: true,
+          reason: 'Correct — Config bills per configuration item recorded (every change = a new CI) plus per rule evaluation. Unscoped, on a high-change account, it adds up fast.' },
+        { label: 'Turning on a multi-region CloudTrail management trail', correct: false,
+          reason: 'Management events are free in Event History and cheap in a trail; this is the safe default, not the trap. (Data events are the paid ones.)' },
+      ],
+      onEnter: (e) => focus(e, ['g-cfg']),
+    },
+  ];
+
+  // ============================================================
+  // L — Predict (ORACLE): given input, predict behavior.
+  // ============================================================
+  const lPredict = [
+    {
+      layer: 'apply',
+      title: 'Symptom → which service tells you?',
+      narration:
+        'EC2 instances intermittently cannot reach the database. No app errors, no API changes — packets just seem to disappear. ' +
+        'Which service shows you whether traffic was <span class="pill">ACCEPT</span>ed or <span class="pill">REJECT</span>ed at the network layer?',
+      codeLines: [20, 25],
+      choices: [
+        { label: 'VPC Flow Logs', correct: true,
+          reason: 'Correct — Flow Logs record ACCEPT/REJECT per flow, exposing a security-group or NACL block as the silent culprit.' },
+        { label: 'CloudTrail', correct: false,
+          reason: 'CloudTrail shows who changed a rule, not whether live packets are being dropped. It names a cause, not the traffic verdict.' },
+        { label: 'Macie', correct: false,
+          reason: 'Macie inspects S3 data content for PII — it has nothing to do with network reachability.' },
+      ],
+      onEnter: (e) => focus(e, ['g-vpc']),
+    },
+    {
+      layer: 'analyze',
+      title: 'Predict the outcome of pointing Macie at a log lake',
+      narration:
+        'Someone enables Macie on a 50 TB bucket of plain application logs "for coverage." Predict the realistic result:',
+      codeLines: [26, 31],
+      choices: [
+        { label: 'High scan cost + noisy low-value findings', correct: true,
+          reason: 'Correct — Macie prices on data scanned, and logs rarely hold real PII. You pay a lot to surface mostly false-positive noise. Scope it to buckets that actually hold customer data.' },
+        { label: 'Macie blocks the bucket until reviewed', correct: false,
+          reason: 'Macie never blocks or quarantines — it only discovers and reports findings. Enforcement is a separate action you wire up.' },
+      ],
+      onEnter: (e) => focus(e, ['g-macie','g-s3sec']),
+    },
+  ];
+
+  // ============================================================
+  // R — Act (GRACE): the in-the-exam reflex.
+  // ============================================================
+  const rAct = [
+    {
+      layer: 'apply',
+      title: 'Exam reflex: trigger → service → reason',
+      narration:
+        '"An auditor wants proof that no S3 bucket has been publicly readable for the last 6 months." The rubric pays for the <i>reason</i>, not just the name. Which service + why?',
+      codeLines: [12, 17],
+      choices: [
+        { label: 'AWS Config — records state over time + compliance rules', correct: true,
+          reason: 'Correct — Config keeps a timeline of each resource and evaluates the s3-bucket-public-read-prohibited rule, giving historical proof of compliance.' },
+        { label: 'CloudTrail — it logs DeleteBucket and PutBucketAcl', correct: false,
+          reason: 'CloudTrail shows the API calls (the cause), but the auditor wants the resulting state over time — that is Config. CloudTrail alone cannot prove "was never public".' },
+        { label: 'CloudWatch — dashboards show bucket status', correct: false,
+          reason: 'Bucket public-access state is not a metric. CloudWatch cannot attest historical configuration compliance.' },
+      ],
+      onEnter: (e) => focus(e, ['g-cfg']),
+    },
+    {
+      layer: 'synthesize',
+      title: 'The one habit that earns the points',
+      narration:
+        'In the moment, for every scenario write three things: <b>trigger keyword → service → one-line reason</b>. ' +
+        'The keyword lookup lives in <span class="wikilink" data-wiki="career-mission/aws-scenario-keywords">[[aws-scenario-keywords]]</span>, and the pre-exam compression is <span class="wikilink" data-wiki="career-mission/aws-exam-compression">[[aws-exam-compression]]</span>. ' +
+        'Naming alone is partial credit; the reason is where the rubric hides the rest.',
+      codeLines: [],
+      onEnter: (e) => { e.glow('g-cw'); e.glow('g-ct'); e.glow('g-cfg'); },
+    },
+  ];
+
+  // ============================================================
+  // BRIDGE: cross-domain analogies — candidates for curation.
+  // Keep / edit / reorder / delete the ones that don't click.
+  // ============================================================
+  const bridge = [
+    {
+      layer: 'synthesize',
+      title: 'AWS observability ≈ a building operations team',
+      narration:
+        'The trio maps cleanly onto <b>three roles in a building\'s ops team</b> — same shape, different domain: <i>one system watches live, one logs who passed through, one inspects against code.</i> ' +
+        'Term-by-term: <span class="pill">CloudWatch</span> ≈ security cameras + alarm buzzer; ' +
+        '<span class="pill">CloudTrail</span> ≈ the front-desk sign-in book (who, when, which door); ' +
+        '<span class="pill">AWS Config</span> ≈ the building inspector with a clipboard (state + pass/fail rules). ' +
+        'The forbidden transfer is identical in both: cameras never tell you <i>who held the badge</i> — for that you need the sign-in book. See <span class="wikilink" data-wiki="career-mission/aws-monitoring-config-room">[[aws-monitoring-config-room]]</span>.' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [2, 7, 12],
+      onEnter: (e) => focus(e, ['g-cw','g-ct','g-cfg']),
+    },
+    {
+      layer: 'synthesize',
+      title: 'S3 → Lambda ≈ a database trigger / stored procedure',
+      narration:
+        '<b>Event-driven S3→Lambda</b> is the same mechanism as a <b>database trigger</b>: <i>a write event automatically fires a piece of code, no caller polling.</i> ' +
+        'Term-by-term: <span class="pill">s3:ObjectCreated</span> ≈ <span class="pill">AFTER INSERT</span>; ' +
+        '<span class="pill">Lambda function</span> ≈ the stored procedure body; ' +
+        '<span class="pill">destination bucket</span> ≈ the side-effect table the trigger writes. ' +
+        'Both share the same hazard: a trigger that writes back into the table it watches (or a Lambda that writes into its own source bucket) creates an infinite loop.' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [34, 39, 40],
+      onEnter: (e) => { focus(e, ['g-s3src','g-lambda','g-s3dst']); e.activate('e-s3-lambda'); e.activate('e-lambda-s3'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'ECR → ECS ≈ a package registry feeding a runtime',
+      narration:
+        '<b>ECR → ECS</b> is the same split as <b>npm → Node</b> or <b>Maven → JVM</b>: <i>a registry stores immutable, versioned artifacts; a runtime pulls a specific version and executes it.</i> ' +
+        'Term-by-term: <span class="pill">ECR repo</span> ≈ the npm registry; ' +
+        '<span class="pill">image:tag</span> ≈ a package@version; ' +
+        '<span class="pill">ECS task</span> ≈ <span class="pill">node app.js</span> after install. ' +
+        'The discipline transfers too: pin tags (no <code>:latest</code> in prod) exactly as you pin package versions in a lockfile. More compute context in <span class="wikilink" data-wiki="career-mission/aws-compute-room">[[aws-compute-room]]</span>.' +
+        '<span class="bridge-candidate">candidate — curate or reject</span>',
+      codeLines: [42, 44, 46],
+      onEnter: (e) => { focus(e, ['g-ecr','g-ecs']); e.activate('e-ecr-ecs'); },
+    },
+    {
+      layer: 'synthesize',
+      title: 'S3 → Lambda ≈ a spinal reflex arc',
+      narration:
+        '<b>S3→Lambda</b> is the same shape as a <b>spinal reflex arc</b>: both <i>let a stimulus fire a local response with no central controller polling or deciding.</i> ' +
+        'Term-by-term: <span class="pill">s3:ObjectCreated</span> ≈ the sensory stimulus (a tack underfoot); ' +
+        '<span class="pill">S3 event notification</span> ≈ the afferent nerve carrying the signal; ' +
+        '<span class="pill">Lambda resize()</span> ≈ the reflex contraction, fired before the brain is even consulted; ' +
+        '<span class="pill">destination bucket</span> ≈ the effector muscle that acts. ' +
+        'Same failure mode: wire the response back onto its own trigger (Lambda writing into its source bucket) and you get a runaway loop — the cloud version of a feedback seizure.',
+      codeLines: [34, 39, 40],
+      onEnter: (e) => { focus(e, ['g-s3src','g-lambda','g-s3dst']); e.activate('e-s3-lambda'); e.activate('e-lambda-s3'); },
+    },
+  ];
+
+  Explain.init({
+    title:    'AWS Midterm 2 — Monitoring, Security & Serverless',
+    subtitle: 'a visual walkthrough — UMTF matrix',
+    created:  '2026-06-08',
+    svg, code,
+    matrix: {
+      'u-see':     { name: 'U — See',     framework: 'CAST',   steps: uSee },
+      'd-name':    { name: 'D — Name',    framework: 'NEDF',   steps: dName },
+      'f-do':      { name: 'F — Do',      framework: 'SPEAR',  steps: fDo },
+      'b-watch':   { name: 'B — Watch',   framework: 'HEART',  steps: bWatch },
+      'l-predict': { name: 'L — Predict', framework: 'ORACLE', steps: lPredict },
+      'r-act':     { name: 'R — Act',     framework: 'GRACE',  steps: rAct },
+      'bridge':    { name: 'BRIDGE',      framework: 'cross-domain', steps: bridge },
+    },
+  });
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

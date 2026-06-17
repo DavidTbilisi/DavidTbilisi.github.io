@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="57 stepped visual walkthroughs built with /explain — design patterns, cloud, cybersecurity, logic, and more.">
+<title>Walkthroughs — Neural OS</title>
+<style>
+:root{--bg:#0d1117;--surf:#161b22;--bdr:#30363d;--txt:#c9d1d9;--mute:#8b949e;--blue:#58a6ff;--grn:#3fb950;--gold:#d29922;--pur:#bc8cff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 16px 64px;max-width:560px;margin:0 auto;gap:24px}
+h1{font-size:1.6rem;font-weight:800;color:var(--blue);letter-spacing:-.02em}
+.sub{font-size:.85rem;color:var(--mute);margin-top:6px;line-height:1.6;text-align:center}
+a.back{font-size:.78rem;color:var(--mute);text-decoration:none;align-self:flex-start}
+a.back:hover{color:var(--blue)}
+.section-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);width:100%;display:flex;align-items:center;gap:8px;margin-top:8px}
+.count{color:var(--mute);font-weight:600}
+.card-list{width:100%;display:flex;flex-direction:column;gap:8px}
+.card{width:100%;background:var(--surf);border:1.5px solid var(--bdr);border-radius:12px;padding:14px 18px;text-decoration:none;color:var(--txt);display:flex;justify-content:space-between;align-items:center;gap:12px;transition:border-color .15s,background .15s}
+.card:hover{border-color:var(--blue);background:#12181f}
+.card-title{font-size:.95rem;font-weight:600}
+.card-arrow{font-size:1rem;color:var(--mute);flex-shrink:0}
+.pill{font-size:.66rem;font-weight:600;padding:2px 9px;border-radius:999px;border:1px solid}
+.blue{color:var(--blue);border-color:var(--blue);background:rgba(88,166,255,.08)}
+.grn{color:var(--grn);border-color:var(--grn);background:rgba(63,185,80,.08)}
+.gold{color:var(--gold);border-color:var(--gold);background:rgba(210,153,34,.08)}
+.pur{color:var(--pur);border-color:var(--pur);background:rgba(188,140,255,.08)}
+.mute{color:var(--mute);border-color:var(--bdr);background:transparent}
+footer{font-size:.72rem;color:var(--mute);text-align:center;line-height:1.8;margin-top:16px}
+</style>
+</head>
+<body>
+
+<a class="back" href="index.html">← Neural OS</a>
+<div style="text-align:center">
+  <h1>Walkthroughs</h1>
+  <p class="sub">57 stepped visual explainers built with /explain.<br>Climb the Bloom ladder from recognize to synthesize.</p>
+</div>
+
+<div class="section-label"><span class="pill gold">Design Patterns</span> <span class="count">23</span></div>
+<div class="card-list">
+  <a class="card" href="abstract-factory-pattern.html">
+    <div class="card-left"><div class="card-title">Abstract Factory Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="adapter-pattern.html">
+    <div class="card-left"><div class="card-title">Adapter Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="bridge-pattern.html">
+    <div class="card-left"><div class="card-title">Bridge Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="builder-pattern.html">
+    <div class="card-left"><div class="card-title">Builder Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="chain-of-responsibility-pattern.html">
+    <div class="card-left"><div class="card-title">Chain of Responsibility →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="command-pattern.html">
+    <div class="card-left"><div class="card-title">Command Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="composite-pattern.html">
+    <div class="card-left"><div class="card-title">Composite Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="decorator-pattern.html">
+    <div class="card-left"><div class="card-title">Decorator Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="facade-pattern.html">
+    <div class="card-left"><div class="card-title">Facade Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="factory-method-pattern.html">
+    <div class="card-left"><div class="card-title">Factory Method Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="flyweight-pattern.html">
+    <div class="card-left"><div class="card-title">Flyweight Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="interpreter-pattern.html">
+    <div class="card-left"><div class="card-title">Interpreter Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="iterator-pattern.html">
+    <div class="card-left"><div class="card-title">Iterator Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="mediator-pattern.html">
+    <div class="card-left"><div class="card-title">Mediator Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="memento-pattern.html">
+    <div class="card-left"><div class="card-title">Memento Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="observer-pattern.html">
+    <div class="card-left"><div class="card-title">Observer Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="prototype-pattern.html">
+    <div class="card-left"><div class="card-title">Prototype Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="proxy-pattern.html">
+    <div class="card-left"><div class="card-title">Proxy Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="singleton-pattern.html">
+    <div class="card-left"><div class="card-title">Singleton Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="state-pattern.html">
+    <div class="card-left"><div class="card-title">State Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="strategy-pattern.html">
+    <div class="card-left"><div class="card-title">Strategy Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="template-method-pattern.html">
+    <div class="card-left"><div class="card-title">Template Method Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="visitor-pattern.html">
+    <div class="card-left"><div class="card-title">Visitor Pattern →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+</div>
+
+<div class="section-label"><span class="pill pur">Cybersecurity</span> <span class="count">9</span></div>
+<div class="card-list">
+  <a class="card" href="cissp-bcp-drp-metrics.html">
+    <div class="card-left"><div class="card-title">CISSP BCP/DRP Metrics →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="cissp-control-types.html">
+    <div class="card-left"><div class="card-title">CISSP Control Types &amp; Functions →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="cissp-domain-1-diagram.html">
+    <div class="card-left"><div class="card-title">CISSP Domain 1 — Diagram (spine matrix) →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="cissp-domain-1.html">
+    <div class="card-left"><div class="card-title">CISSP Domain 1 →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="cissp-quantitative-risk.html">
+    <div class="card-left"><div class="card-title">CISSP Quantitative Risk Formulas →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="cissp-risk-calc.html">
+    <div class="card-left"><div class="card-title">CISSP — Quantitative Risk Calculator →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="cissp-risk-treatment.html">
+    <div class="card-left"><div class="card-title">CISSP Risk Treatment × Cynefin →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="cyber-kill-chain.html">
+    <div class="card-left"><div class="card-title">Cyber Kill Chain →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="ffuf-cheatsheet.html">
+    <div class="card-left"><div class="card-title">FFUF Cheat Sheet →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+</div>
+
+<div class="section-label"><span class="pill grn">Cloud &amp; AWS</span> <span class="count">8</span></div>
+<div class="card-list">
+  <a class="card" href="architecture-pillars.html">
+    <div class="card-left"><div class="card-title">AWS Well-Architected Pillars →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="aws-midterm-2.html">
+    <div class="card-left"><div class="card-title">AWS Midterm 2 →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="delivery-routing.html">
+    <div class="card-left"><div class="card-title">Route 53 vs CloudFront →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="ec2-vs-lambda.html">
+    <div class="card-left"><div class="card-title">EC2 vs Lambda →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="iam-identity.html">
+    <div class="card-left"><div class="card-title">IAM →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="observability-trio.html">
+    <div class="card-left"><div class="card-title">CloudWatch vs CloudTrail vs Config →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="s3-storage.html">
+    <div class="card-left"><div class="card-title">S3 Storage Classes →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="vpc-network.html">
+    <div class="card-left"><div class="card-title">VPC &amp; Subnets →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+</div>
+
+<div class="section-label"><span class="pill blue">Logic &amp; Proofs</span> <span class="count">5</span></div>
+<div class="card-list">
+  <a class="card" href="logic-programming-prolog.html">
+    <div class="card-left"><div class="card-title">Logic Programming (Prolog) →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="prolog.html">
+    <div class="card-left"><div class="card-title">Prolog →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="proof-theory-cut.html">
+    <div class="card-left"><div class="card-title">Proof Theory — Cut Simulator →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="proof-theory-diagram.html">
+    <div class="card-left"><div class="card-title">Proof Theory — Diagram (mechanism view) →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="proof-theory.html">
+    <div class="card-left"><div class="card-title">Proof Theory →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+</div>
+
+<div class="section-label"><span class="pill blue">Cheatsheets</span> <span class="count">4</span></div>
+<div class="card-list">
+  <a class="card" href="css-cheatsheet-geo.html">
+    <div class="card-left"><div class="card-title">CSS — ქართული სახელმძღვანელო →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="css-cheatsheet.html">
+    <div class="card-left"><div class="card-title">CSS Cheat Sheet →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="git-cheatsheet-geo.html">
+    <div class="card-left"><div class="card-title">Git — ქართული სახელმძღვანელო →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="html-cheatsheet-geo.html">
+    <div class="card-left"><div class="card-title">HTML — ქართული სახელმძღვანელო →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+</div>
+
+<div class="section-label"><span class="pill mute">Georgian</span> <span class="count">2</span></div>
+<div class="card-list">
+  <a class="card" href="georgian-driving-exam-b-diagram.html">
+    <div class="card-left"><div class="card-title">Georgian Driving Exam B — Diagram (system view) →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="georgian-driving-exam-b.html">
+    <div class="card-left"><div class="card-title">Georgian Driving Exam B →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+</div>
+
+<div class="section-label"><span class="pill grn">AI Systems</span> <span class="count">2</span></div>
+<div class="card-list">
+  <a class="card" href="ai-vision-object-detection.html">
+    <div class="card-left"><div class="card-title">AI Vision Object Detection →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="claude-ai-how-it-works.html">
+    <div class="card-left"><div class="card-title">How Claude (an LLM) Works →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+</div>
+
+<div class="section-label"><span class="pill mute">More</span> <span class="count">4</span></div>
+<div class="card-list">
+  <a class="card" href="color-mnemonics-3d.html">
+    <div class="card-left"><div class="card-title">Color as a Mnemonic System — 3D Walkthrough →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="frame-forge.html">
+    <div class="card-left"><div class="card-title">FRAME FORGE →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="macos-plist-launchd.html">
+    <div class="card-left"><div class="card-title">macOS plist &amp;amp; launchd →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+  <a class="card" href="school-plan.html">
+    <div class="card-left"><div class="card-title">A Schooling Plan for a Mobile Family →</div></div>
+    <div class="card-arrow">→</div>
+  </a>
+</div>
+
+<footer>
+  Results saved in your browser (localStorage) — nothing sent to a server.<br>
+  github.com/DavidTbilisi/Neural-OS-Research
+</footer>
+
+</body>
+</html>

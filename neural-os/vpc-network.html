@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VPC & Subnets — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --pub:  #ffa657;
+    --priv: #a5d6ff;
+    --igw:  #7ee787;
+    --nat:  #d2a8ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .node { transition: opacity .35s, filter .35s; }
+  .node.dim { opacity: 0.25; }
+  .node.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .node-label { font: 700 12px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .node-sub   { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.8; }
+  .vpc-frame { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .subnet-frame { fill: rgba(255,255,255,0.02); stroke: var(--line); stroke-width: 1; }
+  .frame-label { fill: var(--muted); font: 600 10px ui-monospace, monospace; }
+  .flow { stroke: var(--pick); stroke-width: 2.5; fill: none; marker-end: url(#mk); stroke-dasharray: 6 5; opacity: 0; transition: opacity .35s; }
+  .flow.on { opacity: 1; animation: dash 1.2s linear infinite; }
+  .flow.blocked { stroke: var(--warn); animation: none; }
+  @keyframes dash { to { stroke-dashoffset: -22; } }
+  .caption { fill: var(--muted); font: 600 10.5px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>VPC & Subnets <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 540 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <!-- Internet (outside the VPC) -->
+        <g class="node" id="net" style="color: var(--accent)">
+          <circle cx="60" cy="180" r="32" fill="var(--accent)"/>
+          <text class="node-label" x="60" y="178">Internet</text>
+          <text class="node-sub" x="60" y="192">0.0.0.0/0</text>
+        </g>
+
+        <!-- VPC frame -->
+        <rect class="vpc-frame" x="120" y="40" width="400" height="280" rx="14"/>
+        <text class="frame-label" x="130" y="58">VPC  10.0.0.0/16</text>
+
+        <!-- Public subnet (top-left of VPC) -->
+        <rect class="subnet-frame" x="140" y="74" width="170" height="220" rx="8"/>
+        <text class="frame-label" x="150" y="92">Public Subnet  10.0.1.0/24</text>
+
+        <!-- Private subnet (right side) -->
+        <rect class="subnet-frame" x="330" y="74" width="170" height="220" rx="8"/>
+        <text class="frame-label" x="340" y="92">Private Subnet  10.0.2.0/24</text>
+
+        <!-- IGW (on VPC edge) -->
+        <g class="node" id="igw" style="color: var(--igw)">
+          <rect x="98" y="158" width="44" height="44" rx="8" fill="var(--igw)"/>
+          <text class="node-label" x="120" y="178">IGW</text>
+          <text class="node-sub" x="120" y="192">v4</text>
+        </g>
+
+        <!-- Public EC2 (web server) -->
+        <g class="node" id="web" style="color: var(--pub)">
+          <rect x="170" y="120" width="110" height="50" rx="8" fill="var(--pub)"/>
+          <text class="node-label" x="225" y="142">Web EC2</text>
+          <text class="node-sub" x="225" y="158">public IP</text>
+        </g>
+
+        <!-- NAT Gateway (in public subnet) -->
+        <g class="node" id="nat" style="color: var(--nat)">
+          <rect x="180" y="220" width="90" height="44" rx="8" fill="var(--nat)"/>
+          <text class="node-label" x="225" y="240">NAT GW</text>
+          <text class="node-sub" x="225" y="254">elastic IP</text>
+        </g>
+
+        <!-- Private EC2 (app/db) -->
+        <g class="node" id="app" style="color: var(--priv)">
+          <rect x="355" y="120" width="120" height="50" rx="8" fill="var(--priv)"/>
+          <text class="node-label" x="415" y="142">App EC2</text>
+          <text class="node-sub" x="415" y="158">private IP only</text>
+        </g>
+
+        <g class="node" id="db" style="color: var(--priv)">
+          <rect x="355" y="220" width="120" height="44" rx="8" fill="var(--priv)"/>
+          <text class="node-label" x="415" y="240">RDS</text>
+          <text class="node-sub" x="415" y="254">no public route</text>
+        </g>
+
+        <!-- Flows (drawn but hidden until step activates) -->
+        <!-- F1: Internet ↔ Web EC2 (via IGW) -->
+        <path id="flow-in-web"  class="flow" d="M 92 180 L 142 180 L 142 145 L 170 145"/>
+        <!-- F2: Internet → App EC2 (blocked attempt) -->
+        <path id="flow-in-app"  class="flow blocked" d="M 92 180 Q 200 60 415 120"/>
+        <!-- F3: App EC2 → NAT → IGW → Internet (outbound only) -->
+        <path id="flow-out-app" class="flow" d="M 355 145 L 320 145 L 320 242 L 270 242 L 230 242 L 142 200 L 92 200"/>
+        <!-- F4: Web EC2 → App EC2 (intra-VPC) -->
+        <path id="flow-web-app" class="flow" d="M 280 145 L 355 145"/>
+
+        <text id="caption" class="caption" x="320" y="338"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Detail</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL_NODES = ['net','igw','web','nat','app','db'];
+const ALL_FLOWS = ['flow-in-web','flow-in-app','flow-out-app','flow-web-app'];
+
+const steps = [
+  {
+    title: "the VPC",
+    narration: `A <b>VPC</b> is your own private slice of the AWS network — a CIDR block (e.g. <span class="pill">10.0.0.0/16</span>) that <i>nothing</i> in or out of AWS can reach until you punch a hole.`,
+    code: [
+      '<span class="c">// a VPC is just an address space + a boundary.</span>',
+      '',
+      'aws ec2 create-vpc --cidr-block <span class="s">10.0.0.0/16</span>',
+      '',
+      '<span class="c">// at this point: nothing can reach in. nothing can reach out.</span>',
+      '<span class="c">// no internet, no other VPCs, no on-prem.</span>',
+      '<span class="c">// closed box.</span>',
+    ],
+    state: { dim: ['igw','web','nat','app','db','net'], glow: [], flows: [], caption: "a VPC starts fully isolated" }
+  },
+  {
+    title: "subnets — public vs private",
+    narration: `Carve the VPC into <b>subnets</b>, one per AZ. A subnet becomes <i>public</i> only when its route table sends <span class="pill">0.0.0.0/0</span> to an <b>Internet Gateway</b>. There's no public/private flag — it's defined by routing.`,
+    code: [
+      '<span class="c">// two subnets in the same VPC:</span>',
+      '',
+      'aws ec2 create-subnet --vpc-id ... \\',
+      '  --cidr-block <span class="s">10.0.1.0/24</span> --availability-zone us-east-1a   <span class="c">// "public"</span>',
+      '',
+      'aws ec2 create-subnet --vpc-id ... \\',
+      '  --cidr-block <span class="s">10.0.2.0/24</span> --availability-zone us-east-1a   <span class="c">// "private"</span>',
+      '',
+      '<span class="c">// they\'re identical until you wire route tables.</span>',
+    ],
+    state: { dim: ['igw','web','nat','app','db','net'], glow: [], flows: [], caption: "public vs private = a routing decision" }
+  },
+  {
+    title: "the Internet Gateway",
+    narration: `Attach an <b>IGW</b> to the VPC. Then in the public subnet's route table, add <span class="pill">0.0.0.0/0 → igw-xxx</span>. Now anything launched there with a public IP can talk to the internet (and vice versa).`,
+    code: [
+      '<span class="c">// 1. create + attach the IGW</span>',
+      'aws ec2 create-internet-gateway',
+      'aws ec2 attach-internet-gateway --vpc-id ... --internet-gateway-id igw-...',
+      '',
+      '<span class="c">// 2. public route table:</span>',
+      '  destination            target',
+      '  <span class="s">10.0.0.0/16</span>          local        <span class="c">// intra-VPC, always present</span>',
+      '  <span class="s">0.0.0.0/0</span>            igw-...      <span class="c">// ← this is what makes it public</span>',
+    ],
+    state: { dim: ['nat','app','db'], glow: ['igw'], flows: [], caption: "IGW + 0.0.0.0/0 route = public subnet" }
+  },
+  {
+    title: "Web EC2 — reachable from internet",
+    narration: `Launch an EC2 into the public subnet with a public IP. Internet ↔ instance now works <b>both ways</b>, gated by the instance's <b>security group</b> and the subnet's NACL.`,
+    code: [
+      'aws ec2 run-instances --subnet-id <span class="s">subnet-public</span> \\',
+      '  --associate-public-ip-address \\',
+      '  --security-group-ids sg-web',
+      '',
+      '<span class="c">// security group sg-web allows:</span>',
+      '<span class="c">//   inbound  80, 443  from 0.0.0.0/0   ← world</span>',
+      '<span class="c">//   inbound  22       from <your IP>/32  ← you only</span>',
+      '<span class="c">//   outbound all       to   0.0.0.0/0</span>',
+      '',
+      '<span class="c">// users now hit https://&lt;public-ip&gt;</span>',
+    ],
+    state: { dim: ['nat','app','db'], glow: ['igw','web'], flows: ['flow-in-web'], caption: "public subnet + public IP + SG → reachable" }
+  },
+  {
+    title: "Private subnet — no inbound from internet",
+    narration: `The private subnet's route table has <i>no</i> route to the IGW. An EC2 there has no public IP and is <b>unreachable</b> from the internet — even if its SG allowed it. This is where you put the app server, the database, anything that doesn't need to face users.`,
+    code: [
+      '<span class="c">// private route table:</span>',
+      '  destination            target',
+      '  <span class="s">10.0.0.0/16</span>          local      <span class="c">// intra-VPC only</span>',
+      '  <span class="c">// no 0.0.0.0/0 entry → no internet path.</span>',
+      '',
+      'aws ec2 run-instances --subnet-id <span class="s">subnet-private</span> \\',
+      '  --no-associate-public-ip-address',
+      '',
+      '<span class="c">// inbound from internet: dropped.</span>',
+      '<span class="c">// even if SG said yes — there\'s no route in.</span>',
+    ],
+    state: { dim: ['nat'], glow: ['app','db'], flows: ['flow-in-app','flow-web-app'], caption: "no IGW route ⇒ no reachability — by topology" }
+  },
+  {
+    title: "NAT — private can call out, but not in",
+    narration: `If private EC2 needs to fetch packages or call an external API, route its <span class="pill">0.0.0.0/0</span> through a <b>NAT Gateway</b> sitting in the <i>public</i> subnet. Outbound works; <i>nothing</i> can use NAT to initiate inbound. One-way valve.`,
+    code: [
+      '<span class="c">// NAT GW sits in the public subnet (needs internet itself):</span>',
+      'aws ec2 create-nat-gateway --subnet-id <span class="s">subnet-public</span> \\',
+      '  --allocation-id <span class="s">eipalloc-...</span>   <span class="c">// elastic IP</span>',
+      '',
+      '<span class="c">// private route table now:</span>',
+      '  <span class="s">10.0.0.0/16</span>          local',
+      '  <span class="s">0.0.0.0/0</span>            nat-...    <span class="c">// ← outbound via NAT</span>',
+      '',
+      '<span class="c">// app EC2 can now: yum update, call APIs.</span>',
+      '<span class="c">// internet still cannot reach app EC2 — NAT does not forward inbound.</span>',
+    ],
+    state: { dim: [], glow: ['nat','app'], flows: ['flow-out-app'], caption: "NAT: outbound yes, inbound no" }
+  },
+  {
+    title: "the mental model",
+    narration: `A VPC is <b>defined by what you allow</b>, not by what AWS gives you. Three knobs decide reachability: <b>route tables</b> (where can packets go?), <b>security groups</b> (which packets accepted at the instance?), <b>NACLs</b> (subnet-level allow/deny). VPC ≠ "the cloud"; VPC = <i>your rules</i>.`,
+    code: [
+      '<span class="c">// reachability decision, in order:</span>',
+      '',
+      '  1. is there a ROUTE from src → dst?       (route table)',
+      '  2. does the source SG allow OUTBOUND?     (security group, stateful)',
+      '  3. does the source NACL allow OUTBOUND?   (subnet ACL, stateless)',
+      '  4. does the dest NACL allow INBOUND?',
+      '  5. does the dest SG allow INBOUND?',
+      '',
+      '<span class="c">// fail any layer → traffic dropped silently.</span>',
+      '<span class="c">// 80% of "why can\'t this reach that" is a missing route or a SG rule.</span>',
+    ],
+    state: { dim: [], glow: [], flows: [], caption: "routes + SGs + NACLs = the whole story" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_NODES.forEach(n => {
+    const el = $(n);
+    el.classList.toggle('dim', s.state.dim.includes(n));
+    el.classList.toggle('glow', s.state.glow.includes(n));
+  });
+
+  ALL_FLOWS.forEach(f => {
+    $(f).classList.toggle('on', s.state.flows.includes(f));
+  });
+
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

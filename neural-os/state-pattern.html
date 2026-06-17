@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>State Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166; --back: #d2a8ff;
+    --draft: #ffa657; --review: #79c0ff; --published: #7ee787; --archived: #8b949e;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .state-node { transition: opacity .35s, filter .35s, transform .35s; transform-origin: center; transform-box: fill-box; }
+  .state-node.dim { opacity: 0.35; }
+  .state-node.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .state-label { font: 700 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .arrow-fwd { stroke: var(--pick); stroke-width: 2; fill: none; marker-end: url(#arrowF); opacity: 0.45; transition: opacity .3s, stroke-width .3s; }
+  .arrow-fwd.active { opacity: 1; stroke-width: 3; animation: dash 0.8s linear infinite; stroke-dasharray: 5 4; }
+  .arrow-back { stroke: var(--back); stroke-width: 2; fill: none; marker-end: url(#arrowB); opacity: 0.35; transition: opacity .3s, stroke-width .3s; stroke-dasharray: 3 3; }
+  .arrow-back.active { opacity: 1; stroke-width: 3; animation: dash-back 0.8s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -18; } }
+  @keyframes dash-back { to { stroke-dashoffset: 18; } }
+  .arrow-label { font: 600 10px ui-monospace, monospace; fill: var(--muted); text-anchor: middle; }
+  .arrow-label.fwd { fill: var(--pick); }
+  .arrow-label.back { fill: var(--back); }
+  .doc { transition: transform .55s cubic-bezier(.4,1.4,.4,1); }
+  .doc-body { fill: var(--panel); stroke: var(--accent); stroke-width: 1.5; }
+  .doc-label { fill: var(--text); font: 600 12px sans-serif; text-anchor: middle; }
+  .doc-state { fill: var(--accent); font: 600 11px ui-monospace, monospace; text-anchor: middle; }
+  .ops { font: 600 11px ui-monospace, monospace; fill: var(--muted); text-anchor: start; }
+  .ops .ok { fill: var(--published); }
+  .ops .no { fill: var(--warn); text-decoration: line-through; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .switch-tangle { fill: var(--warn); font: 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .switch-tangle.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The State Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">8</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrowF" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+          <marker id="arrowB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--back)"/>
+          </marker>
+        </defs>
+
+        <!-- Forward arrows (top arcs) -->
+        <path id="arr-d-r" class="arrow-fwd" d="M 110 100 Q 165 70, 220 100"/>
+        <text class="arrow-label fwd" x="165" y="68">submit</text>
+
+        <path id="arr-r-p" class="arrow-fwd" d="M 240 100 Q 295 70, 350 100"/>
+        <text class="arrow-label fwd" x="295" y="68">publish</text>
+
+        <path id="arr-p-a" class="arrow-fwd" d="M 370 100 Q 425 70, 480 100"/>
+        <text class="arrow-label fwd" x="425" y="68">archive</text>
+
+        <!-- Backward arrows (bottom arcs) -->
+        <path id="arr-r-d" class="arrow-back" d="M 220 140 Q 165 170, 110 140"/>
+        <text class="arrow-label back" x="165" y="184">reject</text>
+
+        <path id="arr-p-r" class="arrow-back" d="M 350 140 Q 295 170, 240 140"/>
+        <text class="arrow-label back" x="295" y="184">revoke</text>
+
+        <!-- State nodes -->
+        <g id="node-draft" class="state-node" style="color: var(--draft)">
+          <circle cx="80" cy="120" r="32" fill="var(--draft)"/>
+          <text class="state-label" x="80" y="125">Draft</text>
+        </g>
+        <g id="node-review" class="state-node" style="color: var(--review)">
+          <circle cx="230" cy="120" r="32" fill="var(--review)"/>
+          <text class="state-label" x="230" y="125">Review</text>
+        </g>
+        <g id="node-published" class="state-node" style="color: var(--published)">
+          <circle cx="360" cy="120" r="32" fill="var(--published)"/>
+          <text class="state-label" x="360" y="118">Pub-</text>
+          <text class="state-label" x="360" y="132">lished</text>
+        </g>
+        <g id="node-archived" class="state-node" style="color: var(--archived)">
+          <circle cx="470" cy="120" r="32" fill="var(--archived)"/>
+          <text class="state-label" x="470" y="118">Arch-</text>
+          <text class="state-label" x="470" y="132">ived</text>
+        </g>
+
+        <!-- The tangle (step 1) -->
+        <text class="switch-tangle" id="t1" x="260" y="220">if (state === "draft" &amp;&amp; canSubmit) { state = "review" }</text>
+        <text class="switch-tangle" id="t2" x="260" y="238">else if (state === "review" &amp;&amp; !rejected) { state = "published" }</text>
+        <text class="switch-tangle" id="t3" x="260" y="256">else if (state === "published" &amp;&amp; old) { state = "archived" }</text>
+        <text class="switch-tangle" id="t4" x="260" y="274">else if (state === "review" &amp;&amp; rejected) { state = "draft" }</text>
+        <text class="switch-tangle" id="t5" x="260" y="292">// …in submit(), publish(), archive(), revoke(), reject()…</text>
+
+        <!-- Document pill (moves between states) -->
+        <g id="doc" class="doc" transform="translate(80, 250)" style="opacity: 0">
+          <rect class="doc-body" x="-58" y="-22" width="116" height="44" rx="10"/>
+          <text class="doc-label" y="-3">document #42</text>
+          <text class="doc-state" id="doc-state-label" y="14">[Draft]</text>
+        </g>
+
+        <!-- Allowed operations panel (step 4+) -->
+        <g id="ops-panel" style="opacity: 0">
+          <text class="ops" x="40" y="220" id="op-line-1"></text>
+          <text class="ops" x="40" y="238" id="op-line-2"></text>
+          <text class="ops" x="40" y="256" id="op-line-3"></text>
+          <text class="ops" x="40" y="274" id="op-line-4"></text>
+        </g>
+
+        <!-- Caption -->
+        <text id="caption" class="caption" x="260" y="350"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate · navigation mirrors the state transitions themselves</div>
+</div>
+
+<script>
+const POS = {
+  draft:     { x: 80,  y: 250 },
+  review:    { x: 230, y: 250 },
+  published: { x: 360, y: 250 },
+  archived:  { x: 470, y: 250 },
+};
+
+const ALL_STATES = ['draft','review','published','archived'];
+
+const steps = [
+  {
+    title: "the problem",
+    narration: `Your <b>Document</b> behaves differently depending on a status field. Every method opens with the same <span class="pill">switch</span>: what can be done here? what's the next state? The logic for each state is <i>scattered</i> across every method.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Document</span> {',
+      '  status = <span class="s">"draft"</span>',
+      '',
+      '  submit() {',
+      '    <span class="k">if</span> (<span class="k">this</span>.status === <span class="s">"draft"</span>)     <span class="k">this</span>.status = <span class="s">"review"</span>',
+      '    <span class="k">else if</span> (<span class="k">this</span>.status === <span class="s">"review"</span>) <span class="k">throw</span> <span class="s">"already submitted"</span>',
+      '    <span class="k">else</span> <span class="k">throw</span> <span class="s">"cannot submit from "</span> + <span class="k">this</span>.status',
+      '  }',
+      '  publish() { <span class="c">/* its own switch */</span> }',
+      '  reject()  { <span class="c">/* its own switch */</span> }',
+      '  archive() { <span class="c">/* its own switch */</span> }',
+      '}',
+    ],
+    state: { glow: [], dim: [], current: null, ops: null, tangle: false, fwd: [], back: [], caption: "behavior tangled with status checks in every method" }
+  },
+  {
+    title: "the transition tangle",
+    narration: `Across all those methods, every state's rules are <b>split apart and woven together</b>. A bug in the Review → Draft path could be hiding in <i>any</i> method. Adding a new state means hunting every switch.`,
+    code: [
+      '<span class="c">// scattered across the class:</span>',
+      'submit():  draft  → review',
+      'publish(): review → published',
+      'archive(): published → archived',
+      'reject():  review → draft',
+      'revoke():  published → review',
+      '',
+      '<span class="c">// where does "review" live? Five different methods.</span>',
+      '<span class="c">// where does the next state come from? Every method decides for itself.</span>',
+    ],
+    state: { glow: [], dim: ['draft','review','published','archived'], current: null, ops: null, tangle: true, fwd: [], back: [], caption: "state logic smeared across method boundaries" }
+  },
+  {
+    title: "encapsulate each state",
+    narration: `Make each state a <b>class</b>. All the rules for "what Draft can do" live in <span class="pill">DraftState</span>. All the rules for "what Review can do" live in <span class="pill">ReviewState</span>. One class per state.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">DocState</span> {',
+      '  submit(doc):  <span class="t">DocState</span>',
+      '  publish(doc): <span class="t">DocState</span>',
+      '  reject(doc):  <span class="t">DocState</span>',
+      '  archive(doc): <span class="t">DocState</span>',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">DraftState</span>     <span class="k">implements</span> <span class="t">DocState</span> { <span class="c">/* … */</span> }',
+      '<span class="k">class</span> <span class="t">ReviewState</span>    <span class="k">implements</span> <span class="t">DocState</span> { <span class="c">/* … */</span> }',
+      '<span class="k">class</span> <span class="t">PublishedState</span> <span class="k">implements</span> <span class="t">DocState</span> { <span class="c">/* … */</span> }',
+      '<span class="k">class</span> <span class="t">ArchivedState</span>  <span class="k">implements</span> <span class="t">DocState</span> { <span class="c">/* … */</span> }',
+    ],
+    state: { glow: ['draft','review','published','archived'], dim: [], current: null, ops: null, tangle: false, fwd: [], back: [], caption: "one class per state, all sharing one interface" }
+  },
+  {
+    title: "Context delegates",
+    narration: `The <b>Document</b> (Context) holds a reference to its current state and delegates every operation. <span class="pill">doc.submit()</span> becomes <span class="pill">this.state.submit(this)</span>. The Context shrinks; the states own their behavior.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Document</span> {',
+      '  state: <span class="t">DocState</span> = <span class="k">new</span> DraftState()',
+      '',
+      '  submit()  { <span class="k">this</span>.state = <span class="k">this</span>.state.submit(<span class="k">this</span>) }',
+      '  publish() { <span class="k">this</span>.state = <span class="k">this</span>.state.publish(<span class="k">this</span>) }',
+      '  reject()  { <span class="k">this</span>.state = <span class="k">this</span>.state.reject(<span class="k">this</span>) }',
+      '  archive() { <span class="k">this</span>.state = <span class="k">this</span>.state.archive(<span class="k">this</span>) }',
+      '}',
+      '',
+      '<span class="c">// no more switches. each method is one line.</span>',
+    ],
+    state: { glow: ['draft'], dim: ['review','published','archived'], current: 'draft', ops: ['draft'], tangle: false, fwd: [], back: [], caption: "Context delegates to its current state object" }
+  },
+  {
+    title: "states own transitions →",
+    narration: `Each state returns the <b>next state</b> from each operation. <span class="pill">DraftState.submit()</span> returns a new <span class="pill">ReviewState</span>. Illegal moves throw — the impossible transitions don't even exist as code paths.`,
+    code: [
+      '<span class="k">class</span> <span class="t">DraftState</span> <span class="k">implements</span> <span class="t">DocState</span> {',
+      '  submit(doc)  { <span class="k">return</span> <span class="k">new</span> ReviewState() }   <span class="c">// ← transition</span>',
+      '  publish(doc) { <span class="k">throw</span> <span class="s">"cannot publish a draft"</span> }',
+      '  reject(doc)  { <span class="k">throw</span> <span class="s">"nothing to reject"</span> }',
+      '  archive(doc) { <span class="k">throw</span> <span class="s">"cannot archive a draft"</span> }',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">ReviewState</span> <span class="k">implements</span> <span class="t">DocState</span> {',
+      '  submit(doc)  { <span class="k">throw</span> <span class="s">"already submitted"</span> }',
+      '  publish(doc) { <span class="k">return</span> <span class="k">new</span> PublishedState() }',
+      '  reject(doc)  { <span class="k">return</span> <span class="k">new</span> DraftState() }     <span class="c">// ← rollback</span>',
+      '  archive(doc) { <span class="k">throw</span> <span class="s">"cannot archive in review"</span> }',
+      '}',
+    ],
+    state: { glow: ['draft'], dim: ['published','archived'], current: 'draft', ops: ['draft'], tangle: false, fwd: ['arr-d-r'], back: [], caption: "Draft → Review when submit() is called" }
+  },
+  {
+    title: "walk forward: → Review",
+    narration: `<span class="pill">doc.submit()</span> runs. <b>Draft.submit()</b> returns a new <b>Review</b>. The Document's state pointer is reassigned. From here, only Review's operations apply.`,
+    code: [
+      'doc.submit()                    <span class="c">// Draft → Review</span>',
+      '',
+      '<span class="c">// internally:</span>',
+      '<span class="c">//   this.state = this.state.submit(this)</span>',
+      '<span class="c">//              = new DraftState().submit(this)</span>',
+      '<span class="c">//              = new ReviewState()</span>',
+      '',
+      'doc.state.constructor.name      <span class="c">// "ReviewState"</span>',
+    ],
+    state: { glow: ['review'], dim: ['draft','archived'], current: 'review', ops: ['review'], tangle: false, fwd: ['arr-r-p'], back: ['arr-r-d'], caption: "current state advances; operations available change with it" }
+  },
+  {
+    title: "walk forward: → Published",
+    narration: `<span class="pill">doc.publish()</span>. <b>Review.publish()</b> returns <b>Published</b>. Notice: <i>Draft</i> never had a <span class="pill">publish()</span> path — it threw. The state objects make the legal moves <b>per-state explicit</b>.`,
+    code: [
+      'doc.publish()                   <span class="c">// Review → Published</span>',
+      '',
+      '<span class="k">class</span> <span class="t">PublishedState</span> <span class="k">implements</span> <span class="t">DocState</span> {',
+      '  submit(doc)  { <span class="k">throw</span> <span class="s">"already published"</span> }',
+      '  publish(doc) { <span class="k">throw</span> <span class="s">"already published"</span> }',
+      '  reject(doc)  { <span class="k">return</span> <span class="k">new</span> ReviewState() }   <span class="c">// ← revoke</span>',
+      '  archive(doc) { <span class="k">return</span> <span class="k">new</span> ArchivedState() }',
+      '}',
+    ],
+    state: { glow: ['published'], dim: ['draft'], current: 'published', ops: ['published'], tangle: false, fwd: ['arr-p-a'], back: ['arr-p-r'], caption: "each state defines its own forward AND backward edges" }
+  },
+  {
+    title: "the trade-off",
+    narration: `State turns a status enum into a <b>graph of objects</b>. Use it when ≥3 states each have <i>genuinely different behavior</i> across multiple methods. Skip it when there's a single method whose behavior varies — that's just an <span class="pill">if</span>.`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   TCP connection (Listen/Established/Closing/Closed)</span>',
+      '<span class="c">//   media player  (Stopped/Playing/Paused/Buffering)</span>',
+      '<span class="c">//   workflow doc  (Draft/Review/Published/Archived)</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   "isLoggedIn" toggling one render branch — just use the boolean</span>',
+      '<span class="c">//   states that share behavior for every operation — no inheritance to break out</span>',
+      '',
+      '<span class="c">// cost: N states × M methods → N·M small methods. Worth it when behavior</span>',
+      '<span class="c">// truly differs per cell of that grid. Wasteful when most cells are duplicates.</span>',
+    ],
+    state: { glow: ['draft','review','published','archived'], dim: [], current: 'archived', ops: ['archived'], tangle: false, fwd: [], back: [], caption: "behavior-per-state graph, not a status field" }
+  },
+];
+
+const OPS_BY_STATE = {
+  draft:     [['submit() ', 'ok'],  ['publish()', 'no'], ['reject()', 'no'],  ['archive()', 'no']],
+  review:    [['submit() ', 'no'],  ['publish()', 'ok'], ['reject()', 'ok'],  ['archive()', 'no']],
+  published: [['submit() ', 'no'],  ['publish()', 'no'], ['reject()', 'ok'],  ['archive()', 'ok']],
+  archived:  [['submit() ', 'no'],  ['publish()', 'no'], ['reject()', 'no'],  ['archive()', 'no']],
+};
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function setArrows(fwdIds, backIds) {
+  ['arr-d-r','arr-r-p','arr-p-a'].forEach(id => $(id).classList.toggle('active', fwdIds.includes(id)));
+  ['arr-r-d','arr-p-r'].forEach(id => $(id).classList.toggle('active', backIds.includes(id)));
+}
+
+function setOpsPanel(stateName) {
+  const panel = $('ops-panel');
+  if (!stateName || !OPS_BY_STATE[stateName]) { panel.style.opacity = 0; return; }
+  panel.style.opacity = 1;
+  const ops = OPS_BY_STATE[stateName];
+  for (let i = 0; i < 4; i++) {
+    const el = $('op-line-' + (i + 1));
+    const [text, cls] = ops[i];
+    el.innerHTML = `<tspan class="${cls}">${cls === 'ok' ? '✓ ' : '✗ '}${text}</tspan>`;
+  }
+}
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_STATES.forEach(name => {
+    const el = $('node-' + name);
+    el.classList.toggle('dim', s.state.dim.includes(name));
+    el.classList.toggle('glow', s.state.glow.includes(name));
+  });
+
+  ['t1','t2','t3','t4','t5'].forEach(id => $(id).classList.toggle('on', s.state.tangle));
+
+  const doc = $('doc');
+  if (s.state.current) {
+    const { x, y } = POS[s.state.current];
+    doc.setAttribute('transform', `translate(${x}, ${y})`);
+    doc.style.opacity = 1;
+    $('doc-state-label').textContent = `[${s.state.current[0].toUpperCase() + s.state.current.slice(1)}]`;
+  } else {
+    doc.style.opacity = 0;
+  }
+
+  setOpsPanel(s.state.ops ? s.state.ops[0] : null);
+  setArrows(s.state.fwd || [], s.state.back || []);
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

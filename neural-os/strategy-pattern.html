@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Strategy Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --bubble: #a5d6ff; --quick: #ffa657; --merge: #7ee787;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .card { transition: opacity .3s, filter .3s, transform .35s ease; transform-origin: center; transform-box: fill-box; }
+  .card.dim { opacity: 0.3; }
+  .card.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .card-label { font: 600 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .card-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.7; }
+  .context-box { fill: var(--panel); stroke: var(--accent); stroke-width: 1.5; }
+  .context-label { fill: var(--text); font: 600 13px sans-serif; text-anchor: middle; }
+  .context-sub { fill: var(--muted); font: 11px ui-monospace, monospace; text-anchor: middle; }
+  .pointer { stroke: var(--pick); stroke-width: 2.5; fill: none; marker-end: url(#arrow); opacity: 0; transition: opacity .35s; }
+  .pointer.on { opacity: 1; }
+  .output { fill: var(--accent); font: 600 13px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .output.on { opacity: 1; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .if-else { fill: var(--warn); font: 600 11px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .3s; }
+  .if-else.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Strategy Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 340" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pick)"/>
+          </marker>
+        </defs>
+
+        <!-- Context box -->
+        <g id="context">
+          <rect class="context-box" x="180" y="34" width="160" height="64" rx="8"/>
+          <text class="context-label" x="260" y="58">Sorter (Context)</text>
+          <text class="context-sub" x="260" y="80" id="context-data">data = [3,1,4,1,5,9,2,6]</text>
+        </g>
+
+        <!-- if/else mess (step 1) -->
+        <text id="ifelse-1" class="if-else" x="260" y="180">if (type === "bubble") { … }</text>
+        <text id="ifelse-2" class="if-else" x="260" y="200">else if (type === "quick") { … }</text>
+        <text id="ifelse-3" class="if-else" x="260" y="220">else if (type === "merge") { … }</text>
+
+        <!-- Strategy cards -->
+        <g id="card-bubble" class="card" style="color: var(--bubble)">
+          <rect x="40" y="210" width="120" height="80" rx="8" fill="var(--bubble)" opacity="0.9"/>
+          <text class="card-label" x="100" y="244">BubbleSort</text>
+          <text class="card-sub" x="100" y="266">O(n²)</text>
+        </g>
+        <g id="card-quick" class="card" style="color: var(--quick)">
+          <rect x="200" y="210" width="120" height="80" rx="8" fill="var(--quick)" opacity="0.9"/>
+          <text class="card-label" x="260" y="244">QuickSort</text>
+          <text class="card-sub" x="260" y="266">O(n log n)</text>
+        </g>
+        <g id="card-merge" class="card" style="color: var(--merge)">
+          <rect x="360" y="210" width="120" height="80" rx="8" fill="var(--merge)" opacity="0.9"/>
+          <text class="card-label" x="420" y="244">MergeSort</text>
+          <text class="card-sub" x="420" y="266">O(n log n)</text>
+        </g>
+
+        <!-- Lambda card (appears in step 6) -->
+        <g id="card-lambda" class="card" style="color: var(--pick); opacity: 0">
+          <rect x="200" y="210" width="120" height="80" rx="8" fill="var(--pick)" opacity="0.9"/>
+          <text class="card-label" x="260" y="240">λ</text>
+          <text class="card-sub" x="260" y="262">(a,b) => a-b</text>
+          <text class="card-sub" x="260" y="278">inline strategy</text>
+        </g>
+
+        <!-- Pointer arrow from context to active strategy -->
+        <path id="pointer" class="pointer" d=""/>
+
+        <!-- Output -->
+        <text id="output" class="output" x="260" y="318">→ [1,1,2,3,4,5,6,9]</text>
+
+        <!-- Caption -->
+        <text id="caption" class="caption" x="260" y="334"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+// Center points of each strategy card (top-edge target for arrow)
+const TARGETS = {
+  bubble: { x: 100, y: 210 },
+  quick:  { x: 260, y: 210 },
+  merge:  { x: 420, y: 210 },
+  lambda: { x: 260, y: 210 },
+};
+
+const steps = [
+  {
+    title: "the problem",
+    narration: `Your sort lives inside one big function: a chain of <span class="pill">if/else</span> picks between bubble, quick, merge. Every new algorithm means another branch, more risk, harder tests.`,
+    code: [
+      '<span class="k">function</span> sort(data, type) {',
+      '  <span class="k">if</span> (type === <span class="s">"bubble"</span>) {',
+      '    <span class="c">// 30 lines of bubble sort…</span>',
+      '  } <span class="k">else if</span> (type === <span class="s">"quick"</span>) {',
+      '    <span class="c">// 40 lines of quicksort…</span>',
+      '  } <span class="k">else if</span> (type === <span class="s">"merge"</span>) {',
+      '    <span class="c">// 50 lines of merge sort…</span>',
+      '  }',
+      '}',
+    ],
+    state: { dim: ['bubble','quick','merge','lambda'], glow: [], pointer: null, ifelse: true, output: false, caption: "one giant function, branching on type" }
+  },
+  {
+    title: "extract algorithms",
+    narration: `Pull each branch into its own class. Each class implements the <b>same interface</b> — one method, <span class="pill">sort(arr)</span> — so they're interchangeable.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">SortStrategy</span> {',
+      '  sort(arr: <span class="t">number</span>[]): <span class="t">number</span>[]',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">BubbleSort</span> <span class="k">implements</span> <span class="t">SortStrategy</span> {',
+      '  sort(arr) { <span class="c">/* … */</span> }',
+      '}',
+      '<span class="k">class</span> <span class="t">QuickSort</span>  <span class="k">implements</span> <span class="t">SortStrategy</span> { sort(a){ <span class="c">/*…*/</span> } }',
+      '<span class="k">class</span> <span class="t">MergeSort</span>  <span class="k">implements</span> <span class="t">SortStrategy</span> { sort(a){ <span class="c">/*…*/</span> } }',
+    ],
+    state: { dim: ['lambda'], glow: ['bubble','quick','merge'], pointer: null, ifelse: false, output: false, caption: "three classes, one shared shape" }
+  },
+  {
+    title: "the Context",
+    narration: `The <b>Context</b> holds a reference to <i>some</i> strategy and delegates to it. It doesn't know or care which one — it just calls <span class="pill">strategy.sort()</span>.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Sorter</span> {',
+      '  <span class="k">constructor</span>(<span class="k">private</span> strategy: <span class="t">SortStrategy</span>) {}',
+      '',
+      '  run(data: <span class="t">number</span>[]) {',
+      '    <span class="k">return</span> <span class="k">this</span>.strategy.sort(data)   <span class="c">// ← delegation</span>',
+      '  }',
+      '',
+      '  setStrategy(s: <span class="t">SortStrategy</span>) { <span class="k">this</span>.strategy = s }',
+      '}',
+    ],
+    state: { dim: ['bubble','merge','lambda'], glow: ['quick'], pointer: 'quick', ifelse: false, output: false, caption: "Context delegates to whichever strategy it holds" }
+  },
+  {
+    title: "swap at runtime",
+    narration: `Same context, same data, <b>different strategy</b>. Swap the algorithm without changing the calling code. Choose by config, by data size, by user pref — anything.`,
+    code: [
+      '<span class="k">const</span> sorter = <span class="k">new</span> Sorter(<span class="k">new</span> QuickSort())',
+      'sorter.run(data)                          <span class="c">// quicksort</span>',
+      '',
+      'sorter.setStrategy(<span class="k">new</span> MergeSort())',
+      'sorter.run(data)                          <span class="c">// mergesort, same call site</span>',
+      '',
+      'sorter.setStrategy(',
+      '  data.length &lt; <span class="n">16</span> ? <span class="k">new</span> BubbleSort() : <span class="k">new</span> QuickSort()',
+      ')',
+    ],
+    state: { dim: ['quick','lambda'], glow: ['bubble','merge'], pointer: 'merge', ifelse: false, output: true, caption: "swap algorithm without touching the caller" }
+  },
+  {
+    title: "strategies are values",
+    narration: `Because strategies are <b>objects</b>, you can pass them as parameters, store them, inject them in constructors, even build a registry. Each is testable in isolation — no Context needed.`,
+    code: [
+      '<span class="c">// pass as parameter</span>',
+      '<span class="k">function</span> process(data, strategy) {',
+      '  <span class="k">return</span> <span class="k">new</span> Sorter(strategy).run(data)',
+      '}',
+      '',
+      '<span class="c">// registry</span>',
+      '<span class="k">const</span> registry = {',
+      '  bubble: <span class="k">new</span> BubbleSort(),',
+      '  quick:  <span class="k">new</span> QuickSort(),',
+      '  merge:  <span class="k">new</span> MergeSort(),',
+      '}',
+      'process(data, registry[userPref])',
+    ],
+    state: { dim: ['lambda'], glow: ['bubble','quick','merge'], pointer: 'bubble', ifelse: false, output: true, caption: "strategies become first-class data" }
+  },
+  {
+    title: "when a lambda is enough",
+    narration: `For tiny variations — a comparator, a key extractor — a <b>function</b> is a strategy. Don't build a class hierarchy when one expression carries the whole behavior.`,
+    code: [
+      '<span class="c">// classy version:</span>',
+      '<span class="k">interface</span> <span class="t">Comparator</span> { compare(a, b): <span class="t">number</span> }',
+      '<span class="k">class</span> <span class="t">AscendingByPrice</span> <span class="k">implements</span> <span class="t">Comparator</span> { … }',
+      '',
+      '<span class="c">// lambda version — same pattern, less ceremony:</span>',
+      'items.sort((a, b) =&gt; a.price - b.price)',
+      'items.sort((a, b) =&gt; b.date - a.date)',
+      '',
+      '<span class="c">// reach for classes when strategies carry state or multiple methods.</span>',
+    ],
+    state: { dim: ['bubble','quick','merge'], glow: ['lambda'], pointer: 'lambda', ifelse: false, output: true, caption: "function ≡ strategy when behavior is one expression" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Strategy adds <b>one indirection</b>. It pays off when algorithms vary along a real axis (perf, accuracy, cost) and the caller shouldn't care which is picked. It costs when there's only ever <i>one</i> implementation, or branches are trivial.`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - payment: PayCard / PayCrypto / PayInvoice</span>',
+      '<span class="c">//   - compression: Gzip / Brotli / Zstd</span>',
+      '<span class="c">//   - pricing: RegularPrice / DiscountPrice / DynamicPrice</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - one algorithm, with a flag toggling a single line</span>',
+      '<span class="c">//   - two branches you\'ll never grow past two</span>',
+      '',
+      '<span class="c">// rule of thumb: 3+ variants OR variants that must be swappable at runtime.</span>',
+    ],
+    state: { dim: ['lambda'], glow: ['bubble','quick','merge'], pointer: null, ifelse: false, output: false, caption: "use it when variation is real and ongoing" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function setPointer(target) {
+  const p = $('pointer');
+  if (!target || !TARGETS[target]) { p.classList.remove('on'); return; }
+  const { x, y } = TARGETS[target];
+  // start at bottom-center of context box (260, 98); curve to top of card
+  p.setAttribute('d', `M 260 100 Q ${(260 + x) / 2} ${(100 + y) / 2 + 40}, ${x} ${y - 4}`);
+  p.classList.add('on');
+}
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ['bubble','quick','merge','lambda'].forEach(name => {
+    const el = $('card-' + name);
+    el.classList.toggle('dim', s.state.dim.includes(name));
+    el.classList.toggle('glow', s.state.glow.includes(name));
+    if (name === 'lambda') el.style.opacity = s.state.glow.includes('lambda') || (s.state.pointer === 'lambda') ? 1 : 0;
+  });
+
+  ['ifelse-1','ifelse-2','ifelse-3'].forEach(id => $(id).classList.toggle('on', s.state.ifelse));
+  $('output').classList.toggle('on', s.state.output);
+  $('caption').textContent = s.state.caption || '';
+
+  // Hide other strategy cards when lambda is active (lambda occupies the middle slot)
+  if (s.state.pointer === 'lambda') {
+    $('card-quick').style.opacity = 0;
+  } else if (!s.state.dim.includes('quick')) {
+    $('card-quick').style.opacity = '';
+  }
+
+  requestAnimationFrame(() => setPointer(s.state.pointer));
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

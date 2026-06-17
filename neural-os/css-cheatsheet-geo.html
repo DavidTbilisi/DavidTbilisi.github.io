@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSS — ქართული სახელმძღვანელო</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    padding: 2rem;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1 { text-align: center; font-size: 2rem; color: #f8fafc; margin-bottom: 0.25rem; }
+  .subtitle { text-align: center; color: #64748b; margin-bottom: 2rem; font-size: 0.9rem; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 1.25rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .wide { grid-column: span 2; }
+  @media (max-width: 700px) { .wide { grid-column: span 1; } }
+
+  .card { background: #1e2130; border-radius: 10px; overflow: hidden; border: 1px solid #2d3148; }
+  .card-header { padding: 0.6rem 1rem; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .card-body { padding: 0.75rem 1rem 1rem; }
+
+  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 0.35rem 0; border-bottom: 1px solid #2a2f47; gap: 1rem; }
+  .row:last-child { border-bottom: none; }
+  .label { color: #94a3b8; font-size: 0.82rem; flex-shrink: 0; max-width: 48%; }
+
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem; padding: 0.15rem 0.45rem;
+    border-radius: 4px; background: #111827; white-space: nowrap;
+  }
+
+  .block-code {
+    background: #111827; border-radius: 6px; padding: 0.8rem; margin-top: 0.5rem;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.78rem; line-height: 1.85; color: #e2e8f0; overflow-x: auto; white-space: pre;
+  }
+
+  .note { border-left: 3px solid #475569; padding: 0.45rem 0.75rem; margin-top: 0.6rem; color: #94a3b8; font-size: 0.8rem; border-radius: 0 4px 4px 0; background: #161b2e; }
+  .tip  { border-left: 3px solid #10b981; padding: 0.45rem 0.75rem; margin-top: 0.6rem; color: #6ee7b7; font-size: 0.8rem; border-radius: 0 4px 4px 0; background: #051a10; }
+
+  .blue   .card-header { background: #1e3a5f; color: #60a5fa; }
+  .green  .card-header { background: #14402a; color: #4ade80; }
+  .purple .card-header { background: #2d1f4e; color: #c084fc; }
+  .orange .card-header { background: #3d2200; color: #fb923c; }
+  .red    .card-header { background: #3b1010; color: #f87171; }
+  .teal   .card-header { background: #0f3033; color: #2dd4bf; }
+  .yellow .card-header { background: #3d2e00; color: #fbbf24; }
+  .pink   .card-header { background: #3b1a2e; color: #f472b6; }
+  .slate  .card-header { background: #1e2535; color: #94a3b8; }
+  .cyan   .card-header { background: #082f3a; color: #67e8f9; }
+  .lime   .card-header { background: #1a2e05; color: #a3e635; }
+  .rose   .card-header { background: #3b0a1a; color: #fb7185; }
+  .indigo .card-header { background: #1e1b4b; color: #a5b4fc; }
+  .amber  .card-header { background: #2d1a00; color: #fcd34d; }
+
+  .blue   code { color: #93c5fd; }
+  .green  code { color: #86efac; }
+  .purple code { color: #d8b4fe; }
+  .orange code { color: #fdba74; }
+  .red    code { color: #fca5a5; }
+  .teal   code { color: #5eead4; }
+  .yellow code { color: #fcd34d; }
+  .pink   code { color: #f9a8d4; }
+  .slate  code { color: #cbd5e1; }
+  .cyan   code { color: #a5f3fc; }
+  .lime   code { color: #bef264; }
+  .rose   code { color: #fda4af; }
+  .indigo code { color: #c7d2fe; }
+  .amber  code { color: #fde68a; }
+
+  .prop { color: #93c5fd; }
+  .val  { color: #86efac; }
+  .sel  { color: #f472b6; }
+  .at   { color: #fbbf24; }
+  .num  { color: #c084fc; }
+  .fn   { color: #2dd4bf; }
+  .cmt  { color: #4b5563; font-style: italic; }
+  .var  { color: #fda4af; }
+</style>
+</head>
+<body>
+
+<h1>CSS სახელმძღვანელო</h1>
+<p class="subtitle">სრული სწრაფი მიმოხილვა — CSS3 · ქართულ ენაზე</p>
+
+<div class="grid">
+
+  <!-- SELECTORS -->
+  <div class="card pink">
+    <div class="card-header">🎯 სელექტორები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ელემენტი</span><code>div</code></div>
+      <div class="row"><span class="label">კლასი</span><code>.classname</code></div>
+      <div class="row"><span class="label">იდენტიფიკატორი</span><code>#idname</code></div>
+      <div class="row"><span class="label">ყველა</span><code>*</code></div>
+      <div class="row"><span class="label">ჯგუფი</span><code>h1, h2, p</code></div>
+      <div class="row"><span class="label">შთამომავალი</span><code>div p</code></div>
+      <div class="row"><span class="label">პირდაპირი შვილი</span><code>div > p</code></div>
+      <div class="row"><span class="label">მეზობელი და-ძმა</span><code>h1 + p</code></div>
+      <div class="row"><span class="label">ზოგადი და-ძმა</span><code>h1 ~ p</code></div>
+      <div class="row"><span class="label">ატრიბ. არსებობა</span><code>[href]</code></div>
+      <div class="row"><span class="label">ატრიბ. ტოლია</span><code>[type="text"]</code></div>
+      <div class="row"><span class="label">ატრიბ. შეიცავს</span><code>[class*="btn"]</code></div>
+      <div class="row"><span class="label">ატრიბ. იწყება</span><code>[href^="https"]</code></div>
+      <div class="row"><span class="label">ატრიბ. მთავრდება</span><code>[src$=".png"]</code></div>
+      <div class="row"><span class="label">სპეციფ. რიგი</span><code>inline > #id > .class > tag</code></div>
+      <div class="note">სპეციფიკურობა: inline=1000, #id=100, .class=10, tag=1</div>
+    </div>
+  </div>
+
+  <!-- PSEUDO-CLASSES -->
+  <div class="card rose">
+    <div class="card-header">🔮 ფსევდო-კლასები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ჰოვერი</span><code>:hover</code></div>
+      <div class="row"><span class="label">ფოკუსი</span><code>:focus</code></div>
+      <div class="row"><span class="label">აქტიური (დაჭერილი)</span><code>:active</code></div>
+      <div class="row"><span class="label">მონახულ. ბმული</span><code>:visited</code></div>
+      <div class="row"><span class="label">პირველი შვილი</span><code>:first-child</code></div>
+      <div class="row"><span class="label">ბოლო შვილი</span><code>:last-child</code></div>
+      <div class="row"><span class="label">n-ური შვილი</span><code>:nth-child(2n+1)</code></div>
+      <div class="row"><span class="label">n-ური ტიპი</span><code>:nth-of-type(3)</code></div>
+      <div class="row"><span class="label">ერთადერთი შვილი</span><code>:only-child</code></div>
+      <div class="row"><span class="label">გარდა</span><code>:not(.active)</code></div>
+      <div class="row"><span class="label">მონიშნული</span><code>:checked</code></div>
+      <div class="row"><span class="label">გამორთული</span><code>:disabled</code></div>
+      <div class="row"><span class="label">შაბლონი</span><code>::placeholder</code></div>
+      <div class="row"><span class="label">ცარიელი ელემ.</span><code>:empty</code></div>
+      <div class="row"><span class="label">ხილული ფოკუსი</span><code>:focus-visible</code></div>
+      <div class="row"><span class="label">შვილი გააჩნია</span><code>:has(img)</code></div>
+    </div>
+  </div>
+
+  <!-- PSEUDO-ELEMENTS -->
+  <div class="card indigo">
+    <div class="card-header">✨ ფსევდო-ელემენტები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ელემ. წინ</span><code>::before</code></div>
+      <div class="row"><span class="label">ელემ. შემდეგ</span><code>::after</code></div>
+      <div class="row"><span class="label">პირველი სტრიქონი</span><code>::first-line</code></div>
+      <div class="row"><span class="label">პირველი ასო</span><code>::first-letter</code></div>
+      <div class="row"><span class="label">მარკირ. ტექსტი</span><code>::selection</code></div>
+      <div class="row"><span class="label">შაბლონი</span><code>::placeholder</code></div>
+      <div class="row"><span class="label">მარკერი (სია)</span><code>::marker</code></div>
+      <div class="block-code"><span class="sel">.btn::before</span> {
+  <span class="prop">content</span>: <span class="val">""</span>;        <span class="cmt">/* სავალდებულოა */</span>
+  <span class="prop">display</span>: <span class="val">block</span>;
+  <span class="prop">width</span>: <span class="num">10px</span>;
+  <span class="prop">height</span>: <span class="num">10px</span>;
+  <span class="prop">background</span>: <span class="val">red</span>;
+}</div>
+    </div>
+  </div>
+
+  <!-- BOX MODEL -->
+  <div class="card orange">
+    <div class="card-header">📦 ყუთის მოდელი (Box Model)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სიგანე / სიმაღლე</span><code>width: 200px; height: 100px</code></div>
+      <div class="row"><span class="label">მინ. / მაქს. სიგანე</span><code>min-width: 100px; max-width: 800px</code></div>
+      <div class="row"><span class="label">შეწევა (ყველა)</span><code>padding: 16px</code></div>
+      <div class="row"><span class="label">შეწ. (ზ მარ ქ მარ)</span><code>padding: 10px 20px 10px 20px</code></div>
+      <div class="row"><span class="label">შეწ. (ზ/ქ · მარ/მარ)</span><code>padding: 10px 20px</code></div>
+      <div class="row"><span class="label">მიტოვება (ყველა)</span><code>margin: 16px</code></div>
+      <div class="row"><span class="label">ავტო-ცენტრირება</span><code>margin: 0 auto</code></div>
+      <div class="row"><span class="label">საზღვარი</span><code>border: 1px solid #ccc</code></div>
+      <div class="row"><span class="label">კუთხის მომრგვ.</span><code>border-radius: 8px</code></div>
+      <div class="row"><span class="label">წრე</span><code>border-radius: 50%</code></div>
+      <div class="row"><span class="label">კონტური</span><code>outline: 2px solid blue</code></div>
+      <div class="row"><span class="label">ყუთის ზომა</span><code>box-sizing: border-box</code></div>
+      <div class="row"><span class="label">გადინება</span><code>overflow: hidden / scroll / auto</code></div>
+      <div class="row"><span class="label">გადინება x/y</span><code>overflow-x: hidden</code></div>
+      <div class="tip"><code>box-sizing: border-box</code> — padding და border შედის სიგანეში. ყოველთვის გამოიყენე გლობალურად.</div>
+    </div>
+  </div>
+
+  <!-- DISPLAY & POSITION -->
+  <div class="card blue">
+    <div class="card-header">📐 ჩვენება და პოზიცია</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ბლოკი</span><code>display: block</code></div>
+      <div class="row"><span class="label">ინლაინი</span><code>display: inline</code></div>
+      <div class="row"><span class="label">ინლაინ-ბლოკი</span><code>display: inline-block</code></div>
+      <div class="row"><span class="label">დამალვა</span><code>display: none</code></div>
+      <div class="row"><span class="label">უხილავი (სივრცე რჩება)</span><code>visibility: hidden</code></div>
+      <div class="row"><span class="label">სტატიკური (ნაგ.)</span><code>position: static</code></div>
+      <div class="row"><span class="label">შეფარდებითი</span><code>position: relative</code></div>
+      <div class="row"><span class="label">აბსოლ. (მშობ. მიხ.)</span><code>position: absolute</code></div>
+      <div class="row"><span class="label">ფიქსირებ. (ეკრანი)</span><code>position: fixed</code></div>
+      <div class="row"><span class="label">წებოვანი</span><code>position: sticky; top: 0</code></div>
+      <div class="row"><span class="label">ფენების რიგი</span><code>z-index: 10</code></div>
+      <div class="row"><span class="label">გადაადგ.</span><code>top / right / bottom / left</code></div>
+      <div class="note">absolute — ეძებს უახლოეს non-static მშობელს.</div>
+    </div>
+  </div>
+
+  <!-- FLEXBOX -->
+  <div class="card green wide">
+    <div class="card-header">🟩 Flexbox</div>
+    <div class="card-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 2rem;">
+        <div>
+          <div style="color:#4ade80; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.4rem;">კონტეინერი</div>
+          <div class="row"><span class="label">ჩართვა</span><code>display: flex</code></div>
+          <div class="row"><span class="label">მიმართულება</span><code>flex-direction: row / column</code></div>
+          <div class="row"><span class="label">შებრუნება</span><code>flex-direction: row-reverse</code></div>
+          <div class="row"><span class="label">გადახვევა</span><code>flex-wrap: wrap / nowrap</code></div>
+          <div class="row"><span class="label">მთ. ღერძი</span><code>justify-content: …</code></div>
+          <div class="row"><span class="label">განივი ღერძი</span><code>align-items: …</code></div>
+          <div class="row"><span class="label">მრ. სტრ. სორტ.</span><code>align-content: …</code></div>
+          <div class="row"><span class="label">შუალედი</span><code>gap: 16px</code></div>
+          <div class="row"><span class="label">სტრ./სვეტ. შუალ.</span><code>row-gap: 8px; column-gap: 16px</code></div>
+          <div style="margin-top:0.75rem">
+            <div style="color:#4ade80; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">justify-content მნიშვნელობები</div>
+            <div class="row"><span class="label">დასაწყისში</span><code>flex-start</code></div>
+            <div class="row"><span class="label">ბოლოში</span><code>flex-end</code></div>
+            <div class="row"><span class="label">ცენტრი</span><code>center</code></div>
+            <div class="row"><span class="label">სივრცე შუაში</span><code>space-between</code></div>
+            <div class="row"><span class="label">სივრცე გარშემო</span><code>space-around</code></div>
+            <div class="row"><span class="label">თანაბარი სივრცე</span><code>space-evenly</code></div>
+          </div>
+        </div>
+        <div>
+          <div style="color:#4ade80; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.4rem;">ელემენტები</div>
+          <div class="row"><span class="label">ზრდა (სივრ. შევს.)</span><code>flex-grow: 1</code></div>
+          <div class="row"><span class="label">შეკუმშვა</span><code>flex-shrink: 0</code></div>
+          <div class="row"><span class="label">საბაზო ზომა</span><code>flex-basis: 200px</code></div>
+          <div class="row"><span class="label">მოკლე ჩაწ.</span><code>flex: 1 1 auto</code></div>
+          <div class="row"><span class="label">ყველა სივრცე</span><code>flex: 1</code></div>
+          <div class="row"><span class="label">ფიქსირებული</span><code>flex: none</code></div>
+          <div class="row"><span class="label">საკუთ. სორტ.</span><code>align-self: center</code></div>
+          <div class="row"><span class="label">რიგი</span><code>order: 2</code></div>
+          <div style="margin-top:0.75rem">
+            <div style="color:#4ade80; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">align-items მნიშვნელობები</div>
+            <div class="row"><span class="label">გაჭიმვა (ნაგ.)</span><code>stretch</code></div>
+            <div class="row"><span class="label">დასაწყისი</span><code>flex-start</code></div>
+            <div class="row"><span class="label">ბოლო</span><code>flex-end</code></div>
+            <div class="row"><span class="label">ცენტრი</span><code>center</code></div>
+            <div class="row"><span class="label">ტექსტ. ბაზა</span><code>baseline</code></div>
+          </div>
+          <div class="tip" style="margin-top:0.75rem">სრული ცენტრი: <code>display:flex; justify-content:center; align-items:center</code></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="card purple wide">
+    <div class="card-header">🟪 CSS Grid</div>
+    <div class="card-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 2rem;">
+        <div>
+          <div style="color:#c084fc; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.4rem;">კონტეინერი</div>
+          <div class="row"><span class="label">ჩართვა</span><code>display: grid</code></div>
+          <div class="row"><span class="label">სვეტები</span><code>grid-template-columns: 1fr 2fr 1fr</code></div>
+          <div class="row"><span class="label">მწკრივები</span><code>grid-template-rows: 100px auto</code></div>
+          <div class="row"><span class="label">გამეორება</span><code>repeat(3, 1fr)</code></div>
+          <div class="row"><span class="label">ავტო-შევსება</span><code>repeat(auto-fill, minmax(200px,1fr))</code></div>
+          <div class="row"><span class="label">ავტო-მორგება</span><code>repeat(auto-fit, minmax(200px,1fr))</code></div>
+          <div class="row"><span class="label">შუალედი</span><code>gap: 16px</code></div>
+          <div class="row"><span class="label">სვეტ./სტრ. შუალ.</span><code>column-gap: 16px; row-gap: 8px</code></div>
+          <div class="row"><span class="label">დასახ. არეები</span><code>grid-template-areas: "h h" "s m" "f f"</code></div>
+          <div class="row"><span class="label">ელემ. სორტ.</span><code>justify-items / align-items</code></div>
+          <div class="row"><span class="label">გრიდ. სორტ.</span><code>justify-content / align-content</code></div>
+        </div>
+        <div>
+          <div style="color:#c084fc; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.4rem;">ელემენტები</div>
+          <div class="row"><span class="label">სვეტ. გაერთ.</span><code>grid-column: 1 / 3</code></div>
+          <div class="row"><span class="label">სვეტ. გაერთ. (მოკ.)</span><code>grid-column: span 2</code></div>
+          <div class="row"><span class="label">მწკრ. გაერთ.</span><code>grid-row: 1 / 3</code></div>
+          <div class="row"><span class="label">დასახ. არე</span><code>grid-area: header</code></div>
+          <div class="row"><span class="label">საკუთ. სორტ.</span><code>justify-self / align-self</code></div>
+          <div class="block-code"><span class="cmt">/* დასახ. არეების განლაგება */</span>
+<span class="sel">.layout</span> {
+  <span class="prop">display</span>: <span class="val">grid</span>;
+  <span class="prop">grid-template-areas</span>:
+    <span class="val">"header header"</span>
+    <span class="val">"sidebar main"</span>
+    <span class="val">"footer footer"</span>;
+}
+<span class="sel">.header</span>  { <span class="prop">grid-area</span>: <span class="val">header</span>; }
+<span class="sel">.sidebar</span> { <span class="prop">grid-area</span>: <span class="val">sidebar</span>; }
+<span class="sel">.main</span>    { <span class="prop">grid-area</span>: <span class="val">main</span>; }
+<span class="sel">.footer</span>  { <span class="prop">grid-area</span>: <span class="val">footer</span>; }</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPOGRAPHY -->
+  <div class="card teal">
+    <div class="card-header">🔤 ტიპოგრაფია</div>
+    <div class="card-body">
+      <div class="row"><span class="label">შრიფტის ოჯახი</span><code>font-family: 'Inter', sans-serif</code></div>
+      <div class="row"><span class="label">ზომა</span><code>font-size: 1rem</code></div>
+      <div class="row"><span class="label">სისქე</span><code>font-weight: 400 / 700 / bold</code></div>
+      <div class="row"><span class="label">სტილი</span><code>font-style: italic / normal</code></div>
+      <div class="row"><span class="label">სტრ. სიმაღლე</span><code>line-height: 1.6</code></div>
+      <div class="row"><span class="label">ასოთაშ. მანძ.</span><code>letter-spacing: 0.05em</code></div>
+      <div class="row"><span class="label">სიტყ-თაშ. მანძ.</span><code>word-spacing: 4px</code></div>
+      <div class="row"><span class="label">გარდაქმნა</span><code>text-transform: uppercase / capitalize</code></div>
+      <div class="row"><span class="label">სორტირება</span><code>text-align: left / center / right / justify</code></div>
+      <div class="row"><span class="label">დეკორაცია</span><code>text-decoration: underline / none</code></div>
+      <div class="row"><span class="label">ჩაღრმავება</span><code>text-indent: 2rem</code></div>
+      <div class="row"><span class="label">... გადინება</span><code>text-overflow: ellipsis</code></div>
+      <div class="row"><span class="label">სტრ. გარეშე</span><code>white-space: nowrap</code></div>
+      <div class="row"><span class="label">სიტყვ. გდ.</span><code>word-break: break-word</code></div>
+      <div class="row"><span class="label">Google შრიფტი</span><code>@import url('https://fonts.googleapis.com/…')</code></div>
+      <div class="block-code"><span class="cmt">/* ერთ სტრიქონში შემოკლება */</span>
+<span class="sel">.truncate</span> {
+  <span class="prop">overflow</span>: <span class="val">hidden</span>;
+  <span class="prop">white-space</span>: <span class="val">nowrap</span>;
+  <span class="prop">text-overflow</span>: <span class="val">ellipsis</span>;
+}</div>
+    </div>
+  </div>
+
+  <!-- COLORS & BACKGROUNDS -->
+  <div class="card yellow">
+    <div class="card-header">🎨 ფერები და ფონები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სახელით ფერი</span><code>color: red</code></div>
+      <div class="row"><span class="label">hex კოდი</span><code>color: #ff5733</code></div>
+      <div class="row"><span class="label">hex + გამჭვ.</span><code>color: #ff573380</code></div>
+      <div class="row"><span class="label">rgb</span><code>color: rgb(255, 87, 51)</code></div>
+      <div class="row"><span class="label">rgba</span><code>color: rgba(255, 87, 51, 0.5)</code></div>
+      <div class="row"><span class="label">hsl</span><code>color: hsl(11, 100%, 60%)</code></div>
+      <div class="row"><span class="label">ფონის ფერი</span><code>background-color: #1e2130</code></div>
+      <div class="row"><span class="label">ფონის სურათი</span><code>background-image: url('img.jpg')</code></div>
+      <div class="row"><span class="label">ზომა</span><code>background-size: cover / contain / 50%</code></div>
+      <div class="row"><span class="label">პოზიცია</span><code>background-position: center</code></div>
+      <div class="row"><span class="label">განმეორება</span><code>background-repeat: no-repeat</code></div>
+      <div class="row"><span class="label">მიმაგრება</span><code>background-attachment: fixed</code></div>
+      <div class="row"><span class="label">გამჭვირვალობა</span><code>opacity: 0.5</code></div>
+      <div class="block-code"><span class="cmt">/* სწორხაზოვანი გრადიენტი */</span>
+<span class="prop">background</span>: <span class="fn">linear-gradient</span>(<span class="num">135deg</span>, <span class="val">#667eea</span>, <span class="val">#764ba2</span>);
+
+<span class="cmt">/* რადიალური გრადიენტი */</span>
+<span class="prop">background</span>: <span class="fn">radial-gradient</span>(<span class="val">circle</span>, <span class="val">#667eea</span>, <span class="val">#764ba2</span>);
+
+<span class="cmt">/* მრავლობითი ფონი */</span>
+<span class="prop">background</span>: <span class="fn">url</span>(<span class="val">overlay.png</span>) <span class="val">top/cover</span>,
+             <span class="fn">linear-gradient</span>(<span class="val">#000</span>, <span class="val">#333</span>);</div>
+    </div>
+  </div>
+
+  <!-- SHADOWS -->
+  <div class="card cyan">
+    <div class="card-header">🌑 ჩრდილები და საზღვრები</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt">/* box-shadow: x y blur spread ფერი */</span>
+<span class="prop">box-shadow</span>: <span class="num">0 4px 6px</span> <span class="fn">rgba</span>(<span class="num">0,0,0,0.1</span>);
+
+<span class="cmt">/* შიდა ჩრდილი */</span>
+<span class="prop">box-shadow</span>: <span class="val">inset</span> <span class="num">0 2px 4px</span> <span class="fn">rgba</span>(<span class="num">0,0,0,0.2</span>);
+
+<span class="cmt">/* მრავლობითი ჩრდილი */</span>
+<span class="prop">box-shadow</span>: <span class="num">0 1px 3px</span> <span class="val">#0003</span>,
+             <span class="num">0 4px 12px</span> <span class="val">#0002</span>;
+
+<span class="cmt">/* text-shadow: x y blur ფერი */</span>
+<span class="prop">text-shadow</span>: <span class="num">2px 2px 4px</span> <span class="fn">rgba</span>(<span class="num">0,0,0,0.5</span>);
+
+<span class="cmt">/* საზღვარი */</span>
+<span class="prop">border</span>: <span class="num">2px</span> <span class="val">solid</span> <span class="val">#60a5fa</span>;
+<span class="prop">border-radius</span>: <span class="num">8px</span>;
+
+<span class="cmt">/* ცალკეული მხარე */</span>
+<span class="prop">border-top</span>: <span class="num">4px</span> <span class="val">solid</span> <span class="val">#f87171</span>;
+<span class="prop">border-bottom</span>: <span class="val">none</span>;
+
+<span class="cmt">/* კონტური (განლაგებაზე გავლ. არ ახდ.) */</span>
+<span class="prop">outline</span>: <span class="num">2px</span> <span class="val">solid</span> <span class="val">#60a5fa</span>;
+<span class="prop">outline-offset</span>: <span class="num">4px</span>;</div>
+    </div>
+  </div>
+
+  <!-- TRANSITIONS -->
+  <div class="card lime">
+    <div class="card-header">⚡ გადასვლები (Transitions)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">მოკლე ჩაწ.</span><code>transition: all 0.3s ease</code></div>
+      <div class="row"><span class="label">თვისება</span><code>transition-property: color, background</code></div>
+      <div class="row"><span class="label">ხანგრძლ.</span><code>transition-duration: 0.3s</code></div>
+      <div class="row"><span class="label">ტემპი</span><code>transition-timing-function: ease-in-out</code></div>
+      <div class="row"><span class="label">დაგვ.</span><code>transition-delay: 0.1s</code></div>
+      <div style="color:#a3e635; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin: 0.6rem 0 0.3rem;">ტემპის ფუნქციები</div>
+      <div class="row"><span class="label">ease (ნაგ.)</span><code>ნელი → სწრაფი → ნელი</code></div>
+      <div class="row"><span class="label">linear</span><code>მუდმივი სიჩქარე</code></div>
+      <div class="row"><span class="label">ease-in</span><code>ნელი დასაწყისი</code></div>
+      <div class="row"><span class="label">ease-out</span><code>ნელი დასასრული</code></div>
+      <div class="row"><span class="label">ease-in-out</span><code>ნელი ორივე მხარეს</code></div>
+      <div class="row"><span class="label">cubic-bezier</span><code>cubic-bezier(0.4, 0, 0.2, 1)</code></div>
+      <div class="row"><span class="label">ნაბიჯები</span><code>steps(4, end)</code></div>
+      <div class="block-code"><span class="sel">.btn</span> {
+  <span class="prop">background</span>: <span class="val">#3b82f6</span>;
+  <span class="prop">transition</span>: <span class="val">background</span> <span class="num">0.2s</span> <span class="val">ease</span>, <span class="prop">transform</span> <span class="num">0.1s</span>;
+}
+<span class="sel">.btn:hover</span> {
+  <span class="prop">background</span>: <span class="val">#2563eb</span>;
+  <span class="prop">transform</span>: <span class="fn">translateY</span>(<span class="num">-2px</span>);
+}</div>
+    </div>
+  </div>
+
+  <!-- ANIMATIONS -->
+  <div class="card red">
+    <div class="card-header">🎬 ანიმაციები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">სახელი</span><code>animation-name: slide-in</code></div>
+      <div class="row"><span class="label">ხანგრძლ.</span><code>animation-duration: 1s</code></div>
+      <div class="row"><span class="label">ტემპი</span><code>animation-timing-function: ease</code></div>
+      <div class="row"><span class="label">დაგვ.</span><code>animation-delay: 0.5s</code></div>
+      <div class="row"><span class="label">გამეორება</span><code>animation-iteration-count: infinite</code></div>
+      <div class="row"><span class="label">მიმართ.</span><code>animation-direction: alternate</code></div>
+      <div class="row"><span class="label">შევს. რეჟ.</span><code>animation-fill-mode: forwards</code></div>
+      <div class="row"><span class="label">სახ. რეჟ.</span><code>animation-play-state: paused</code></div>
+      <div class="block-code"><span class="at">@keyframes</span> <span class="val">slide-in</span> {
+  <span class="num">from</span> { <span class="prop">transform</span>: <span class="fn">translateX</span>(<span class="num">-100%</span>); <span class="prop">opacity</span>: <span class="num">0</span>; }
+  <span class="num">to</span>   { <span class="prop">transform</span>: <span class="fn">translateX</span>(<span class="num">0</span>); <span class="prop">opacity</span>: <span class="num">1</span>; }
+}
+
+<span class="at">@keyframes</span> <span class="val">pulse</span> {
+  <span class="num">0%, 100%</span> { <span class="prop">transform</span>: <span class="fn">scale</span>(<span class="num">1</span>); }
+  <span class="num">50%</span>      { <span class="prop">transform</span>: <span class="fn">scale</span>(<span class="num">1.05</span>); }
+}
+
+<span class="sel">.card</span> {
+  <span class="prop">animation</span>: <span class="val">slide-in</span> <span class="num">0.4s</span> <span class="val">ease forwards</span>;
+}</div>
+    </div>
+  </div>
+
+  <!-- TRANSFORMS -->
+  <div class="card amber">
+    <div class="card-header">🔄 გარდაქმნები (Transforms)</div>
+    <div class="card-body">
+      <div class="row"><span class="label">გადაადგ. X/Y</span><code>transform: translateX(50px)</code></div>
+      <div class="row"><span class="label">გადაადგ. ორივე</span><code>transform: translate(50px, 20px)</code></div>
+      <div class="row"><span class="label">მასშტ.</span><code>transform: scale(1.5)</code></div>
+      <div class="row"><span class="label">მასშტ. X/Y</span><code>transform: scaleX(2) scaleY(0.5)</code></div>
+      <div class="row"><span class="label">ბრუნვა</span><code>transform: rotate(45deg)</code></div>
+      <div class="row"><span class="label">გადახრა</span><code>transform: skewX(20deg)</code></div>
+      <div class="row"><span class="label">რამდენიმე ერთად</span><code>transform: rotate(45deg) scale(1.2)</code></div>
+      <div class="row"><span class="label">3D ბრუნვა</span><code>transform: rotateY(180deg)</code></div>
+      <div class="row"><span class="label">3D პერსპ.</span><code>perspective: 800px</code></div>
+      <div class="row"><span class="label">საწყისი წერტ.</span><code>transform-origin: top left</code></div>
+      <div class="row"><span class="label">3D შენ.</span><code>transform-style: preserve-3d</code></div>
+    </div>
+  </div>
+
+  <!-- CSS VARIABLES -->
+  <div class="card slate">
+    <div class="card-header">📌 CSS ცვლადები</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt">/* :root-ზე განსაზ. (გლობ.) */</span>
+<span class="sel">:root</span> {
+  <span class="var">--color-primary</span>:  <span class="val">#3b82f6</span>;
+  <span class="var">--color-bg</span>:       <span class="val">#0f1117</span>;
+  <span class="var">--spacing-sm</span>:     <span class="num">8px</span>;
+  <span class="var">--spacing-md</span>:     <span class="num">16px</span>;
+  <span class="var">--radius</span>:         <span class="num">8px</span>;
+  <span class="var">--font-body</span>:      <span class="val">'Inter', sans-serif</span>;
+}
+
+<span class="cmt">/* გამოყენება */</span>
+<span class="sel">.card</span> {
+  <span class="prop">background</span>: <span class="fn">var</span>(<span class="var">--color-bg</span>);
+  <span class="prop">padding</span>: <span class="fn">var</span>(<span class="var">--spacing-md</span>);
+  <span class="prop">border-radius</span>: <span class="fn">var</span>(<span class="var">--radius</span>);
+}
+
+<span class="cmt">/* სათად. მნიშვნელობა */</span>
+<span class="prop">color</span>: <span class="fn">var</span>(<span class="var">--color-text</span>, <span class="val">#e2e8f0</span>);
+
+<span class="cmt">/* ლოკ. გადაწ. */</span>
+<span class="sel">.dark-card</span> {
+  <span class="var">--color-bg</span>: <span class="val">#1e2130</span>;
+}
+
+<span class="cmt">/* JS-ით განახ. */</span>
+document.documentElement.style
+  .setProperty(<span class="val">'--color-primary'</span>, <span class="val">'#f87171'</span>);</div>
+    </div>
+  </div>
+
+  <!-- UNITS -->
+  <div class="card blue">
+    <div class="card-header">📏 ზომის ერთეულები</div>
+    <div class="card-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 1.5rem;">
+        <div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">აბსოლ. ერთ.</div>
+          <div class="row"><span class="label">პიქსელები</span><code>px</code></div>
+          <div class="row"><span class="label">პუნქტები</span><code>pt</code></div>
+          <div class="row"><span class="label">სანტ./მილ.</span><code>cm / mm</code></div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin:0.6rem 0 0.3rem;">შეფარდ. ერთ.</div>
+          <div class="row"><span class="label">მშობ. შრ. ზომა</span><code>em</code></div>
+          <div class="row"><span class="label">root შრ. ზომა</span><code>rem</code></div>
+          <div class="row"><span class="label">მშობ. სიგ. %</span><code>%</code></div>
+          <div class="row"><span class="label">ეკ. სიგანე</span><code>vw</code></div>
+          <div class="row"><span class="label">ეკ. სიმაღ.</span><code>vh</code></div>
+          <div class="row"><span class="label">min(vw, vh)</span><code>vmin</code></div>
+          <div class="row"><span class="label">max(vw, vh)</span><code>vmax</code></div>
+          <div class="row"><span class="label">გრიდ. წილი</span><code>fr</code></div>
+          <div class="row"><span class="label">სიმბ. სიგანე</span><code>ch</code></div>
+        </div>
+        <div>
+          <div style="color:#60a5fa; font-size:0.72rem; font-weight:700; text-transform:uppercase; margin-bottom:0.3rem;">ფუნქციები</div>
+          <div class="row"><span class="label">შეზღ.</span><code>clamp(1rem, 2vw, 2rem)</code></div>
+          <div class="row"><span class="label">მინ.</span><code>min(50%, 400px)</code></div>
+          <div class="row"><span class="label">მაქს.</span><code>max(200px, 50%)</code></div>
+          <div class="row"><span class="label">გამოთვ.</span><code>calc(100% - 2rem)</code></div>
+          <div class="note" style="margin-top:0.5rem">
+            <b>rem</b> — შრ. ზომებისთვის.<br>
+            <b>em</b> — კომპ. padding/margin.<br>
+            <b>%</b> — ადაპტ. განლ.<br>
+            <b>clamp()</b> — ადაპტ. ტიპოგ.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEDIA QUERIES -->
+  <div class="card pink">
+    <div class="card-header">📱 მედია მოთხოვნები</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt">/* მობ. პირველი (min-width) */</span>
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">640px</span>)  { <span class="cmt">/* sm  */</span> }
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">768px</span>)  { <span class="cmt">/* md  */</span> }
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">1024px</span>) { <span class="cmt">/* lg  */</span> }
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">1280px</span>) { <span class="cmt">/* xl  */</span> }
+<span class="at">@media</span> (<span class="prop">min-width</span>: <span class="num">1536px</span>) { <span class="cmt">/* 2xl */</span> }
+
+<span class="cmt">/* დესკ. პირველი (max-width) */</span>
+<span class="at">@media</span> (<span class="prop">max-width</span>: <span class="num">767px</span>) { <span class="cmt">/* მობილური */</span> }
+
+<span class="cmt">/* დიაპაზონი */</span>
+<span class="at">@media</span> (<span class="num">640px</span> &lt;= <span class="prop">width</span> &lt; <span class="num">1024px</span>) { }
+
+<span class="cmt">/* მუქი თემა */</span>
+<span class="at">@media</span> (<span class="prop">prefers-color-scheme</span>: <span class="val">dark</span>) { }
+
+<span class="cmt">/* შემ. მოძრაობა */</span>
+<span class="at">@media</span> (<span class="prop">prefers-reduced-motion</span>: <span class="val">reduce</span>) {
+  * { <span class="prop">animation-duration</span>: <span class="num">0.01ms</span> <span class="val">!important</span>; }
+}
+
+<span class="cmt">/* ბეჭდვა */</span>
+<span class="at">@media</span> <span class="val">print</span> { <span class="sel">.sidebar</span> { <span class="prop">display</span>: <span class="val">none</span>; } }
+
+<span class="cmt">/* ორიენტაცია */</span>
+<span class="at">@media</span> (<span class="prop">orientation</span>: <span class="val">landscape</span>) { }</div>
+    </div>
+  </div>
+
+  <!-- USEFUL PATTERNS -->
+  <div class="card teal wide">
+    <div class="card-header">🛠️ სასარგებლო შაბლონები</div>
+    <div class="card-body">
+      <div class="block-code"><span class="cmt">/* ── გლობ. განულება ─────────────────────────────────── */</span>
+<span class="sel">*, *::before, *::after</span> {
+  <span class="prop">box-sizing</span>: <span class="val">border-box</span>;
+  <span class="prop">margin</span>: <span class="num">0</span>; <span class="prop">padding</span>: <span class="num">0</span>;
+}
+
+<span class="cmt">/* ── ცენტრი (flex) ──────────────────────────────────── */</span>
+<span class="sel">.center</span> { <span class="prop">display</span>: <span class="val">flex</span>; <span class="prop">justify-content</span>: <span class="val">center</span>; <span class="prop">align-items</span>: <span class="val">center</span>; }
+
+<span class="cmt">/* ── ცენტრი (position) ──────────────────────────────── */</span>
+<span class="sel">.center-pos</span> {
+  <span class="prop">position</span>: <span class="val">absolute</span>;
+  <span class="prop">top</span>: <span class="num">50%</span>; <span class="prop">left</span>: <span class="num">50%</span>;
+  <span class="prop">transform</span>: <span class="fn">translate</span>(<span class="num">-50%, -50%</span>);
+}
+
+<span class="cmt">/* ── ადაპტ. სურათი ──────────────────────────────────── */</span>
+<span class="sel">img</span> { <span class="prop">max-width</span>: <span class="num">100%</span>; <span class="prop">height</span>: <span class="val">auto</span>; <span class="prop">display</span>: <span class="val">block</span>; }
+
+<span class="cmt">/* ── მხარეთა თანაფ. ─────────────────────────────────── */</span>
+<span class="sel">.video-wrap</span> { <span class="prop">aspect-ratio</span>: <span class="num">16 / 9</span>; <span class="prop">width</span>: <span class="num">100%</span>; }
+
+<span class="cmt">/* ── გლუვი გადახვ. ──────────────────────────────────── */</span>
+<span class="sel">html</span> { <span class="prop">scroll-behavior</span>: <span class="val">smooth</span>; }
+
+<span class="cmt">/* ── გამოქ. scroll ──────────────────────────────────── */</span>
+<span class="sel">::-webkit-scrollbar</span>       { <span class="prop">width</span>: <span class="num">6px</span>; }
+<span class="sel">::-webkit-scrollbar-track</span> { <span class="prop">background</span>: <span class="val">#1e2130</span>; }
+<span class="sel">::-webkit-scrollbar-thumb</span> { <span class="prop">background</span>: <span class="val">#475569</span>; <span class="prop">border-radius</span>: <span class="num">3px</span>; }
+
+<span class="cmt">/* ── ადაპტ. ტექსტი ──────────────────────────────────── */</span>
+<span class="sel">h1</span> { <span class="prop">font-size</span>: <span class="fn">clamp</span>(<span class="num">1.5rem, 5vw, 3rem</span>); }
+
+<span class="cmt">/* ── ხელმისაწვდ. დამალ. ─────────────────────────────── */</span>
+<span class="sel">.sr-only</span> {
+  <span class="prop">position</span>: <span class="val">absolute</span>; <span class="prop">width</span>: <span class="num">1px</span>; <span class="prop">height</span>: <span class="num">1px</span>;
+  <span class="prop">padding</span>: <span class="num">0</span>; <span class="prop">margin</span>: <span class="num">-1px</span>; <span class="prop">overflow</span>: <span class="val">hidden</span>;
+  <span class="prop">clip</span>: <span class="fn">rect</span>(<span class="num">0,0,0,0</span>); <span class="prop">white-space</span>: <span class="val">nowrap</span>; <span class="prop">border</span>: <span class="num">0</span>;
+}
+
+<span class="cmt">/* ── შუშის ეფექტი (glass morphism) ─────────────────── */</span>
+<span class="sel">.glass</span> {
+  <span class="prop">background</span>: <span class="fn">rgba</span>(<span class="num">255,255,255,0.1</span>);
+  <span class="prop">backdrop-filter</span>: <span class="fn">blur</span>(<span class="num">10px</span>);
+  <span class="prop">border</span>: <span class="num">1px</span> <span class="val">solid</span> <span class="fn">rgba</span>(<span class="num">255,255,255,0.2</span>);
+}
+
+<span class="cmt">/* ── მიმ. ქვ. კოლ. (sticky footer) ─────────────────── */</span>
+<span class="sel">body</span> { <span class="prop">display</span>: <span class="val">flex</span>; <span class="prop">flex-direction</span>: <span class="val">column</span>; <span class="prop">min-height</span>: <span class="num">100vh</span>; }
+<span class="sel">main</span> { <span class="prop">flex</span>: <span class="num">1</span>; }</div>
+    </div>
+  </div>
+
+  <!-- FUNCTIONS -->
+  <div class="card indigo">
+    <div class="card-header">⚙️ CSS ფუნქციები</div>
+    <div class="card-body">
+      <div class="row"><span class="label">ცვლადი</span><code>var(--name, fallback)</code></div>
+      <div class="row"><span class="label">გამოთვლა</span><code>calc(100% - 2rem)</code></div>
+      <div class="row"><span class="label">შეზღვ. მნიშვ.</span><code>clamp(min, ideal, max)</code></div>
+      <div class="row"><span class="label">მინიმ.</span><code>min(50%, 400px)</code></div>
+      <div class="row"><span class="label">მაქსიმ.</span><code>max(200px, 50%)</code></div>
+      <div class="row"><span class="label">rgb / rgba</span><code>rgb(255 87 51 / 50%)</code></div>
+      <div class="row"><span class="label">hsl / hsla</span><code>hsl(220 90% 56% / 0.8)</code></div>
+      <div class="row"><span class="label">url</span><code>url('image.jpg')</code></div>
+      <div class="row"><span class="label">სწ. გრადიენტი</span><code>linear-gradient(to right, #f00, #00f)</code></div>
+      <div class="row"><span class="label">რად. გრადიენტი</span><code>radial-gradient(circle, …)</code></div>
+      <div class="row"><span class="label">კონ. გრადიენტი</span><code>conic-gradient(red, yellow, green)</code></div>
+      <div class="row"><span class="label">მთვლელი</span><code>counter(section)</code></div>
+      <div class="row"><span class="label">ატრიბ. მნიშვ.</span><code>attr(data-label)</code></div>
+      <div class="row"><span class="label">გარემ. ცვლ.</span><code>env(safe-area-inset-top)</code></div>
+    </div>
+  </div>
+
+  <!-- FILTERS & MISC -->
+  <div class="card orange">
+    <div class="card-header">🔧 ფილტრები, კურსორი, სხვა</div>
+    <div class="card-body">
+      <div class="row"><span class="label">დაბინდვა</span><code>filter: blur(4px)</code></div>
+      <div class="row"><span class="label">სიკაშკაშე</span><code>filter: brightness(0.8)</code></div>
+      <div class="row"><span class="label">კონტრასტი</span><code>filter: contrast(1.2)</code></div>
+      <div class="row"><span class="label">ნაცრისფ.</span><code>filter: grayscale(100%)</code></div>
+      <div class="row"><span class="label">ინვერსია</span><code>filter: invert(1)</code></div>
+      <div class="row"><span class="label">გაჯერება</span><code>filter: saturate(2)</code></div>
+      <div class="row"><span class="label">ჩრდ. ფილტრი</span><code>filter: drop-shadow(0 4px 6px #0003)</code></div>
+      <div class="row"><span class="label">კურსორი — მაჩვ.</span><code>cursor: pointer</code></div>
+      <div class="row"><span class="label">კურს. ტიპები</span><code>default / crosshair / not-allowed / grab</code></div>
+      <div class="row"><span class="label">მაჩვ. მოვლ.</span><code>pointer-events: none</code></div>
+      <div class="row"><span class="label">ტექსტ. მარკ.</span><code>user-select: none</code></div>
+      <div class="row"><span class="label">ზომის შეცვ.</span><code>resize: vertical</code></div>
+      <div class="row"><span class="label">მომზ. ცვლ.</span><code>will-change: transform</code></div>
+      <div class="row"><span class="label">შეურ. რეჟ.</span><code>mix-blend-mode: multiply</code></div>
+      <div class="row"><span class="label">გარეგნობა</span><code>appearance: none</code></div>
+    </div>
+  </div>
+
+</div>
+
+<p style="text-align:center; margin-top:2rem; color:#4b5563; font-size:0.75rem;">
+  CSS3 · ქართული სახელმძღვანელო · Neural OS
+</p>
+
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

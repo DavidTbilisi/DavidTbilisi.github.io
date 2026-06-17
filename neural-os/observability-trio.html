@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CloudWatch vs CloudTrail vs Config — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --cw:     #7ee787;
+    --ct:     #ffa657;
+    --cfg:    #d2a8ff;
+    --warn:   #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .card { transition: opacity .35s, filter .35s; }
+  .card.dim { opacity: 0.22; }
+  .card.glow { filter: drop-shadow(0 0 14px currentColor); }
+  .card-label { font: 700 14px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .card-sub   { font: 600 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.8; }
+  .q { fill: var(--muted); font: 600 11px ui-monospace, monospace; }
+  .input-pill { fill: var(--bg); stroke: var(--muted); stroke-width: 1; }
+  .input-text { font: 600 10.5px ui-monospace, monospace; fill: var(--text); text-anchor: middle; }
+  .arrow { stroke: var(--muted); stroke-width: 1.8; fill: none; marker-end: url(#mk); opacity: 0.35; transition: opacity .35s, stroke .35s; }
+  .arrow.on { opacity: 1; }
+  .arrow.cw  { stroke: var(--cw); }
+  .arrow.ct  { stroke: var(--ct); }
+  .arrow.cfg { stroke: var(--cfg); }
+  .caption { fill: var(--muted); font: 600 10.5px ui-monospace, monospace; text-anchor: middle; }
+  .scenario { fill: var(--warn); font: 700 12px ui-monospace, monospace; text-anchor: middle; opacity: 0; transition: opacity .35s; }
+  .scenario.on { opacity: 1; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>CloudWatch vs CloudTrail vs Config <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 540 360" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"/>
+          </marker>
+        </defs>
+
+        <!-- The three questions across the top -->
+        <text class="q" x="100" y="36" text-anchor="middle">what's happening?</text>
+        <text class="q" x="270" y="36" text-anchor="middle">who did what?</text>
+        <text class="q" x="440" y="36" text-anchor="middle">what's the config?</text>
+
+        <!-- CloudWatch card -->
+        <g class="card" id="card-cw" style="color: var(--cw)">
+          <rect x="30" y="50" width="140" height="80" rx="10" fill="var(--cw)"/>
+          <text class="card-label" x="100" y="80">CloudWatch</text>
+          <text class="card-sub" x="100" y="100">metrics · logs</text>
+          <text class="card-sub" x="100" y="116">alarms · dashboards</text>
+        </g>
+
+        <!-- CloudTrail card -->
+        <g class="card" id="card-ct" style="color: var(--ct)">
+          <rect x="200" y="50" width="140" height="80" rx="10" fill="var(--ct)"/>
+          <text class="card-label" x="270" y="80">CloudTrail</text>
+          <text class="card-sub" x="270" y="100">API call history</text>
+          <text class="card-sub" x="270" y="116">who · when · what call</text>
+        </g>
+
+        <!-- Config card -->
+        <g class="card" id="card-cfg" style="color: var(--cfg)">
+          <rect x="370" y="50" width="140" height="80" rx="10" fill="var(--cfg)"/>
+          <text class="card-label" x="440" y="80">AWS Config</text>
+          <text class="card-sub" x="440" y="100">resource snapshots</text>
+          <text class="card-sub" x="440" y="116">config drift · compliance</text>
+        </g>
+
+        <!-- Input pills (bottom of cards) -->
+        <g class="card" id="in-cw" style="opacity: 1">
+          <rect class="input-pill" x="36" y="156" width="128" height="22" rx="11"/>
+          <text class="input-text" x="100" y="171">CPU · 5xx · log lines</text>
+        </g>
+        <g class="card" id="in-ct" style="opacity: 1">
+          <rect class="input-pill" x="206" y="156" width="128" height="22" rx="11"/>
+          <text class="input-text" x="270" y="171">every AWS API call</text>
+        </g>
+        <g class="card" id="in-cfg" style="opacity: 1">
+          <rect class="input-pill" x="376" y="156" width="128" height="22" rx="11"/>
+          <text class="input-text" x="440" y="171">resource state changes</text>
+        </g>
+
+        <!-- Output panel (bottom of each column) -->
+        <g class="card" id="out-cw" style="opacity: 1">
+          <rect x="30" y="206" width="140" height="72" rx="10" fill="none" stroke="var(--cw)" stroke-width="1"/>
+          <text class="input-text" x="100" y="224" fill="var(--cw)">→ alarm fires</text>
+          <text class="input-text" x="100" y="240" fill="var(--cw)">→ Lambda triggered</text>
+          <text class="input-text" x="100" y="256" fill="var(--cw)">→ dashboard graph</text>
+          <text class="input-text" x="100" y="272" fill="var(--muted)">live state</text>
+        </g>
+        <g class="card" id="out-ct" style="opacity: 1">
+          <rect x="200" y="206" width="140" height="72" rx="10" fill="none" stroke="var(--ct)" stroke-width="1"/>
+          <text class="input-text" x="270" y="224" fill="var(--ct)">→ "alice deleted X"</text>
+          <text class="input-text" x="270" y="240" fill="var(--ct)">→ unusual API alert</text>
+          <text class="input-text" x="270" y="256" fill="var(--ct)">→ 90-day search</text>
+          <text class="input-text" x="270" y="272" fill="var(--muted)">audit trail</text>
+        </g>
+        <g class="card" id="out-cfg" style="opacity: 1">
+          <rect x="370" y="206" width="140" height="72" rx="10" fill="none" stroke="var(--cfg)" stroke-width="1"/>
+          <text class="input-text" x="440" y="224" fill="var(--cfg)">→ SG opened to world</text>
+          <text class="input-text" x="440" y="240" fill="var(--cfg)">→ non-compliant flag</text>
+          <text class="input-text" x="440" y="256" fill="var(--cfg)">→ auto-remediation</text>
+          <text class="input-text" x="440" y="272" fill="var(--muted)">desired state diff</text>
+        </g>
+
+        <!-- Arrows from input to output through each card -->
+        <path id="arr-cw"  class="arrow cw"  d="M 100 156 L 100 206"/>
+        <path id="arr-ct"  class="arrow ct"  d="M 270 156 L 270 206"/>
+        <path id="arr-cfg" class="arrow cfg" d="M 440 156 L 440 206"/>
+
+        <!-- Scenario callout (one of these per scenario step) -->
+        <text id="scenario" class="scenario" x="270" y="318"></text>
+        <text id="caption" class="caption" x="270" y="340"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Detail</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL_CARDS = ['card-cw','card-ct','card-cfg','in-cw','in-ct','in-cfg','out-cw','out-ct','out-cfg'];
+const ALL_ARROWS = ['arr-cw','arr-ct','arr-cfg'];
+
+const steps = [
+  {
+    title: "the three questions",
+    narration: `These three services are not redundant — they answer three different questions. <b>CloudWatch</b>: <i>what's happening</i> right now? <b>CloudTrail</b>: <i>who did what</i> in the AWS API? <b>Config</b>: <i>what's the current configuration</i>, and has it drifted?`,
+    code: [
+      '<span class="c">// three columns, three questions:</span>',
+      '',
+      '  CloudWatch  → operational state    (metrics, logs, alarms)',
+      '  CloudTrail  → who called the API   (audit log)',
+      '  AWS Config  → resource config + history (state snapshots)',
+      '',
+      '<span class="c">// they overlap only at the edges. confusing them is the #1 trap.</span>',
+    ],
+    state: { dim: [], glow: [], arrows: ['arr-cw','arr-ct','arr-cfg'], scenario: '', caption: "different questions, different answers" }
+  },
+  {
+    title: "CloudWatch — vitals",
+    narration: `<b>CloudWatch</b> is the vitals monitor. <span class="pill">Metrics</span> (CPU, latency, 5xx rate), <span class="pill">Logs</span> (your app's stdout/stderr), <span class="pill">Alarms</span> (thresholds that trigger SNS/Lambda), <span class="pill">Dashboards</span> (graphs). Real-time, numeric, <i>now</i>.`,
+    code: [
+      '<span class="c">// metrics: a time series of numbers</span>',
+      'aws cloudwatch put-metric-data --namespace MyApp \\',
+      '  --metric-name OrdersPerSecond --value <span class="n">42</span>',
+      '',
+      '<span class="c">// alarm: fire when metric crosses threshold</span>',
+      'aws cloudwatch put-metric-alarm \\',
+      '  --alarm-name High5xx \\',
+      '  --metric-name HTTPCode_Target_5XX_Count \\',
+      '  --threshold <span class="n">10</span> --evaluation-periods <span class="n">2</span> \\',
+      '  --alarm-actions <span class="s">arn:aws:sns:...</span>',
+      '',
+      '<span class="c">// logs: app writes to CW Logs, you search/tail/aggregate</span>',
+    ],
+    state: { dim: ['card-ct','card-cfg','in-ct','in-cfg','out-ct','out-cfg'], glow: ['card-cw'], arrows: ['arr-cw'], scenario: '', caption: "CW = ops dashboards + alerts" }
+  },
+  {
+    title: "CloudTrail — the audit log",
+    narration: `<b>CloudTrail</b> records <i>every AWS API call</i> in your account: who made it, when, from where, what parameters, what response. It's not about your app's behavior — it's about <b>changes made to AWS itself</b>.`,
+    code: [
+      '<span class="c">// every API call → CloudTrail event:</span>',
+      '{',
+      '  <span class="s">"eventTime"</span>:  <span class="s">"2026-06-03T14:22:11Z"</span>,',
+      '  <span class="s">"eventName"</span>:  <span class="s">"DeleteBucket"</span>,',
+      '  <span class="s">"userIdentity"</span>: { <span class="s">"userName"</span>: <span class="s">"alice"</span>, ... },',
+      '  <span class="s">"sourceIPAddress"</span>: <span class="s">"203.0.113.42"</span>,',
+      '  <span class="s">"requestParameters"</span>: { <span class="s">"bucketName"</span>: <span class="s">"prod-data"</span> }',
+      '}',
+      '',
+      '<span class="c">// retained 90 days by default; ship to S3 for longer audit.</span>',
+      '<span class="c">// EventBridge can alert on suspicious patterns (e.g. iam:* by non-admin).</span>',
+    ],
+    state: { dim: ['card-cw','card-cfg','in-cw','in-cfg','out-cw','out-cfg'], glow: ['card-ct'], arrows: ['arr-ct'], scenario: '', caption: "CT = forensics, compliance, security audits" }
+  },
+  {
+    title: "Config — desired state",
+    narration: `<b>AWS Config</b> snapshots <i>every resource's configuration</i> and tracks how it changes. You write <b>Config Rules</b> that say "S3 buckets must not be public" — Config flags any resource that drifts out of compliance and can auto-remediate.`,
+    code: [
+      '<span class="c">// Config sees: every resource attribute, over time.</span>',
+      '',
+      '<span class="c">// example managed rule:</span>',
+      'aws configservice put-config-rule --config-rule \\',
+      '  <span class="s">\'{"ConfigRuleName":"s3-bucket-public-read-prohibited",</span>',
+      '  <span class="s">  "Source":{"Owner":"AWS",</span>',
+      '  <span class="s">    "SourceIdentifier":"S3_BUCKET_PUBLIC_READ_PROHIBITED"}}\'</span>',
+      '',
+      '<span class="c">// → any public-read bucket flagged NON_COMPLIANT.</span>',
+      '<span class="c">// + remediation action: auto-private the bucket via SSM doc.</span>',
+      '',
+      '<span class="c">// also: full timeline — "what did this SG look like 3 weeks ago?"</span>',
+    ],
+    state: { dim: ['card-cw','card-ct','in-cw','in-ct','out-cw','out-ct'], glow: ['card-cfg'], arrows: ['arr-cfg'], scenario: '', caption: "Config = configuration history + compliance" }
+  },
+  {
+    title: "scenario: 5xx errors spiked",
+    narration: `Users report errors. The question is <i>"what's happening right now?"</i> → reach for <b>CloudWatch</b>: check the 5xx metric, scan app logs, see which alarm fired. CloudTrail and Config don't help — nothing about AWS state changed.`,
+    code: [
+      '<span class="c">// triage: "our /checkout endpoint is throwing 500s"</span>',
+      '',
+      '  → CloudWatch Metrics    → 5xx rate spike at 14:20',
+      '  → CloudWatch Logs Insights → grep for ERROR around 14:20',
+      '  → CloudWatch Alarm     → confirmed: HighErrorRate fired',
+      '',
+      '<span class="c">// CloudTrail: nobody changed AWS. Not the right tool here.</span>',
+      '<span class="c">// Config:     bucket/SG/instance config unchanged. Not it either.</span>',
+    ],
+    state: { dim: ['card-ct','card-cfg','in-ct','in-cfg','out-ct','out-cfg'], glow: ['card-cw'], arrows: ['arr-cw'], scenario: '"runtime symptom" → CloudWatch', caption: "" }
+  },
+  {
+    title: "scenario: who deleted the bucket?",
+    narration: `Production bucket gone. CloudWatch wouldn't know — buckets disappearing isn't a metric. <b>CloudTrail</b> is your tool: search for <span class="pill">DeleteBucket</span> in the last hour, see the user, IP, and time.`,
+    code: [
+      '<span class="c">// triage: "our s3://prod-data is missing"</span>',
+      '',
+      '  → CloudTrail event history → search "DeleteBucket"',
+      '       eventTime:    2026-06-03T14:22:11Z',
+      '       userName:     alice',
+      '       sourceIP:     203.0.113.42',
+      '       params:       { bucketName: "prod-data" }',
+      '',
+      '<span class="c">// → revoke alice\'s creds, restore from versioning/MFA-Delete backup.</span>',
+      '<span class="c">// CloudWatch: didn\'t record it. Config: shows the bucket vanished, but not WHO.</span>',
+    ],
+    state: { dim: ['card-cw','card-cfg','in-cw','in-cfg','out-cw','out-cfg'], glow: ['card-ct'], arrows: ['arr-ct'], scenario: '"who/when API call?" → CloudTrail', caption: "" }
+  },
+  {
+    title: "scenario: a security group got opened to the world",
+    narration: `Audit finds an SG allowing <span class="pill">0.0.0.0/0</span> on port 22. You need to know <i>when</i> it changed and whether it violates policy. <b>AWS Config</b>: timeline of that SG + Config Rule "restricted-ssh" flagging it. CloudTrail tells you the API call; Config tells you the <i>result over time</i>.`,
+    code: [
+      '<span class="c">// "our prod SG has 0.0.0.0/0 on 22 — when did this happen?"</span>',
+      '',
+      '  → Config resource timeline for sg-abc → diff between snapshots',
+      '       2026-06-01 09:00  IngressRule: 22 / 10.0.0.0/8',
+      '       2026-06-02 16:15  IngressRule: 22 / 0.0.0.0/0   ← drift',
+      '       Compliance: NON_COMPLIANT (restricted-ssh rule)',
+      '',
+      '<span class="c">// + remediation: detach via auto-remediation action.</span>',
+      '<span class="c">// Pair with CloudTrail to see WHO ran ec2:AuthorizeSecurityGroupIngress.</span>',
+    ],
+    state: { dim: ['card-cw','card-ct','in-cw','in-ct','out-cw','out-ct'], glow: ['card-cfg'], arrows: ['arr-cfg'], scenario: '"resource state / drift" → AWS Config', caption: "" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  ALL_CARDS.forEach(c => {
+    const el = $(c);
+    el.classList.toggle('dim', s.state.dim.includes(c));
+    el.classList.toggle('glow', s.state.glow.includes(c));
+  });
+
+  ALL_ARROWS.forEach(a => {
+    $(a).classList.toggle('on', s.state.arrows.includes(a));
+  });
+
+  const sc = $('scenario');
+  sc.textContent = s.state.scenario || '';
+  sc.classList.toggle('on', !!s.state.scenario);
+
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

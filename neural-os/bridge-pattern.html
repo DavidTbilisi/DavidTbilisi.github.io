@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bridge Pattern — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166;
+    --abs: #79c0ff; --impl: #ffa657; --pair: #d2a8ff;
+    --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  svg { flex: 1; width: 100%; min-height: 340px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .n { color: #d2a8ff; }
+  .t { color: #7ee787; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pick)); transition: width .35s ease; width: 0; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .cell { transition: opacity .35s, fill .35s; }
+  .cell.dim { opacity: 0.3; }
+  .cell.live { filter: drop-shadow(0 0 8px var(--pair)); }
+  .cell-label { font: 600 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.8; }
+  .axis-label { fill: var(--muted); font: 600 11px ui-monospace, monospace; text-anchor: middle; }
+  .axis-key { fill: var(--text); font: 700 12px sans-serif; text-anchor: middle; }
+  .abs-box { fill: var(--abs); transition: opacity .35s, filter .35s; }
+  .impl-box { fill: var(--impl); transition: opacity .35s, filter .35s; }
+  .glow { filter: drop-shadow(0 0 10px currentColor); }
+  .bridge-line { stroke: var(--pair); stroke-width: 2.5; opacity: 0; transition: opacity .35s; stroke-dasharray: 4 3; }
+  .bridge-line.on { opacity: 1; animation: dash 0.8s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -14; } }
+  .b-label { font: 700 13px sans-serif; text-anchor: middle; fill: #0d1117; }
+  .b-sub { font: 500 10px ui-monospace, monospace; text-anchor: middle; fill: #0d1117; opacity: 0.78; }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>The Bridge Pattern <small>— a visual walkthrough</small></h1>
+    <div class="step-count">Step <span id="curr">1</span> of <span id="total">6</span> · <span id="title"></span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <svg id="stage" viewBox="0 0 520 360" preserveAspectRatio="xMidYMid meet">
+        <g id="matrix-view" style="opacity: 1; transition: opacity .35s;">
+          <text class="axis-label" x="260" y="36">N × M class explosion</text>
+          <text class="axis-key" x="40" y="80">Shape ↓</text>
+          <text class="axis-key" x="220" y="56">Renderer →</text>
+
+          <text class="axis-label" x="160" y="80">Vector</text>
+          <text class="axis-label" x="260" y="80">Raster</text>
+          <text class="axis-label" x="360" y="80">SVG</text>
+          <text class="axis-label" x="460" y="80">PDF</text>
+
+          <text class="axis-label" x="80" y="110">Circle</text>
+          <text class="axis-label" x="80" y="155">Square</text>
+          <text class="axis-label" x="80" y="200">Triangle</text>
+          <text class="axis-label" x="80" y="245">Ellipse</text>
+
+          <g id="cell-c-v"  class="cell"><rect x="120" y="92"  width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="160" y="112">CircleVec</text></g>
+          <g id="cell-c-r"  class="cell"><rect x="220" y="92"  width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="260" y="112">CircleRast</text></g>
+          <g id="cell-c-s"  class="cell"><rect x="320" y="92"  width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="360" y="112">CircleSVG</text></g>
+          <g id="cell-c-p"  class="cell"><rect x="420" y="92"  width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="460" y="112">CirclePDF</text></g>
+
+          <g id="cell-sq-v" class="cell"><rect x="120" y="137" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="160" y="157">SquareVec</text></g>
+          <g id="cell-sq-r" class="cell"><rect x="220" y="137" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="260" y="157">SquareRast</text></g>
+          <g id="cell-sq-s" class="cell"><rect x="320" y="137" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="360" y="157">SquareSVG</text></g>
+          <g id="cell-sq-p" class="cell"><rect x="420" y="137" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="460" y="157">SquarePDF</text></g>
+
+          <g id="cell-t-v"  class="cell"><rect x="120" y="182" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="160" y="202">TriVec</text></g>
+          <g id="cell-t-r"  class="cell"><rect x="220" y="182" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="260" y="202">TriRast</text></g>
+          <g id="cell-t-s"  class="cell"><rect x="320" y="182" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="360" y="202">TriSVG</text></g>
+          <g id="cell-t-p"  class="cell"><rect x="420" y="182" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="460" y="202">TriPDF</text></g>
+
+          <g id="cell-e-v"  class="cell"><rect x="120" y="227" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="160" y="247">EllVec</text></g>
+          <g id="cell-e-r"  class="cell"><rect x="220" y="227" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="260" y="247">EllRast</text></g>
+          <g id="cell-e-s"  class="cell"><rect x="320" y="227" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="360" y="247">EllSVG</text></g>
+          <g id="cell-e-p"  class="cell"><rect x="420" y="227" width="80" height="32" rx="4" fill="var(--pair)" opacity="0.6"/><text class="cell-label" x="460" y="247">EllPDF</text></g>
+
+          <text class="axis-label" x="260" y="296">→ 4 × 4 = 16 classes (add a row OR column → 4 new)</text>
+        </g>
+
+        <g id="bridge-view" style="opacity: 0; transition: opacity .35s;">
+          <text class="axis-key" x="120" y="46">Abstraction</text>
+          <rect class="abs-box" id="abs-c"  x="40" y="60" width="160" height="38" rx="6"/>
+          <text class="b-label" x="120" y="84">Shape (holds Renderer)</text>
+
+          <rect class="abs-box" id="abs-1" x="40" y="120" width="160" height="32" rx="6"/>
+          <text class="b-label" x="120" y="142">Circle</text>
+          <rect class="abs-box" id="abs-2" x="40" y="160" width="160" height="32" rx="6"/>
+          <text class="b-label" x="120" y="182">Square</text>
+          <rect class="abs-box" id="abs-3" x="40" y="200" width="160" height="32" rx="6"/>
+          <text class="b-label" x="120" y="222">Triangle</text>
+          <rect class="abs-box" id="abs-4" x="40" y="240" width="160" height="32" rx="6"/>
+          <text class="b-label" x="120" y="262">Ellipse</text>
+
+          <text class="axis-key" x="400" y="46">Implementor</text>
+          <rect class="impl-box" id="impl-c" x="320" y="60" width="160" height="38" rx="6"/>
+          <text class="b-label" x="400" y="84">Renderer</text>
+
+          <rect class="impl-box" id="impl-1" x="320" y="120" width="160" height="32" rx="6"/>
+          <text class="b-label" x="400" y="142">VectorRenderer</text>
+          <rect class="impl-box" id="impl-2" x="320" y="160" width="160" height="32" rx="6"/>
+          <text class="b-label" x="400" y="182">RasterRenderer</text>
+          <rect class="impl-box" id="impl-3" x="320" y="200" width="160" height="32" rx="6"/>
+          <text class="b-label" x="400" y="222">SVGRenderer</text>
+          <rect class="impl-box" id="impl-4" x="320" y="240" width="160" height="32" rx="6"/>
+          <text class="b-label" x="400" y="262">PDFRenderer</text>
+
+          <line id="bridge-1" class="bridge-line" x1="200" y1="79" x2="320" y2="79"/>
+          <line id="bridge-2" class="bridge-line" x1="200" y1="136" x2="320" y2="176"/>
+          <line id="bridge-3" class="bridge-line" x1="200" y1="216" x2="320" y2="136"/>
+          <text class="axis-label" x="260" y="296">→ 4 + 4 = 8 classes; bind at runtime</text>
+        </g>
+
+        <text id="caption" class="caption" x="260" y="340"></text>
+      </svg>
+    </section>
+
+    <section class="panel">
+      <p class="label">Code</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+
+  <nav>
+    <button id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button id="next">Next →</button>
+  </nav>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+</div>
+
+<script>
+const ALL_CELLS = ['cell-c-v','cell-c-r','cell-c-s','cell-c-p',
+                   'cell-sq-v','cell-sq-r','cell-sq-s','cell-sq-p',
+                   'cell-t-v','cell-t-r','cell-t-s','cell-t-p',
+                   'cell-e-v','cell-e-r','cell-e-s','cell-e-p'];
+const steps = [
+  {
+    title: "two axes, one tangle",
+    narration: `You have <b>4 shapes</b> and <b>4 renderers</b>. The naive inheritance way: <span class="pill">CircleVectorRenderer</span>, <span class="pill">CircleRasterRenderer</span>, <span class="pill">SquareSVGRenderer</span>… 16 classes for 4×4. Add one new shape → 4 new classes. Add one new renderer → 4 more.`,
+    code: [
+      '<span class="k">class</span> <span class="t">CircleVectorRenderer</span> { draw() { <span class="c">/* circle + vector */</span> } }',
+      '<span class="k">class</span> <span class="t">CircleRasterRenderer</span> { draw() { <span class="c">/* circle + raster */</span> } }',
+      '<span class="k">class</span> <span class="t">SquareVectorRenderer</span> { draw() { <span class="c">/* square + vector */</span> } }',
+      '<span class="k">class</span> <span class="t">SquareRasterRenderer</span> { draw() { <span class="c">/* square + raster */</span> } }',
+      '<span class="c">// … 16 of these. then SVG and PDF land. then Polygon and Star.</span>',
+      '<span class="c">// each cell is a class. you maintain a matrix, not a class hierarchy.</span>',
+    ],
+    state: { matrix: true, bridge: false, dim: [], glow: ALL_CELLS, bridges: [], caption: "two axes of variation crammed into one class hierarchy = N×M classes" }
+  },
+  {
+    title: "split the axes",
+    narration: `Bridge says: the two axes are <i>orthogonal</i>. Pull them apart into <b>two separate hierarchies</b>. <span class="pill">Shape</span> on one side (Circle, Square, …). <span class="pill">Renderer</span> on the other (Vector, Raster, SVG, …). Bridge them by <b>composition</b> — Shape holds a Renderer reference.`,
+    code: [
+      '<span class="k">interface</span> <span class="t">Renderer</span> {',
+      '  drawCircle(x, y, r): <span class="t">void</span>',
+      '  drawSquare(x, y, w): <span class="t">void</span>',
+      '}',
+      '',
+      '<span class="k">abstract</span> <span class="k">class</span> <span class="t">Shape</span> {',
+      '  <span class="k">constructor</span>(<span class="k">protected</span> renderer: <span class="t">Renderer</span>) {}  <span class="c">// ← the bridge</span>',
+      '  <span class="k">abstract</span> draw(): <span class="t">void</span>',
+      '}',
+    ],
+    state: { matrix: false, bridge: true, dim: [], glow: ['abs-c','impl-c'], bridges: ['bridge-1'], caption: "abstraction holds a reference to its implementor" }
+  },
+  {
+    title: "each side specializes its own axis",
+    narration: `<b>Circle</b> knows it's a circle. It doesn't know how drawing works. <b>VectorRenderer</b> knows how to draw shapes vectorly; it doesn't know which shape. Each subclass only adds knowledge along <i>its</i> axis.`,
+    code: [
+      '<span class="k">class</span> <span class="t">Circle</span> <span class="k">extends</span> <span class="t">Shape</span> {',
+      '  <span class="k">constructor</span>(renderer, <span class="k">private</span> x, <span class="k">private</span> y, <span class="k">private</span> r) { <span class="k">super</span>(renderer) }',
+      '  draw() { <span class="k">this</span>.renderer.drawCircle(<span class="k">this</span>.x, <span class="k">this</span>.y, <span class="k">this</span>.r) }',
+      '}',
+      '',
+      '<span class="k">class</span> <span class="t">VectorRenderer</span> <span class="k">implements</span> <span class="t">Renderer</span> {',
+      '  drawCircle(x, y, r) { <span class="c">/* path commands */</span> }',
+      '  drawSquare(x, y, w) { <span class="c">/* path commands */</span> }',
+      '}',
+    ],
+    state: { matrix: false, bridge: true, dim: [], glow: ['abs-1','impl-1'], bridges: ['bridge-2'], caption: "Circle adds shape-knowledge; VectorRenderer adds drawing-knowledge" }
+  },
+  {
+    title: "bind at runtime",
+    narration: `Combinations are <i>composition</i>, not classes. A circle on a raster surface is one object pair; the same Circle code, different Renderer.`,
+    code: [
+      '<span class="k">const</span> svg    = <span class="k">new</span> SVGRenderer()',
+      '<span class="k">const</span> raster = <span class="k">new</span> RasterRenderer()',
+      '',
+      '<span class="k">const</span> a = <span class="k">new</span> Circle(svg,    <span class="n">10</span>, <span class="n">10</span>, <span class="n">5</span>)   <span class="c">// SVG circle</span>',
+      '<span class="k">const</span> b = <span class="k">new</span> Circle(raster, <span class="n">10</span>, <span class="n">10</span>, <span class="n">5</span>)   <span class="c">// raster circle, same Circle class</span>',
+      '<span class="k">const</span> c = <span class="k">new</span> Square(svg,    <span class="n">0</span>, <span class="n">0</span>, <span class="n">20</span>)',
+      '',
+      'a.draw(); b.draw(); c.draw()',
+    ],
+    state: { matrix: false, bridge: true, dim: [], glow: ['abs-1','impl-1','abs-2','impl-3'], bridges: ['bridge-1','bridge-2','bridge-3'], caption: "any shape, any renderer — pair them at construction" }
+  },
+  {
+    title: "grow either axis without explosion",
+    narration: `Add <b>Polygon</b> — one class. It plugs into all 4 existing renderers for free. Add <b>WebGLRenderer</b> — one class. It works with all 4 existing shapes. Linear growth instead of quadratic.`,
+    code: [
+      '<span class="c">// new shape — works with every renderer immediately</span>',
+      '<span class="k">class</span> <span class="t">Polygon</span> <span class="k">extends</span> <span class="t">Shape</span> {',
+      '  <span class="k">constructor</span>(renderer, <span class="k">private</span> pts) { <span class="k">super</span>(renderer) }',
+      '  draw() { <span class="k">this</span>.renderer.drawPolygon(<span class="k">this</span>.pts) }',
+      '}',
+      '',
+      '<span class="c">// new renderer — works with every shape immediately</span>',
+      '<span class="k">class</span> <span class="t">WebGLRenderer</span> <span class="k">implements</span> <span class="t">Renderer</span> {',
+      '  drawCircle(x, y, r) { <span class="c">/* gl */</span> }',
+      '  drawSquare(x, y, w) { <span class="c">/* gl */</span> }',
+      '  drawPolygon(pts)    { <span class="c">/* gl */</span> }',
+      '}',
+    ],
+    state: { matrix: false, bridge: true, dim: [], glow: ['abs-c','impl-c'], bridges: ['bridge-1','bridge-2','bridge-3'], caption: "add along one axis: linear cost, not quadratic" }
+  },
+  {
+    title: "the trade-off",
+    narration: `Bridge prevents the N×M class explosion when two real, independent axes of variation collide. Pays off when both axes <i>actually</i> grow over time (shapes + renderers, devices + protocols, file formats + parsers). Costs: two hierarchies and one indirection per call — overkill if only one axis ever moves. Often confused with <b>[[adapter-pattern]]</b>: Adapter fits a <i>given</i> interface to a <i>required</i> one (after the fact); Bridge is designed <i>up front</i> to keep two evolving sides independent. Cousin of <b>[[strategy-pattern]]</b> (also "composition over inheritance for variation") and <b>[[abstract-factory-pattern]]</b> (which often <i>builds</i> the bridged pair).`,
+    code: [
+      '<span class="c">// good fit:</span>',
+      '<span class="c">//   - cross-platform UIs (Window × OS)</span>',
+      '<span class="c">//   - devices × messaging protocols</span>',
+      '<span class="c">//   - documents × renderers (Markdown → HTML/PDF/Term)</span>',
+      '<span class="c">//   - drivers: high-level API × hardware backend</span>',
+      '',
+      '<span class="c">// poor fit:</span>',
+      '<span class="c">//   - only one axis ever changes</span>',
+      '<span class="c">//   - the two axes are not truly orthogonal (shapes that need renderer-specific behavior)</span>',
+      '<span class="c">//   - small fixed matrix, never grows (just hand-write the cells)</span>',
+    ],
+    state: { matrix: false, bridge: true, dim: [], glow: ['abs-c','impl-c'], bridges: ['bridge-1','bridge-2','bridge-3'], caption: "use it when two axes evolve independently and you don't want the matrix" }
+  },
+];
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+$('total').textContent = steps.length;
+
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1;
+  $('title').textContent = s.title;
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === steps.length - 1;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+
+  $('matrix-view').style.opacity = s.state.matrix ? 1 : 0;
+  $('bridge-view').style.opacity = s.state.bridge ? 1 : 0;
+  ALL_CELLS.forEach(id => $(id).classList.toggle('glow', s.state.glow.includes(id)));
+  ['abs-c','abs-1','abs-2','abs-3','abs-4','impl-c','impl-1','impl-2','impl-3','impl-4'].forEach(id => {
+    $(id).classList.toggle('glow', s.state.glow.includes(id));
+  });
+  ['bridge-1','bridge-2','bridge-3'].forEach(id => $(id).classList.toggle('on', s.state.bridges.includes(id)));
+  $('caption').textContent = s.state.caption || '';
+}
+
+function go(d) {
+  const n = Math.max(0, Math.min(steps.length - 1, idx + d));
+  if (n === idx) return;
+  idx = n; render();
+}
+
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+});
+render();
+</script>
+  <script src="tools/explain-viz/walkthrough-graph.js" defer></script>
+  <script src="tools/explain-viz/walkthrough-nav.js" defer></script>
+</body>
+</html>

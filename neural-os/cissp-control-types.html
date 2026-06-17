@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en" data-created="2026-06-05">
+<head>
+<meta charset="utf-8">
+<title>CISSP Control Types & Functions — Visual Walkthrough</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --accent: #79c0ff; --pick: #f78166; --warn: #f85149;
+    --hl: rgba(247, 129, 102, 0.18);
+    --l1: #7ee787; --l2: #79c0ff; --l3: #f78166; --l4: #ffa657; --l5: #d2a8ff;
+    --right: #7ee787; --wrong: #f85149;
+    /* Phase colors: BEFORE (gold) — DURING (red) — AFTER (blue) — ALWAYS (purple) */
+    --p-before:  #ffa657;
+    --p-during:  #f85149;
+    --p-after:   #79c0ff;
+    --p-always:  #d2a8ff;
+    /* Row colors */
+    --row-m: #ffd6a0;   /* managerial — scrolls */
+    --row-t: #7ee787;   /* technical — gears */
+    --row-p: #d2a8ff;   /* physical — locks */
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .step-count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .bloom-pill { display: inline-block; padding: 2px 9px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-right: 6px; }
+  .bloom-pill.l1 { background: rgba(126,231,135,0.16); color: var(--l1); }
+  .bloom-pill.l2 { background: rgba(121,192,255,0.16); color: var(--l2); }
+  .bloom-pill.l3 { background: rgba(247,129,102,0.16); color: var(--l3); }
+  .bloom-pill.l4 { background: rgba(255,166,87,0.16); color: var(--l4); }
+  .bloom-pill.l5 { background: rgba(210,168,255,0.18); color: var(--l5); }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; flex: 1; min-height: 480px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; min-height: 0; }
+  .label { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .narration { font-size: 15px; line-height: 1.6; margin: 0 0 14px; min-height: 56px; }
+  .narration b { color: var(--accent); font-weight: 600; }
+  .narration .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--hl); color: var(--pick); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .narration .wikilink { color: var(--l5); text-decoration: underline; text-decoration-color: rgba(210,168,255,0.4); cursor: pointer; }
+  .narration .wikilink:after { content: " ↗"; font-size: 10px; opacity: 0.6; }
+  svg { flex: 1; width: 100%; min-height: 320px; }
+  .code { flex: 1; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code pre { margin: 0; white-space: pre; }
+  .ln { display: block; padding: 0 10px; border-left: 2px solid transparent; }
+  .ln.hl { background: var(--hl); border-left-color: var(--pick); }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: #ff7b72; } .s { color: #a5d6ff; } .t { color: #7ee787; } .n { color: #d2a8ff; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+  .choice { background: var(--bg); color: var(--text); border: 1px solid var(--line); padding: 7px 13px; border-radius: 7px; cursor: pointer; font: inherit; font-size: 13px; transition: all .15s; }
+  .choice:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .choice:disabled { cursor: not-allowed; opacity: 0.7; }
+  .choice.picked.correct { background: rgba(126,231,135,0.15); border-color: var(--right); color: var(--right); }
+  .choice.picked.wrong { background: rgba(248,81,73,0.15); border-color: var(--wrong); color: var(--wrong); }
+  .choice.correct:not(.picked) { border-style: dashed; border-color: var(--right); color: var(--right); }
+  .feedback { font-size: 13px; line-height: 1.55; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; display: none; }
+  .feedback.show { display: block; }
+  .feedback.right { background: rgba(126,231,135,0.10); color: var(--right); border-left: 3px solid var(--right); }
+  .feedback.wrong { background: rgba(248,81,73,0.10); color: var(--wrong); border-left: 3px solid var(--wrong); }
+  .ask { font-size: 13px; color: var(--muted); margin: 6px 0; font-style: italic; }
+  /* Grid cells */
+  .cell { transition: opacity .35s, filter .35s; }
+  .cell.dim { opacity: 0.25; }
+  .cell.glow { filter: drop-shadow(0 0 12px currentColor); }
+  .cell-body { stroke-width: 1.2; }
+  .cell-label { font: 600 9px ui-monospace, monospace; text-anchor: middle; fill: var(--text); }
+  .phase-header { font: 700 11px sans-serif; text-anchor: middle; }
+  .phase-divider { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.4; }
+  .row-label { font: 700 12px sans-serif; text-anchor: end; }
+  .col-label { font: 700 11px ui-monospace, monospace; text-anchor: middle; fill: var(--muted); }
+  .meta-band { font: 600 10px ui-monospace, monospace; text-anchor: middle; fill: var(--muted); }
+  .caption { fill: var(--muted); font: 600 10px ui-monospace, monospace; text-anchor: middle; }
+  .glyph { font: 800 14px sans-serif; text-anchor: middle; }
+  nav { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .progress { flex: 1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg, var(--l1) 0%, var(--l2) 25%, var(--l3) 50%, var(--l4) 75%, var(--l5) 100%); transition: width .35s ease; width: 0; }
+  button.nav-btn { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 8px 18px; border-radius: 7px; cursor: pointer; font: inherit; transition: all .15s; min-width: 96px; }
+  button.nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  button.nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>CISSP Control Types × Functions <small>— 3×7 glyph walkthrough</small></h1>
+    <div class="step-count">
+      <span id="pill" class="bloom-pill l1">Recognize</span>
+      Step <span id="curr">1</span> of <span id="total">7</span> · <span id="title"></span>
+    </div>
+  </header>
+  <main>
+    <section class="panel">
+      <p class="label">Scene</p>
+      <p class="narration" id="narration"></p>
+      <p class="ask" id="ask"></p>
+      <div class="choices" id="choices"></div>
+      <div class="feedback" id="feedback"></div>
+      <svg id="stage" viewBox="0 0 600 380" preserveAspectRatio="xMidYMid meet">
+        <!-- Phase headers (3+1+2+1) -->
+        <text class="phase-header" x="135" y="22" fill="var(--p-before)">3 BEFORE</text>
+        <text class="phase-header" x="285" y="22" fill="var(--p-during)">1 DURING</text>
+        <text class="phase-header" x="375" y="22" fill="var(--p-after)">2 AFTER</text>
+        <text class="phase-header" x="465" y="22" fill="var(--p-always)">1 ALWAYS</text>
+
+        <!-- Column labels (function names) -->
+        <text class="col-label" x="75"  y="48">Dir</text>
+        <text class="col-label" x="135" y="48">Det.r</text>
+        <text class="col-label" x="195" y="48">Prev</text>
+        <text class="col-label" x="285" y="48">Det.c</text>
+        <text class="col-label" x="345" y="48">Corr</text>
+        <text class="col-label" x="405" y="48">Recv</text>
+        <text class="col-label" x="465" y="48">Comp</text>
+
+        <!-- Row labels -->
+        <text class="row-label" x="40" y="100" fill="var(--row-m)">M</text>
+        <text class="row-label" x="40" y="170" fill="var(--row-t)">T</text>
+        <text class="row-label" x="40" y="240" fill="var(--row-p)">P</text>
+
+        <!-- Phase dividers -->
+        <line class="phase-divider" x1="225" y1="55" x2="225" y2="285"/>
+        <line class="phase-divider" x1="315" y1="55" x2="315" y2="285"/>
+        <line class="phase-divider" x1="435" y1="55" x2="435" y2="285"/>
+
+        <!-- 21 cells = 3 rows × 7 cols -->
+        <!-- Row 1 — Managerial -->
+        <g class="cell" id="cell-m-1" data-row="m" data-col="1" data-phase="before"><rect class="cell-body" x="50" y="68" width="50" height="56" rx="4" fill="var(--p-before)" fill-opacity="0.18" stroke="var(--row-m)"/><text class="glyph" x="75" y="92" fill="var(--row-m)">📜</text><text class="cell-label" x="75" y="115">AUP</text></g>
+        <g class="cell" id="cell-m-2" data-row="m" data-col="2" data-phase="before"><rect class="cell-body" x="110" y="68" width="50" height="56" rx="4" fill="var(--p-before)" fill-opacity="0.18" stroke="var(--row-m)"/><text class="glyph" x="135" y="92" fill="var(--row-m)">📜</text><text class="cell-label" x="135" y="115">disc.</text></g>
+        <g class="cell" id="cell-m-3" data-row="m" data-col="3" data-phase="before"><rect class="cell-body" x="170" y="68" width="50" height="56" rx="4" fill="var(--p-before)" fill-opacity="0.18" stroke="var(--row-m)"/><text class="glyph" x="195" y="92" fill="var(--row-m)">📜</text><text class="cell-label" x="195" y="115">vet.</text></g>
+        <g class="cell" id="cell-m-4" data-row="m" data-col="4" data-phase="during"><rect class="cell-body" x="260" y="68" width="50" height="56" rx="4" fill="var(--p-during)" fill-opacity="0.18" stroke="var(--row-m)"/><text class="glyph" x="285" y="92" fill="var(--row-m)">📜</text><text class="cell-label" x="285" y="115">audit</text></g>
+        <g class="cell" id="cell-m-5" data-row="m" data-col="5" data-phase="after"><rect class="cell-body" x="320" y="68" width="50" height="56" rx="4" fill="var(--p-after)" fill-opacity="0.18" stroke="var(--row-m)"/><text class="glyph" x="345" y="92" fill="var(--row-m)">📜</text><text class="cell-label" x="345" y="115">disc.A</text></g>
+        <g class="cell" id="cell-m-6" data-row="m" data-col="6" data-phase="after"><rect class="cell-body" x="380" y="68" width="50" height="56" rx="4" fill="var(--p-after)" fill-opacity="0.18" stroke="var(--row-m)"/><text class="glyph" x="405" y="92" fill="var(--row-m)">📜</text><text class="cell-label" x="405" y="115">DR plan</text></g>
+        <g class="cell" id="cell-m-7" data-row="m" data-col="7" data-phase="always"><rect class="cell-body" x="440" y="68" width="50" height="56" rx="4" fill="var(--p-always)" fill-opacity="0.18" stroke="var(--row-m)"/><text class="glyph" x="465" y="92" fill="var(--row-m)">📜</text><text class="cell-label" x="465" y="115">oversight</text></g>
+
+        <!-- Row 2 — Technical -->
+        <g class="cell" id="cell-t-1" data-row="t" data-col="1" data-phase="before"><rect class="cell-body" x="50" y="138" width="50" height="56" rx="4" fill="var(--p-before)" fill-opacity="0.18" stroke="var(--row-t)"/><text class="glyph" x="75" y="162" fill="var(--row-t)">⚙</text><text class="cell-label" x="75" y="185">banner</text></g>
+        <g class="cell" id="cell-t-2" data-row="t" data-col="2" data-phase="before"><rect class="cell-body" x="110" y="138" width="50" height="56" rx="4" fill="var(--p-before)" fill-opacity="0.18" stroke="var(--row-t)"/><text class="glyph" x="135" y="162" fill="var(--row-t)">⚙</text><text class="cell-label" x="135" y="185">notice</text></g>
+        <g class="cell" id="cell-t-3" data-row="t" data-col="3" data-phase="before"><rect class="cell-body" x="170" y="138" width="50" height="56" rx="4" fill="var(--p-before)" fill-opacity="0.18" stroke="var(--row-t)"/><text class="glyph" x="195" y="162" fill="var(--row-t)">⚙</text><text class="cell-label" x="195" y="185">MFA·FW</text></g>
+        <g class="cell" id="cell-t-4" data-row="t" data-col="4" data-phase="during"><rect class="cell-body" x="260" y="138" width="50" height="56" rx="4" fill="var(--p-during)" fill-opacity="0.18" stroke="var(--row-t)"/><text class="glyph" x="285" y="162" fill="var(--row-t)">⚙</text><text class="cell-label" x="285" y="185">IDS·SIEM</text></g>
+        <g class="cell" id="cell-t-5" data-row="t" data-col="5" data-phase="after"><rect class="cell-body" x="320" y="138" width="50" height="56" rx="4" fill="var(--p-after)" fill-opacity="0.18" stroke="var(--row-t)"/><text class="glyph" x="345" y="162" fill="var(--row-t)">⚙</text><text class="cell-label" x="345" y="185">patch</text></g>
+        <g class="cell" id="cell-t-6" data-row="t" data-col="6" data-phase="after"><rect class="cell-body" x="380" y="138" width="50" height="56" rx="4" fill="var(--p-after)" fill-opacity="0.18" stroke="var(--row-t)"/><text class="glyph" x="405" y="162" fill="var(--row-t)">⚙</text><text class="cell-label" x="405" y="185">backup</text></g>
+        <g class="cell" id="cell-t-7" data-row="t" data-col="7" data-phase="always"><rect class="cell-body" x="440" y="138" width="50" height="56" rx="4" fill="var(--p-always)" fill-opacity="0.18" stroke="var(--row-t)"/><text class="glyph" x="465" y="162" fill="var(--row-t)">⚙</text><text class="cell-label" x="465" y="185">TOTP</text></g>
+
+        <!-- Row 3 — Physical -->
+        <g class="cell" id="cell-p-1" data-row="p" data-col="1" data-phase="before"><rect class="cell-body" x="50" y="208" width="50" height="56" rx="4" fill="var(--p-before)" fill-opacity="0.18" stroke="var(--row-p)"/><text class="glyph" x="75" y="232" fill="var(--row-p)">🔒</text><text class="cell-label" x="75" y="255">posted</text></g>
+        <g class="cell" id="cell-p-2" data-row="p" data-col="2" data-phase="before"><rect class="cell-body" x="110" y="208" width="50" height="56" rx="4" fill="var(--p-before)" fill-opacity="0.18" stroke="var(--row-p)"/><text class="glyph" x="135" y="232" fill="var(--row-p)">🔒</text><text class="cell-label" x="135" y="255">CCTV</text></g>
+        <g class="cell" id="cell-p-3" data-row="p" data-col="3" data-phase="before"><rect class="cell-body" x="170" y="208" width="50" height="56" rx="4" fill="var(--p-before)" fill-opacity="0.18" stroke="var(--row-p)"/><text class="glyph" x="195" y="232" fill="var(--row-p)">🔒</text><text class="cell-label" x="195" y="255">locks</text></g>
+        <g class="cell" id="cell-p-4" data-row="p" data-col="4" data-phase="during"><rect class="cell-body" x="260" y="208" width="50" height="56" rx="4" fill="var(--p-during)" fill-opacity="0.18" stroke="var(--row-p)"/><text class="glyph" x="285" y="232" fill="var(--row-p)">🔒</text><text class="cell-label" x="285" y="255">walk audit</text></g>
+        <g class="cell" id="cell-p-5" data-row="p" data-col="5" data-phase="after"><rect class="cell-body" x="320" y="208" width="50" height="56" rx="4" fill="var(--p-after)" fill-opacity="0.18" stroke="var(--row-p)"/><text class="glyph" x="345" y="232" fill="var(--row-p)">🔒</text><text class="cell-label" x="345" y="255">replace</text></g>
+        <g class="cell" id="cell-p-6" data-row="p" data-col="6" data-phase="after"><rect class="cell-body" x="380" y="208" width="50" height="56" rx="4" fill="var(--p-after)" fill-opacity="0.18" stroke="var(--row-p)"/><text class="glyph" x="405" y="232" fill="var(--row-p)">🔒</text><text class="cell-label" x="405" y="255">rebuild</text></g>
+        <g class="cell" id="cell-p-7" data-row="p" data-col="7" data-phase="always"><rect class="cell-body" x="440" y="208" width="50" height="56" rx="4" fill="var(--p-always)" fill-opacity="0.18" stroke="var(--row-p)"/><text class="glyph" x="465" y="232" fill="var(--row-p)">🔒</text><text class="cell-label" x="465" y="255">extra grd</text></g>
+
+        <!-- Meta band: 3+1+2+1 = 7 -->
+        <text class="meta-band" x="300" y="305">3 + 1 + 2 + 1 = 7 functions  ·  M·T·P = 3 types</text>
+        <text id="caption" class="caption" x="300" y="358"></text>
+      </svg>
+    </section>
+    <section class="panel">
+      <p class="label">Notes</p>
+      <div class="code"><pre id="code"></pre></div>
+    </section>
+  </main>
+  <nav>
+    <button class="nav-btn" id="prev">← Back</button>
+    <div class="progress"><div id="bar"></div></div>
+    <button class="nav-btn" id="next">Next →</button>
+  </nav>
+  <div class="hint">← / → arrow keys to navigate · Apply &amp; Analyze require a choice before Next unlocks</div>
+</div>
+
+<script>
+const ALL_CELLS = [];
+for (const r of ['m','t','p']) for (let c = 1; c <= 7; c++) ALL_CELLS.push(`cell-${r}-${c}`);
+
+const steps = [
+  {
+    layer: "recognize",
+    title: "the 3×7 grid",
+    narration: `Every CISSP security control occupies <b>one cell</b> in this grid. <b>3 rows</b> = implementation types (Managerial 📜 · Technical ⚙ · Physical 🔒). <b>7 columns</b> = attack-timeline functions, grouped <span style="color:var(--p-before)">3 BEFORE</span>, <span style="color:var(--p-during)">1 DURING</span>, <span style="color:var(--p-after)">2 AFTER</span>, <span style="color:var(--p-always)">1 ALWAYS</span>. Read the grid at a glance.`,
+    code: [
+      '<span class="c">// the grid:</span>',
+      '<span class="c">// rows = WHO/WHAT implements the control</span>',
+      '<span class="c">// cols = WHEN in the attack timeline</span>',
+      '',
+      '<span class="t">M</span> managerial   📜  policy/process',
+      '<span class="t">T</span> technical    ⚙   system-implemented',
+      '<span class="t">P</span> physical     🔒  the world itself',
+      '',
+      '<span class="c">// 3 × 7 = 21 example cells filled below.</span>',
+    ],
+    g: { glow: ALL_CELLS, dim: [], caption: "3 types × 7 functions = 21 cells; the grid IS the mnemonic" }
+  },
+  {
+    layer: "understand",
+    title: "the function order: 3 + 1 + 2 + 1",
+    narration: `Read the columns left-to-right along the <b>attack timeline</b>. <span style="color:var(--p-before)">BEFORE</span>: <b>Directive</b> (tells what to do), <b>Deterrent</b> (discourages), <b>Preventive</b> (blocks). <span style="color:var(--p-during)">DURING</span>: <b>Detective</b> (finds it). <span style="color:var(--p-after)">AFTER</span>: <b>Corrective</b> (fixes damage), <b>Recovery</b> (restores ops). <span style="color:var(--p-always)">ALWAYS</span>: <b>Compensating</b> (substitute when primary unavailable).`,
+    code: [
+      '<span class="c">// phase decomposition:</span>',
+      '',
+      '<span style="color:var(--p-before)">BEFORE</span>  (3)  Directive · Deterrent · Preventive',
+      '<span style="color:var(--p-during)">DURING</span>  (1)  Detective',
+      '<span style="color:var(--p-after)">AFTER</span>   (2)  Corrective · Recovery',
+      '<span style="color:var(--p-always)">ALWAYS</span>  (1)  Compensating',
+      '',
+      '<span class="c">// 3 + 1 + 2 + 1 = 7. This is the checksum.</span>',
+    ],
+    g: { glow: ALL_CELLS, dim: [], caption: "3 before, 1 during, 2 after, 1 always — count this every time" }
+  },
+  {
+    layer: "understand",
+    title: "row + column = full classification",
+    narration: `A control's identity is <b>both</b> axes. "An IDS that alerts the SOC" = <span class="pill">Technical × Detective</span> = cell <span class="pill">T-4</span>. "Locked door with badge access" = <span class="pill">Physical × Preventive</span> = cell <span class="pill">P-3</span>. CISSP exam stems almost always ask for the (row, column) pair, not just one.`,
+    code: [
+      '<span class="c">// each control has TWO coordinates:</span>',
+      '',
+      'IDS alerting SOC           → <span class="t">T-4</span> Technical × Detective',
+      'Locked door, badge access  → <span class="t">P-3</span> Physical × Preventive',
+      'Acceptable Use Policy      → <span class="t">M-1</span> Managerial × Directive',
+      'Backup restore             → <span class="t">T-6</span> Technical × Recovery',
+      '',
+      '<span class="c">// when in doubt, pick the function closer to the</span>',
+      '<span class="c">// attack timeline (Detective &gt; Directive if it alerts).</span>',
+    ],
+    g: { glow: ['cell-t-4','cell-p-3'], dim: ALL_CELLS.filter(c => !['cell-t-4','cell-p-3'].includes(c)), caption: "row × column, not row or column" }
+  },
+  {
+    layer: "apply",
+    title: "classify a control (1)",
+    ask: "A formal corporate policy stating that user passwords must be at least 12 characters. Which cell?",
+    choices: [
+      { label: "T-3 Technical × Preventive", correct: false, why: "The policy itself doesn't enforce the password rule in software — that's the system's job (which would be T-3). The policy on paper is Managerial × Directive." },
+      { label: "M-1 Managerial × Directive", correct: true,  why: "Right. The policy is paper, owned by management, telling what should be done. Managerial × Directive = M-1. If a system *enforces* it, that's a separate T-3 control implementing the M-1 directive." },
+      { label: "P-3 Physical × Preventive",  correct: false, why: "Physical means the world itself (locks, walls). A written policy is not physical." },
+      { label: "M-4 Managerial × Detective", correct: false, why: "Detective happens DURING/AFTER the attack (audit, mandatory leave). Setting the rule beforehand is Directive, not Detective." },
+    ],
+    narration: `<span class="pill">apply</span> — Read the stem twice. First find the row (who implements). Then find the column (when in the attack timeline).`,
+    code: [
+      '<span class="c">// the stem:</span>',
+      '<span class="s">"A formal corporate policy stating that user</span>',
+      '<span class="s"> passwords must be at least 12 characters."</span>',
+      '',
+      '<span class="c">// what is the IMPLEMENTATION TYPE?</span>',
+      '<span class="c">// (paper? system? world?)</span>',
+      '',
+      '<span class="c">// what is the FUNCTION?</span>',
+      '<span class="c">// (before? during? after? always?)</span>',
+    ],
+    g: { glow: [], dim: ALL_CELLS, caption: "pick the cell — both axes" }
+  },
+  {
+    layer: "apply",
+    title: "classify a control (2)",
+    ask: "Replacing a vandalized server with a spare unit after a break-in. Which cell?",
+    choices: [
+      { label: "P-3 Physical × Preventive", correct: false, why: "Preventive happens BEFORE the attack. The break-in already happened — this is AFTER." },
+      { label: "P-4 Physical × Detective",  correct: false, why: "Detective finds the attack (CCTV review, walkthrough). Replacing the server is a fix, not a find." },
+      { label: "P-5 Physical × Corrective", correct: true,  why: "Right. The physical-world server is being replaced AFTER damage = Corrective. P-5. (If it restored full operations from a tested DR plan, P-6 Recovery is also defensible — but for one-unit replacement, Corrective is the cleaner answer.)" },
+      { label: "P-7 Physical × Compensating", correct: false, why: "Compensating is a substitute when the primary isn't available — e.g., extra guard when CCTV is down. A replacement server is a direct fix, not a substitute." },
+    ],
+    narration: `<span class="pill">apply</span> — Same scan: row first, column second. Watch out for the phase boundary BEFORE/AFTER — the most common error.`,
+    code: [
+      '<span class="c">// the stem:</span>',
+      '<span class="s">"Replacing a vandalized server with a spare</span>',
+      '<span class="s"> unit after a break-in."</span>',
+      '',
+      '<span class="c">// the break-in is past → AFTER phase</span>',
+      '<span class="c">// replacement = direct fix</span>',
+      '<span class="c">// hardware swap in the physical world</span>',
+      '',
+      '<span class="c">// Corrective vs Recovery?</span>',
+      '<span class="c">//   Corrective = fix the damage</span>',
+      '<span class="c">//   Recovery   = restore full operations</span>',
+    ],
+    g: { glow: [], dim: ALL_CELLS, caption: "AFTER + physical + direct-fix = P-5" }
+  },
+  {
+    layer: "analyze",
+    title: "the missing function",
+    ask: "A defense-in-depth chain has Preventive + Recovery + Compensating controls but no Detective. What's the load-bearing problem?",
+    choices: [
+      { label: "Too many Preventive controls — over-engineered", correct: false, why: "Real problem in some cases, but not the load-bearing one here. The missing function matters more than the count." },
+      { label: "No Due Diligence evidence — attacks go unnoticed until damage is done", correct: true,  why: "Right. Without Detective, you can't *prove* an attack happened or detect it in progress — meaning Recovery activates only after irreversible damage. This is the act-vs-prove failure: you have Due Care (Preventive) but no Due Diligence (Detective). Defense-in-depth needs all phases, especially DURING." },
+      { label: "Compensating is being used as primary, which is illegal", correct: false, why: "Compensating-as-permanent is a real failure mode, but the stem doesn't say it's permanent. Detective-absence is the bigger gap." },
+      { label: "Recovery before Corrective is wrong order", correct: false, why: "Corrective and Recovery can run in parallel; order isn't strict. The missing DURING-phase Detective is the real failure." },
+    ],
+    narration: `<span class="pill">analyze</span> — Defense-in-depth pairs controls <i>across</i> functions. Which function's absence collapses the chain into Due Care without Due Diligence?`,
+    code: [
+      '<span class="c">// the chain:</span>',
+      'Preventive · Recovery · Compensating',
+      '',
+      '<span class="c">// missing: ?</span>',
+      '',
+      '<span class="c">// without Detective:</span>',
+      '<span class="c">// → attack lands</span>',
+      '<span class="c">// → nobody knows it landed</span>',
+      '<span class="c">// → Recovery activates only after damage</span>',
+      '<span class="c">// → Due Care without Due Diligence</span>',
+      '<span class="c">// → legally indefensible</span>',
+    ],
+    g: { glow: ['cell-m-4','cell-t-4','cell-p-4'], dim: ALL_CELLS.filter(c => !['cell-m-4','cell-t-4','cell-p-4'].includes(c)), caption: "the DURING column (Detective) is the hinge of defense-in-depth" }
+  },
+  {
+    layer: "synthesize",
+    title: "the unlock & where it travels",
+    narration: `<b>The unlock</b>: this 3×7 grid encodes the <span class="wikilink" data-link="cissp-due-care-due-diligence">act-vs-prove meta-pattern</span> registered in <span class="wikilink" data-link="composability-index">composability-index</span>. <b>Preventive</b> = the act side (Due Care). <b>Detective</b> = the prove side (Due Diligence). A defense without Detective is Due Care without Due Diligence — legally indefensible. The grid also feeds <span class="wikilink" data-link="cissp-risk-treatment-quadrant">the Mitigate treatment</span>: "deploy controls" means pick cells from this grid. Mnemonic: <span class="pill">"3 before, 1 during, 2 after, 1 always" + "Make Things Physical" (M·T·P)</span>. Checksum: <b>3+1+2+1=7 functions · M·T·P = 3 types · 3 D-functions (Directive, Deterrent, Detective)</b>.`,
+    code: [
+      '<span class="c">// MNEMONIC (two voices)</span>',
+      '<span class="t">"3 before, 1 during, 2 after, 1 always"</span>  → 7 functions',
+      '<span class="t">"Make Things Physical"</span>                   → M·T·P (3 types)',
+      '',
+      '<span class="c">// CHECKSUM</span>',
+      '<span class="c">// function count: 3 + 1 + 2 + 1 = 7</span>',
+      '<span class="c">// type count:     M + T + P = 3</span>',
+      '<span class="c">// D-count: Directive, Deterrent, Detective = 3 D\'s</span>',
+      '',
+      '<span class="c">// CROSS-DOMAIN</span>',
+      '<span class="c">// Preventive  = Due Care    (act)</span>',
+      '<span class="c">// Detective   = Due Diligence (prove)</span>',
+      '<span class="c">// the grid IS the act-vs-prove pattern</span>',
+    ],
+    g: { glow: ALL_CELLS, dim: [], caption: "act-vs-prove = the meta-pattern this grid encodes" }
+  },
+];
+
+const BLOOM_LABELS = { recognize: "Recognize", understand: "Understand", apply: "Apply", analyze: "Analyze", synthesize: "Synthesize" };
+const BLOOM_PILL   = { recognize: "l1",         understand: "l2",         apply: "l3",   analyze: "l4",   synthesize: "l5" };
+
+const $ = (id) => document.getElementById(id);
+let idx = 0;
+let answered = new Array(steps.length).fill(false);
+$('total').textContent = steps.length;
+
+function renderChoices(s) {
+  const ch = $('choices'); const fb = $('feedback'); const ask = $('ask');
+  ch.innerHTML = ''; fb.classList.remove('show', 'right', 'wrong'); fb.innerHTML = '';
+  if (!s.choices) { ask.textContent = ''; return; }
+  ask.textContent = s.ask || '';
+  s.choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice' + (answered[idx] && c.correct ? ' correct' : '');
+    btn.textContent = c.label; btn.disabled = answered[idx];
+    btn.addEventListener('click', () => pick(i));
+    ch.appendChild(btn);
+  });
+  if (answered[idx]) {
+    const picked = s._picked; const c = s.choices[picked];
+    fb.classList.add('show', c.correct ? 'right' : 'wrong');
+    fb.innerHTML = `<b>${c.correct ? '✓ ' + c.label : '✗ ' + c.label}</b> — ${c.why}`;
+    Array.from(ch.children).forEach((btn, i) => {
+      if (i === picked) btn.classList.add('picked', s.choices[i].correct ? 'correct' : 'wrong');
+    });
+  }
+}
+function pick(i) {
+  const s = steps[idx]; answered[idx] = true; s._picked = i;
+  // glow correct cell
+  const correctChoiceIdx = s.choices.findIndex(c => c.correct);
+  const correctLabel = s.choices[correctChoiceIdx].label;
+  const match = correctLabel.match(/([MTP])-(\d)/);
+  if (match) {
+    const id = `cell-${match[1].toLowerCase()}-${match[2]}`;
+    ALL_CELLS.forEach(c => $(c).classList.add('dim'));
+    const el = $(id); if (el) { el.classList.remove('dim'); el.classList.add('glow'); }
+  }
+  renderChoices(s); updateNav();
+}
+function render() {
+  const s = steps[idx];
+  $('curr').textContent = idx + 1; $('title').textContent = s.title;
+  const pill = $('pill'); pill.className = 'bloom-pill ' + BLOOM_PILL[s.layer]; pill.textContent = BLOOM_LABELS[s.layer];
+  $('narration').innerHTML = s.narration;
+  $('bar').style.width = `${((idx + 1) / steps.length) * 100}%`;
+  $('code').innerHTML = s.code.map(line => `<span class="ln">${line || '&nbsp;'}</span>`).join('');
+  ALL_CELLS.forEach(c => {
+    const el = $(c);
+    el.classList.toggle('dim', s.g.dim.includes(c));
+    el.classList.toggle('glow', s.g.glow.includes(c));
+  });
+  $('caption').textContent = s.g.caption || '';
+  renderChoices(s); updateNav();
+}
+function updateNav() {
+  $('prev').disabled = idx === 0;
+  const s = steps[idx];
+  const gated = (s.layer === 'apply' || s.layer === 'analyze') && s.choices && !answered[idx];
+  $('next').disabled = idx === steps.length - 1 || gated;
+}
+function go(d) { const n = Math.max(0, Math.min(steps.length - 1, idx + d)); if (n === idx) return; idx = n; render(); }
+$('prev').addEventListener('click', () => go(-1));
+$('next').addEventListener('click', () => go(1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); if (!$('next').disabled) go(1); }
+});
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('.wikilink'); if (!link) return;
+  window.open('obsidian://open?vault=Neural-OS-Research&file=' + encodeURIComponent(link.dataset.link), '_blank');
+});
+render();
+</script>
+</body>
+</html>
