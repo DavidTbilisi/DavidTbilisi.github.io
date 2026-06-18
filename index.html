@@ -321,8 +321,7 @@
           <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Works fully offline</li>
           <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Email support</li>
         </ul>
-        <!-- TODO: real Paddle checkout link for price pri_01ksr72rdvfephq1h3gb20dqse -->
-        <a class="btn btn-primary" href="https://buy.filetagger.dev/individual">Buy Individual</a>
+        <a class="btn btn-primary" href="#" data-price="pri_01ksr72rdvfephq1h3gb20dqse">Buy Individual</a>
       </div>
 
       <!-- Team — yearly (popular) -->
@@ -340,8 +339,7 @@
           <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Centralized license management</li>
           <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Priority email support</li>
         </ul>
-        <!-- TODO: real Paddle checkout link for price pri_01ksr7537sr6x9daz8zdy6rpv8 -->
-        <a class="btn btn-primary" href="https://buy.filetagger.dev/team">Subscribe to Team</a>
+        <a class="btn btn-primary" href="#" data-price="pri_01ksr7537sr6x9daz8zdy6rpv8">Subscribe to Team</a>
       </div>
 
       <!-- Business — yearly -->
@@ -358,8 +356,7 @@
           <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Onboarding assistance</li>
           <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Priority support</li>
         </ul>
-        <!-- TODO: real Paddle checkout link for price pri_01ksr76adnnmqa0mzankddtr72 -->
-        <a class="btn btn-ghost" href="https://buy.filetagger.dev/business">Subscribe to Business</a>
+        <a class="btn btn-ghost" href="#" data-price="pri_01ksr76adnnmqa0mzankddtr72">Subscribe to Business</a>
       </div>
 
     </div>
@@ -432,7 +429,18 @@
   </div>
 </footer>
 
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 <script>
+  // Paddle.js checkout. The client-side token is public and safe to embed.
+  if (window.Paddle) {
+    Paddle.Initialize({ token: 'live_b48424d0655defea076a1556962' });
+    document.querySelectorAll('a[data-price]').forEach(function(el){
+      el.addEventListener('click', function(e){
+        e.preventDefault();
+        Paddle.Checkout.open({ items: [{ priceId: el.getAttribute('data-price'), quantity: 1 }] });
+      });
+    });
+  }
   document.getElementById('yr').textContent = new Date().getFullYear();
   const io = new IntersectionObserver((entries)=>{
     entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
