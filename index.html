@@ -113,22 +113,28 @@
   .feat code{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--t-teal)}
 
   /* pricing */
-  .price-wrap{display:grid;grid-template-columns:1fr;max-width:520px;margin:0 auto}
-  .price-card{background:linear-gradient(180deg,var(--ink-2),var(--ink-3));border:1px solid #4a3f30;border-radius:20px;
-    padding:40px;position:relative;overflow:hidden}
+  .price-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:stretch;margin:0}
+  @media(max-width:900px){.price-wrap{grid-template-columns:1fr;max-width:460px;margin:0 auto}}
+  .price-card{background:linear-gradient(180deg,var(--ink-2),var(--ink-3));border:1px solid var(--line);border-radius:20px;
+    padding:32px 28px;position:relative;overflow:hidden;display:flex;flex-direction:column}
+  .price-card.popular{border-color:#6a5526;box-shadow:0 22px 54px -26px rgba(240,178,74,.55)}
   .price-card::before{content:"";position:absolute;top:-60px;right:-60px;width:200px;height:200px;
-    background:radial-gradient(circle,rgba(240,178,74,.22),transparent 70%)}
-  .price-card .ptag{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
-  .price-card h3{font-size:28px;margin-top:6px}
-  .price-amt{display:flex;align-items:baseline;gap:10px;margin:20px 0 6px}
-  .price-amt .num{font-family:"Fraunces",serif;font-size:62px;font-weight:600;line-height:1}
-  .price-amt .per{color:var(--paper-faint);font-size:15px}
-  .price-note{color:var(--paper-dim);font-size:14.5px;margin-bottom:24px}
-  .plist{list-style:none;margin:22px 0 28px;display:grid;gap:13px}
-  .plist li{display:flex;gap:12px;align-items:flex-start;font-size:15.5px;color:var(--paper)}
-  .plist svg{width:19px;height:19px;color:var(--t-green);flex:none;margin-top:2px}
-  .price-card .btn-primary{width:100%;justify-content:center;padding:15px}
-  .activate{margin-top:16px;text-align:center;font-size:13px;color:var(--paper-faint)}
+    background:radial-gradient(circle,rgba(240,178,74,.18),transparent 70%)}
+  .badge{position:absolute;top:18px;right:18px;font-size:10.5px;font-weight:700;letter-spacing:.07em;
+    text-transform:uppercase;color:#231803;background:var(--amber);padding:4px 11px;border-radius:999px}
+  .price-card .ptag{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+  .price-card h3{font-size:23px;margin-top:5px}
+  .price-for{color:var(--paper-faint);font-size:13px;margin-top:3px}
+  .price-amt{display:flex;align-items:baseline;gap:8px;margin:18px 0 4px}
+  .price-amt .num{font-family:"Fraunces",serif;font-size:46px;font-weight:600;line-height:1}
+  .price-amt .per{color:var(--paper-faint);font-size:14px}
+  .price-note{color:var(--paper-dim);font-size:13.5px;margin-bottom:18px;min-height:40px}
+  .plist{list-style:none;margin:8px 0 24px;display:grid;gap:11px}
+  .plist li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:var(--paper);line-height:1.4}
+  .plist svg{width:18px;height:18px;color:var(--t-green);flex:none;margin-top:2px}
+  .price-card .btn{width:100%;justify-content:center;padding:14px;margin-top:auto}
+  .price-card .btn-ghost{border-color:#4a3f30}
+  .activate{margin-top:34px;text-align:center;font-size:13px;color:var(--paper-faint)}
   .activate code{font-family:"JetBrains Mono",monospace;color:var(--t-teal)}
 
   /* legal */
@@ -297,31 +303,68 @@
   <section id="pricing">
     <div class="sec-head reveal" style="margin-left:auto;margin-right:auto;text-align:center">
       <div class="sec-tag">Pricing</div>
-      <h2>One license. Yours for good.</h2>
-      <p style="margin-left:auto;margin-right:auto">Buy once, use forever. No subscriptions, no renewals.</p>
+      <h2>Pick the plan that fits.</h2>
+      <p style="margin-left:auto;margin-right:auto">Own it outright as an individual, or keep your whole team in sync.</p>
     </div>
     <div class="price-wrap reveal">
+
+      <!-- Individual — one-time -->
       <div class="price-card">
-        <div class="ptag">FileTagger Pro</div>
-        <h3>Full version</h3>
-        <!-- TODO: set your real price below -->
-        <div class="price-amt">
-          <span class="num">$19</span>
-          <span class="per">one-time · USD</span>
-        </div>
-        <div class="price-note">A perpetual license for one person, on all your computers.</div>
+        <div class="ptag">One-time</div>
+        <h3>Individual</h3>
+        <div class="price-for">For solo users &amp; personal projects</div>
+        <div class="price-amt"><span class="num">$19</span><span class="per">one-time · USD</span></div>
+        <div class="price-note">A perpetual license for one person, on all your own computers.</div>
         <ul class="plist">
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Every feature — CLI, GUI, graph, MCP &amp; shell integration</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Every feature — CLI, GUI, graph, MCP &amp; shell</li>
           <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Free updates for the 1.x line</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Works fully offline — license verified once</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Works fully offline</li>
           <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Email support</li>
         </ul>
-        <!-- TODO: replace href with your live Paddle checkout link -->
-        <a class="btn btn-primary" href="https://buy.filetagger.dev/pro">Buy FileTagger Pro</a>
-        <div class="activate">After checkout, activate with<br><code>ftag license activate &lt;transaction-id&gt;</code></div>
+        <!-- TODO: real Paddle checkout link for price pri_01ksr72rdvfephq1h3gb20dqse -->
+        <a class="btn btn-primary" href="https://buy.filetagger.dev/individual">Buy Individual</a>
       </div>
+
+      <!-- Team — yearly (popular) -->
+      <div class="price-card popular">
+        <span class="badge">Most popular</span>
+        <div class="ptag">Subscription</div>
+        <h3>Team</h3>
+        <div class="price-for">For small teams sharing tag conventions</div>
+        <div class="price-amt"><span class="num">$99</span><span class="per">per year · USD</span></div>
+        <!-- TODO: confirm seat count -->
+        <div class="price-note">Annual subscription for up to 5 team members.</div>
+        <ul class="plist">
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Everything in Individual</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Up to 5 team members</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Centralized license management</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Priority email support</li>
+        </ul>
+        <!-- TODO: real Paddle checkout link for price pri_01ksr7537sr6x9daz8zdy6rpv8 -->
+        <a class="btn btn-primary" href="https://buy.filetagger.dev/team">Subscribe to Team</a>
+      </div>
+
+      <!-- Business — yearly -->
+      <div class="price-card">
+        <div class="ptag">Subscription</div>
+        <h3>Business</h3>
+        <div class="price-for">For organizations &amp; larger teams</div>
+        <div class="price-amt"><span class="num">$499</span><span class="per">per year · USD</span></div>
+        <!-- TODO: confirm seat count -->
+        <div class="price-note">Annual subscription for up to 30 team members.</div>
+        <ul class="plist">
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Everything in Team</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Up to 30 team members</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Onboarding assistance</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Priority support</li>
+        </ul>
+        <!-- TODO: real Paddle checkout link for price pri_01ksr76adnnmqa0mzankddtr72 -->
+        <a class="btn btn-ghost" href="https://buy.filetagger.dev/business">Subscribe to Business</a>
+      </div>
+
     </div>
-    <p style="text-align:center;color:var(--paper-faint);font-size:14px;margin-top:24px">
+    <div class="activate">Every plan activates the same way — <code>ftag license activate &lt;transaction-id&gt;</code> after checkout.</div>
+    <p style="text-align:center;color:var(--paper-faint);font-size:14px;margin-top:18px">
       Payments are securely processed by <strong style="color:var(--paper-dim)">Paddle</strong>, our Merchant of Record. Prices shown in USD; local taxes calculated at checkout.
     </p>
   </section>
